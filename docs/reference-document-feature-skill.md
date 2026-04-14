@@ -246,3 +246,7 @@ If no external interactions are found for the feature: omit the `Dependencies an
 - Feature names reflect behavior (not caching/events/implementation).
 - Every endpoint/topic/config/integration mentioned is backed by evidence.
 - Sections are in fixed order; non-applicable sections are omitted.
+
+## See also
+
+- PR description guide: `docs/pr/pr-description.md`

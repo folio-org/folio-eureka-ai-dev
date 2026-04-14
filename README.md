@@ -6,6 +6,7 @@ This repo is evolving documentation and prompts (plugins may come later).
 
 - Document Feature skill: `docs/reference-document-feature-skill.md`
 - Unit testing guidelines: `docs/testing/unit-testing.md`
+- PR description guide: `docs/pr/pr-description.md`
 
 ### Feature documentation
 
@@ -21,6 +22,14 @@ To follow our unit testing guidelines (structure, naming, Mockito usage, verific
 
 ```text
 Fetch and follow instructions from https://raw.githubusercontent.com/folio-org/folio-eureka-ai-dev/refs/heads/master/docs/testing/unit-testing.md
+```
+
+### PR description
+
+To write a consistent, reviewable pull request description following our conventions, use the snippet.
+
+```text
+Fetch and follow instructions from https://raw.githubusercontent.com/folio-org/folio-eureka-ai-dev/refs/heads/master/docs/pr/pr-description.md
 ```
 ## 🤖 AI Agent Skills
 
