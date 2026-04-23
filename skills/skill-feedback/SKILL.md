@@ -1,9 +1,13 @@
 ---
 name: skill-feedback
 description: Use when a user has finished using one installed skill and wants to preserve actionable feedback about that skill while the session context is still fresh
+license: Apache-2.0
+metadata:
+  author: folio-org
+  version: "1.0.0"
 ---
 
-# Collecting Skill Feedback
+# Skill Feedback
 
 ## Overview
 
@@ -42,13 +46,13 @@ Do not use when:
 | Step | Requirement |
 |------|-------------|
 | Target | One skill, one completed session |
-| Contract | Use [report-template.md](./report-template.md) for fields, enums, title, and body shape |
+| Contract | Use [references/report-template.md](references/report-template.md) for fields, enums, title, and body shape |
 | Intake | One required question, one optional question when useful |
 | Draft | Show all fields, inferred values, destination repo, title, and full body |
 | Decision | `approve`, `edit`, or `cancel` |
 | Submit | GitHub tool, then `gh`, then manual copy/paste |
 
-If this repository includes a manual GitHub issue template, keep it aligned with [report-template.md](./report-template.md). The skill must still work without that template.
+If this repository includes a manual GitHub issue template, keep it aligned with [references/report-template.md](references/report-template.md). The skill must still work without that template.
 
 ## Workflow
 
@@ -63,7 +67,7 @@ If this repository includes a manual GitHub issue template, keep it aligned with
 4. Ask the user the minimum intake needed:
    - Required: `What should this skill improve first?`
    - Optional when useful: `What worked well?`
-5. Draft the report using [report-template.md](./report-template.md).
+5. Draft the report using [references/report-template.md](references/report-template.md). Use [references/example-report.md](references/example-report.md) only as a style example.
 6. Show the entire draft to the user, including:
    - all fields;
    - all inferred values;
