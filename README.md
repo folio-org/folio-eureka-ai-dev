@@ -43,7 +43,7 @@ Use the `skill-feedback` skill when you finish working with another skill and wa
 
 Ask your AI agent to run the skill feedback workflow after a skill session. The agent should review the session context, prepare a GitHub-ready issue draft, show the full draft for your approval, and then create an issue in this repository if GitHub access is available. If the agent cannot create the issue directly, copy the approved draft and create the GitHub issue manually.
 
-The feedback loop should stay lightweight: it should be easy to create GitHub issues for bug fixes, requests, ideas, and new skill proposals, and easy to use GitHub Actions later for labeling, triage, or follow-up automation. We will continue improving these skills together with the community based on real usage and feedback.
+The feedback loop should stay lightweight: you can create feedback through the `skill-feedback` skill, or simply open a GitHub issue directly in this repository for bugs, ideas, improvements, and new skill proposals. We will continue improving these skills together with the community based on real usage and feedback.
 
 ## Prompts and docs
 
