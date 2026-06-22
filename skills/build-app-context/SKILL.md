@@ -1,10 +1,10 @@
+---
 name: build-app-context
 description: Use when you need to build or refresh a context file for a FOLIO application area before writing test cases. This skill gathers live data from TestRail (existing cases), GitHub (README, docs, feature files, capability/permission definitions), and Jira (closed stories and bugs for the component), then distills everything into a structured context .md file and saves it to references/context/. Run this skill once per application area, then use write-testrail-cases normally.
 license: Apache-2.0
 metadata:
   author: folio-org
   version: 1.0.0
-
 ---
 
 # Build App Context
