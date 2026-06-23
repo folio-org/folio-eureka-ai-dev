@@ -8,11 +8,13 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 
 ### Available skills
 
+- `build-app-context` - Builds or refreshes a business-logic context file for a FOLIO application area by pulling live data from TestRail (existing cases), GitHub (translations, capability sets, Cypress fragments), and Jira (closed stories and bugs). Run this once per application area before using `write-testrail-cases`.
 - `code-review` - Reviews branch diffs and produces a structured code quality report.
 - `document-feature` - Documents implemented behavior by analyzing code changes and writing feature docs.
 - `liquibase-migration` - Guides FOLIO Liquibase migration authoring, structure, naming, and database conventions.
 - `skill-feedback` - Captures user-validated feedback after a skill session and prepares a GitHub-ready report.
 - `unit-testing` - Applies Java unit testing guidance for JUnit 5, Mockito, strict stubbing, and clear test structure.
+- `write-testrail-cases` - Generates structured manual test cases from a Jira story and posts them directly to TestRail. Uses app-specific context files and automatically enriches from Jira, GitHub, and TestRail when context is insufficient.
 - `write-bug` - Drafts reproducible FOLIO bug reports with steps, expected and actual results, and supporting evidence.
 - `write-pr-description` - Drafts PR descriptions following team conventions for purpose, approach, and checklist.
 - `write-user-story` - Drafts user stories with scope, requirements, acceptance criteria, and manual testing guidance.
@@ -36,6 +38,15 @@ To update to the latest version of our team's AI guidelines, run:
 ```bash
 npx skills update folio-org/folio-eureka-ai-dev
 ```
+## Writing Test Cases
+
+The `write-testrail-cases` skill generates structured manual test cases from a Jira story and posts them to TestRail automatically. It understands FOLIO's domain — module ownership, capability sets, and Eureka architecture.
+
+The skill always presents a **Scenario Analysis** for your review before writing anything, and waits for your confirmation before posting.
+
+### Refreshing context files
+
+If context for your app area is missing or outdated, run `build-app-context`:
 
 ### GitHub issue reporter
 
