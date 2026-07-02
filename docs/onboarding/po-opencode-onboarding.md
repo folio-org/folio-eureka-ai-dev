@@ -101,10 +101,17 @@ If you get a response, you are ready.
 
 ---
 
-## 4. Install the FOLIO skills
+## 4. Install the FOLIO Product Owner skills
 
 Before you can use the `write-user-story` and `write-bug` skills, OpenCode
-needs a local working folder and the FOLIO skills package installed in it.
+needs a local working folder and the FOLIO Product Owner preset installed in it.
+
+The PO preset installs these four skills:
+
+- `write-user-story`
+- `write-bug`
+- `write-pr-description`
+- `skill-feedback`
 
 There are two ways to do this. **Pick the one that suits you best.**
 
@@ -133,8 +140,8 @@ that is safe for a non-technical user.
 
 My goal:
 - Create a local folder for Jira drafting work.
-- Install the FOLIO skills from folio-org/folio-eureka-ai-dev.
-- Make sure I can use write-user-story and write-bug in OpenCode.
+- Install the FOLIO Product Owner skills from folio-org/folio-eureka-ai-dev.
+- Make sure I can use write-user-story, write-bug, write-pr-description, and skill-feedback in OpenCode.
 
 Please follow these rules:
 1. Explain each step in plain English before asking me to do it.
@@ -148,7 +155,7 @@ Please follow these rules:
 5. Once Node.js is confirmed, guide me to create a folder named
    `folio-jira-drafts` in my home directory.
 6. Then guide me to open that folder in a terminal and run:
-     npx skills add folio-org/folio-eureka-ai-dev
+      npx skills add folio-org/folio-eureka-ai-dev --skill write-user-story --skill write-bug --skill write-pr-description --skill skill-feedback
 7. After installation, help me verify that the skills are available.
 8. Then remind me how to open that folder in the OpenCode Desktop App
    and run `/init` if needed.
@@ -206,17 +213,19 @@ create a new folder named `folio-jira-drafts`.
 From inside that folder, run:
 
 ```bash
-npx skills add folio-org/folio-eureka-ai-dev
+npx skills add folio-org/folio-eureka-ai-dev --skill write-user-story --skill write-bug --skill write-pr-description --skill skill-feedback
 ```
 
-This downloads the skills (including `write-user-story` and `write-bug`)
-into the folder. To update later:
+This installs the Product Owner preset into the folder. It includes
+`write-user-story`, `write-bug`, `write-pr-description`, and `skill-feedback`.
+To update later:
 
 ```bash
 npx skills update folio-org/folio-eureka-ai-dev
 ```
 
-See the [README](../../README.md) for the full list of available skills.
+See the [README](../../README.md) for other role presets and the advanced
+all-skills install option.
 
 #### 4B.4 Verify the install succeeded
 
@@ -227,7 +236,8 @@ npx skills list
 ```
 
 You should see `write-user-story` and `write-bug` listed. If not, re-run
-the install command above.
+the install command above. You should also see `write-pr-description` and
+`skill-feedback`, because they are part of the Product Owner preset.
 
 ---
 

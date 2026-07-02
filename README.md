@@ -8,24 +8,58 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 
 ### Available skills
 
+- `build-app-context` - Builds or refreshes `references/context/<area>.md` from live TestRail, Jira, and GitHub sources for manual test design.
 - `code-review` - Reviews branch diffs and produces a structured code quality report.
 - `document-feature` - Documents implemented behavior by analyzing code changes and writing feature docs.
+- `ecs-user-setup` - Guides ECS and multi-tenant user setup for FOLIO automated tests.
+- `implement-automated-test` - Generates or updates Cypress E2E tests for FOLIO Stripes.
 - `liquibase-migration` - Guides FOLIO Liquibase migration authoring, structure, naming, and database conventions.
+- `review-generated-automated-test` - Reviews Cypress E2E test changes against FOLIO Stripes testing conventions.
 - `skill-feedback` - Captures user-validated feedback after a skill session and prepares a GitHub-ready report.
+- `testrail-bug-report` - Generates Jira-ready bug reports from failed FOLIO TestRail cases.
 - `unit-testing` - Applies Java unit testing guidance for JUnit 5, Mockito, strict stubbing, and clear test structure.
 - `write-bug` - Drafts reproducible FOLIO bug reports with steps, expected and actual results, and supporting evidence.
 - `write-pr-description` - Drafts PR descriptions following team conventions for purpose, approach, and checklist.
+- `write-testrail-cases` - Writes structured manual TestRail cases from user stories and application context.
 - `write-user-story` - Drafts user stories with scope, requirements, acceptance criteria, and manual testing guidance.
 
-### Installing skills
+### Installing skills by role
 
-To install these skills in your project, run:
+Install only the preset that matches your role:
+
+#### Product Owner
+
+```bash
+npx skills add folio-org/folio-eureka-ai-dev --skill write-user-story --skill write-bug --skill write-pr-description --skill skill-feedback
+```
+
+#### Backend Developer
+
+```bash
+npx skills add folio-org/folio-eureka-ai-dev --skill unit-testing --skill liquibase-migration --skill code-review --skill document-feature --skill skill-feedback
+```
+
+#### QA Manual
+
+```bash
+npx skills add folio-org/folio-eureka-ai-dev --skill write-user-story --skill write-testrail-cases --skill build-app-context --skill testrail-bug-report --skill write-bug --skill skill-feedback
+```
+
+#### QA Automation
+
+```bash
+npx skills add folio-org/folio-eureka-ai-dev --skill implement-automated-test --skill review-generated-automated-test --skill ecs-user-setup --skill write-bug --skill skill-feedback
+```
+
+### Advanced install
+
+To install every skill in this repository instead of a role preset, run:
 
 ```bash
 npx skills add folio-org/folio-eureka-ai-dev
 ```
 
-Running this command in the terminal of a target project will automatically download our AI context. This ensures that your AI assistant is aware of our specific architectural and testing standards when generating or refactoring code.
+Run the install command in the target project so your AI assistant picks up the right local skill set and FOLIO guidance.
 
 For more information about skills.sh, see the [official documentation](https://skills.sh/docs).
 
