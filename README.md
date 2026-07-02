@@ -2,6 +2,8 @@
 
 This repository contains installable AI agent skills for FOLIO development workflows, plus supporting prompts and documentation.
 
+![Role-based install demo](docs/assets/install-po-preset.gif)
+
 ## 🤖 AI Agent Skills
 
 This repository serves as a skills registry containing guidelines (`SKILL.md`). These skills can be loaded into AI assistants like Cursor, Claude Code, or Copilot using the skills.sh CLI.
@@ -30,25 +32,45 @@ Install only the preset that matches your role:
 #### Product Owner
 
 ```bash
-npx skills add folio-org/folio-eureka-ai-dev --skill write-user-story --skill write-bug --skill write-pr-description --skill skill-feedback
+npx skills add folio-org/folio-eureka-ai-dev \
+  --skill write-user-story \
+  --skill write-bug \
+  --skill write-pr-description \
+  --skill skill-feedback
 ```
 
 #### Backend Developer
 
 ```bash
-npx skills add folio-org/folio-eureka-ai-dev --skill unit-testing --skill liquibase-migration --skill code-review --skill document-feature --skill skill-feedback
+npx skills add folio-org/folio-eureka-ai-dev \
+  --skill unit-testing \
+  --skill liquibase-migration \
+  --skill code-review \
+  --skill document-feature \
+  --skill skill-feedback
 ```
 
 #### QA Manual
 
 ```bash
-npx skills add folio-org/folio-eureka-ai-dev --skill write-user-story --skill write-testrail-cases --skill build-app-context --skill testrail-bug-report --skill write-bug --skill skill-feedback
+npx skills add folio-org/folio-eureka-ai-dev \
+  --skill write-user-story \
+  --skill write-testrail-cases \
+  --skill build-app-context \
+  --skill testrail-bug-report \
+  --skill write-bug \
+  --skill skill-feedback
 ```
 
 #### QA Automation
 
 ```bash
-npx skills add folio-org/folio-eureka-ai-dev --skill implement-automated-test --skill review-generated-automated-test --skill ecs-user-setup --skill write-bug --skill skill-feedback
+npx skills add folio-org/folio-eureka-ai-dev \
+  --skill implement-automated-test \
+  --skill review-generated-automated-test \
+  --skill ecs-user-setup \
+  --skill write-bug \
+  --skill skill-feedback
 ```
 
 ### Advanced install
