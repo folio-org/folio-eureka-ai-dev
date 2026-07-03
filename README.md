@@ -2,7 +2,7 @@
 
 This repository contains installable AI agent skills for FOLIO development workflows, plus supporting prompts and documentation.
 
-![Role-based install demo](docs/assets/install-po-preset.gif)
+![Role-based install demo](docs/assets/install-po-preset-2026-07-02.gif)
 
 ## 🤖 AI Agent Skills
 
