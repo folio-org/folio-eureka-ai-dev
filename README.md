@@ -35,7 +35,6 @@ Install only the preset that matches your role:
 npx skills add folio-org/folio-eureka-ai-dev \
   --skill write-user-story \
   --skill write-bug \
-  --skill write-pr-description \
   --skill skill-feedback
 ```
 
@@ -43,10 +42,12 @@ npx skills add folio-org/folio-eureka-ai-dev \
 
 ```bash
 npx skills add folio-org/folio-eureka-ai-dev \
+  --skill write-user-story \
   --skill unit-testing \
   --skill liquibase-migration \
   --skill code-review \
   --skill document-feature \
+  --skill write-pr-description \
   --skill skill-feedback
 ```
 
