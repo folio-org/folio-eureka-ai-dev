@@ -20,7 +20,6 @@
       "skills": [
         "./skills/write-user-story",
         "./skills/write-bug",
-        "./skills/write-pr-description",
         "./skills/skill-feedback"
       ],
       "mcpServers": {
