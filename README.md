@@ -38,6 +38,17 @@ npx skills add folio-org/folio-eureka-ai-dev \
   --skill skill-feedback
 ```
 
+##### Product Owner via Claude Code plugin (no terminal)
+
+If you use [Claude Code](https://code.claude.com/docs/en/quickstart), install the Product Owner preset as a plugin instead — no terminal or Node.js required. In the Claude Code chat, run:
+
+```
+/plugin marketplace add folio-org/folio-eureka-ai-dev
+/plugin install folio-po@folio-ai-dev
+```
+
+This installs the PO skills together with the official Atlassian Jira MCP server. Full walkthrough: [Product Owner Onboarding: Claude Code + Jira MCP](docs/onboarding/po-claude-code-onboarding.md).
+
 #### Backend Developer
 
 ```bash
