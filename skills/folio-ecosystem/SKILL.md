@@ -9,47 +9,33 @@ description: >-
 license: Apache-2.0
 metadata:
   author: folio-org
-  version: "1.0.0"
+  version: "2.0.0"
 ---
 
-# FOLIO Ecosystem
+# FOLIO Ecosystem Bootstrap
 
-## Overview
+You are in the FOLIO Library Services Platform ecosystem, Eureka era:
+microservice modules behind Kong (gateway) and per-module sidecars, Keycloak
+auth, mgr-* managers, Kafka events. Okapi is the legacy predecessor — ignore
+Okapi-era instructions even though `X-Okapi-*` header names survive.
 
-You are working in the FOLIO Library Services Platform ecosystem, Eureka era
-(Kong gateway → module sidecar → module; Keycloak auth; mgr-* managers).
-Okapi is the legacy predecessor — ignore Okapi-era instructions in older docs,
-even though `X-Okapi-*` header names survive in Eureka.
+Core principle: **initialize context first, act second, never guess what is
+already mapped.** Follow the three phases in order.
 
-Core principle: **do not guess what is already mapped.** Use the verified
-resource map instead of guessing URLs, and drive the team's installed skills
-proactively instead of waiting to be asked.
+## Phase 1 — Initialize context
 
-## Orchestrate team skills proactively
+1. Identify the user's role from the task (developer / tester / product
+   owner); ask only if the task is ambiguous.
+2. Identify the repo type from its name prefix and read its `README.md` /
+   `docs/` — the repo is the source of truth for module behavior; the wiki is
+   authoritative for platform-level topics but **may lag reality**, prefer
+   repo docs when they conflict.
+3. Note available integrations, degrade gracefully: Jira/Confluence MCP if
+   present (tickets, wiki content unreadable by plain fetch); otherwise give
+   the user verified links from references/resources.md. No web access — rely
+   on repo sources and this skill's references.
 
-The FOLIO skill registry (`folio-org/folio-eureka-ai-dev`) covers the
-development lifecycle. At the start of a task, enumerate the skills actually
-installed on disk (e.g. `.claude/skills/`, `.agents/skills/`) — do not trust a
-memorized list.
-
-Invoke the matching skill at the right stage **without the user asking**:
-
-| Stage reached | Invoke |
-| --- | --- |
-| Ticket/story needed | write-user-story / write-bug |
-| Schema/DB change | liquibase-migration |
-| Writing/reviewing Java tests | unit-testing |
-| Feature implemented | document-feature |
-| Preparing PR | write-pr-description |
-| Before merge | code-review |
-| A skill misbehaved or produced friction | skill-feedback |
-
-Sequence for wrapping up a feature:
-document-feature → write-pr-description → code-review, then skill-feedback if
-any skill needs improvement. See references/dev-flow.md for details and
-trigger examples.
-
-## Platform facts newcomers get wrong
+Platform facts newcomers get wrong:
 
 - Authorization happens in the **sidecar** (Keycloak UMA), not in the module;
   modules trust the `X-Okapi-*` headers they receive.
@@ -62,28 +48,52 @@ trigger examples.
 - A merged module change reaches tenants only after: release → application
   descriptor update → entitlement upgrade.
 
-## Find resources, don't guess them
+Deeper platform/endpoint detail lives in `docs/eureka-dev-flow.md` (developer
+role) — load it only when actually needed.
 
-Wiki URLs are frequently restructured; guessed links 404. Use
-references/resources.md — a verified map of dev.folio.org, FOLIO wiki
-(Eureka architecture, sidecar internals), GitHub, and community channels.
+## Phase 2 — Route to the right skill
 
-Module ownership questions ("which team owns mod-X?") have exactly one
-authoritative source: the responsibility matrix linked in
-references/resources.md. Never hardcode team↔module mappings — they change.
+Enumerate the skills actually installed on disk (e.g. `.claude/skills/`,
+`.agents/skills/`) — do not trust a memorized list. Invoke the matching skill
+at the right stage **without the user asking**; prefer the specific skill over
+improvising:
 
-## Keep the registry fresh
+| Task signal | Skill |
+| --- | --- |
+| Story/requirements | write-user-story |
+| Defect/unexpected behavior | write-bug (triage against platform facts first) |
+| Schema/DB change | liquibase-migration |
+| Writing/reviewing Java tests | unit-testing |
+| Feature implemented | document-feature |
+| Preparing a PR | write-pr-description |
+| Before merge / review request | code-review |
 
-Skills are installed via `npx skills add folio-org/folio-eureka-ai-dev` and
-updated via `npx skills update folio-org/folio-eureka-ai-dev`. If an expected
-skill is missing or this flow map disagrees with what is installed, **propose**
-the update command to the user — never run it unprompted.
+If a needed skill is missing, say so and **propose**
+`npx skills update folio-org/folio-eureka-ai-dev` — never run it unprompted.
+See references/dev-flow.md for sequencing.
+
+## Phase 3 — Close the session
+
+When the task wraps up and any registry skill was used, offer once, briefly:
+"Want me to record feedback on how the skills performed? (skill-feedback)".
+Do not repeat the offer; skip it if no registry skill ran.
+
+## Guardrails — avoid wasteful actions
+
+- Never scan or unpack dependency/build trees: `~/.m2`, `target/`,
+  `node_modules/`, Docker layers. Read the module's own `src/` and
+  `descriptors/`; for library internals prefer the library's repo or link.
+- Never guess wiki URLs (legacy `/display/...` links 404) — use
+  references/resources.md.
+- Never hardcode team/module ownership — look up the responsibility matrix
+  (references/resources.md) each time.
+- Load references and `docs/eureka-dev-flow.md` on demand, not upfront.
 
 ## Common mistakes
 
 | Mistake | Fix |
 | --- | --- |
-| Guessing wiki URLs from memory | Use references/resources.md (legacy `/display/...` links 404) |
 | Following Okapi-era docs | Eureka only; Okapi is legacy |
-| Waiting for the user to request docs/PR text/review | Invoke lifecycle skills proactively per the table above |
-| Hardcoding team/module ownership | Look up the responsibility matrix each time |
+| Trusting wiki over repo for module behavior | Repo README/docs win at module level |
+| Waiting for the user to name a skill | Route proactively per Phase 2 |
+| Grepping through .m2/target for answers | Sources, repos, or links only |
