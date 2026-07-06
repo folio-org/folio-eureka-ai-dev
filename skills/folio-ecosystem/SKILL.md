@@ -1,15 +1,17 @@
 ---
 name: folio-ecosystem
 description: >-
-  Use when working in any FOLIO platform repository (mod-*, ui-*, mgr-*, edge-*, app-*, stripes-*),
-  or when anyone new to FOLIO — developer, tester, or product owner — needs orientation:
-  understanding the platform, writing a story, filing a defect, finding which team owns a module,
-  or deciding which team skill applies. Also use when needing FOLIO documentation, wiki, or Eureka
-  platform references, or when unsure whether the platform is Eureka or legacy Okapi.
+  Load this first, at the start of any session in a FOLIO platform repository (mod-*, ui-*, mgr-*,
+  edge-*, app-*, stripes-*) — before acting, and before or alongside any other FOLIO skill
+  (bug report, user story, migration, tests, PR, review). Also use when anyone new to FOLIO —
+  developer, tester, or product owner — needs orientation: understanding the platform, writing a
+  story, filing a defect, finding which team owns a module, or deciding which team skill applies;
+  and when needing FOLIO documentation, wiki, or Eureka platform references, or when unsure
+  whether the platform is Eureka or legacy Okapi.
 license: Apache-2.0
 metadata:
   author: folio-org
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # FOLIO Ecosystem Bootstrap

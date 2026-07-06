@@ -131,3 +131,36 @@ Shipped scope: `SKILL.md` + `references/resources.md` (verified resource map)
 + `references/dev-flow.md` (lifecycle orchestration rules).
 `references/architecture.md` and `references/module-conventions.md` were
 dropped; research drafts are preserved outside the repo if ever needed.
+
+## Trigger/value test round (amendment, 2026-07-06)
+
+All prior scenario tests told the agent skills were installed. This round
+tested natural triggering: clean mod-users-keycloak clone, registry skills in
+`.claude/skills`, headless Claude Code 2.1.201, prompts never mentioning
+skills. Scenarios and stand recipe persisted in docs/skill-test-scenarios.md.
+
+Findings:
+
+- **Value confirmed** (forced-load A/B, m2m-401 defect scenario): with
+  folio-ecosystem loaded, 3/3 reports attributed the 401 to the sidecar
+  (system-user egress token / bootstrap declaration) and redirected ownership
+  away from the target module's team; without it, 3/3 reports gave a generic
+  token-timing hypothesis addressed to the wrong team.
+- **Natural triggering failed on the defect scenario**: write-bug's more
+  specific description intercepted 3/3; folio-ecosystem co-triggered 0/3, so
+  its platform facts never loaded. On the pure platform-triage scenario it
+  triggered 2/3 (the miss answered correctly from model priors — harmless).
+
+Rejected fixes (operator decisions): back-references from other registry
+skills to folio-ecosystem (skill may be absent on a given system; unwanted
+coupling) and AGENTS.md pointers in module repos (files vary or don't exist;
+distribution is skills-only — the agentskills.io spec is cross-tool).
+
+Applied fix (v2.2.0): description-only CSO change — opening rewritten to
+"Load this first, at the start of any session in a FOLIO platform
+repository… before or alongside any other FOLIO skill". A/B against a
+narrower "always load before triaging any defect" variant, N=5 each: both
+reached 5/5 co-trigger with correct substance; the primacy wording won as it
+generalizes to interception by any specific skill, not just write-bug.
+Regression on the platform-triage scenario: 3/3 (baseline 2/3). Skill body
+untouched.
