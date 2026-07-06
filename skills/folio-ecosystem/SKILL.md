@@ -83,8 +83,11 @@ Do not repeat the offer; skip it if no registry skill ran.
 - Never scan or unpack dependency/build trees: `~/.m2`, `target/`,
   `node_modules/`, Docker layers. Read the module's own `src/` and
   `descriptors/`; for library internals prefer the library's repo or link.
-- Never guess wiki URLs (legacy `/display/...` links 404) — use
-  references/resources.md.
+- When the user asks about any FOLIO documentation, wiki page, or "where do I
+  find X" — **open references/resources.md first** and answer with the
+  verified link (some wiki pages are unreadable via plain fetch; the map says
+  which). Never guess wiki URLs (legacy `/display/...` links 404), and never
+  answer "check the wiki" generically while a concrete verified link exists.
 - Never hardcode team/module ownership — look up the responsibility matrix
   (references/resources.md) each time.
 - Load references and `docs/eureka-dev-flow.md` on demand, not upfront.
