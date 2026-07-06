@@ -14,10 +14,18 @@ metadata:
 
 # FOLIO Ecosystem Bootstrap
 
-You are in the FOLIO Library Services Platform ecosystem, Eureka era:
-microservice modules behind Kong (gateway) and per-module sidecars, Keycloak
-auth, mgr-* managers, Kafka events. Okapi is the legacy predecessor — ignore
-Okapi-era instructions even though `X-Okapi-*` header names survive.
+You are in the FOLIO Library Services Platform ecosystem, Eureka era.
+Okapi is the legacy predecessor — ignore Okapi-era instructions even though
+`X-Okapi-*` header names survive.
+
+| Component | Role |
+| --- | --- |
+| Kong | External gateway only: routes outside traffic (UI, scripts) to module sidecars; **no authorization**; maps the browser cookie `folioAccessToken` to `Authorization`/`X-Okapi-Token` headers |
+| Sidecar (per module) | All authN/authZ (Keycloak JWT + UMA) and ingress/egress routing |
+| Keycloak | Identity: realm per tenant, tokens, permission (UMA) evaluation |
+| mgr-* | Control plane: mgr-applications (descriptors, discovery), mgr-tenants (tenants/realms), mgr-tenant-entitlements (enable/upgrade apps) |
+| Modules (mod-*) | Business logic only; trust incoming `X-Okapi-*` headers |
+| Frontend | Stripes (React) SPA; calls the backend through Kong |
 
 Core principle: **initialize context first, act second, never guess what is
 already mapped.**
@@ -46,6 +54,13 @@ Platform facts newcomers get wrong:
   their capability-set) explicitly.
 - A merged module change reaches tenants only after: release → application
   descriptor update → entitlement upgrade.
+- Module-to-module calls go **through sidecars, never through Kong**: the
+  module calls its own sidecar, which routes directly to the target module's
+  sidecar using routes learned from discovery.
+- **System user** = a module's service account, created at entitlement time
+  (Kafka `system-user` topic → mod-users-keycloak, with role-assignment
+  retries). The sidecar attaches its token to egress calls only if the module
+  declares "system user required" in its bootstrap. Most m2m 401s trace here.
 
 ## Hard rules (all roles)
 
