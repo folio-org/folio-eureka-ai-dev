@@ -7,6 +7,7 @@ This repo is evolving documentation and prompts (plugins may come later).
 - Document Feature skill: `docs/reference-document-feature-skill.md`
 - Unit testing guidelines: `docs/testing/unit-testing.md`
 - PR description guide: `docs/pr/pr-description.md`
+- Eureka developer flow (platform bring-up, endpoint sequences, tests, per-module watch-outs): `docs/eureka-dev-flow.md`
 
 ### Feature documentation
 
