@@ -21,9 +21,18 @@ resources are) and guides the agent through a role-appropriate flow:
   navigation (responsibility matrix).
 
 The agent determines the user's role from the task context or asks.
-Platform-understanding content (architecture reference) is included by
-operator decision, overriding the earlier TDD-based cut: strong models derive
-it, but the skill also serves weaker agents and non-developer roles.
+
+Verification 2026-07-06: PO and QA role scenarios ran in a clean environment
+against the existing skill — both passed (6/6 scenarios total across roles).
+Consequence: no role-specific restructuring needed; role behavior emerges from
+resources.md + the registry skills + model priors. Applied instead:
+(a) description broadened with role-trigger vocabulary (onboarding, story,
+defect, ownership); (b) a compact "Platform facts newcomers get wrong" section
+(sidecar-side authorization, eventual-consistency 403 after entitlement,
+capabilities not auto-added to roles, release→descriptor→entitlement path)
+replaces the originally planned full architecture.md — the facts tests showed
+to be load-bearing, without duplicating model priors or creating a rot-prone
+architecture retelling.
 
 ## Problem
 

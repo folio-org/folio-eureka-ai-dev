@@ -1,10 +1,11 @@
 ---
 name: folio-ecosystem
 description: >-
-  Use when working in any FOLIO platform repository (mod-*, ui-*, mgr-*, edge-*, app-*, stripes-*) —
-  starting a task in a module, planning or wrapping up a feature, deciding which team skill applies,
-  or needing FOLIO documentation, wiki pages, Eureka platform references, or team/module ownership
-  information. Also use when unsure whether the platform is Eureka or legacy Okapi.
+  Use when working in any FOLIO platform repository (mod-*, ui-*, mgr-*, edge-*, app-*, stripes-*),
+  or when anyone new to FOLIO — developer, tester, or product owner — needs orientation:
+  understanding the platform, writing a story, filing a defect, finding which team owns a module,
+  or deciding which team skill applies. Also use when needing FOLIO documentation, wiki, or Eureka
+  platform references, or when unsure whether the platform is Eureka or legacy Okapi.
 license: Apache-2.0
 metadata:
   author: folio-org
@@ -47,6 +48,19 @@ Sequence for wrapping up a feature:
 document-feature → write-pr-description → code-review, then skill-feedback if
 any skill needs improvement. See references/dev-flow.md for details and
 trigger examples.
+
+## Platform facts newcomers get wrong
+
+- Authorization happens in the **sidecar** (Keycloak UMA), not in the module;
+  modules trust the `X-Okapi-*` headers they receive.
+- Enabling an app for a tenant is **eventually consistent**: capabilities are
+  created asynchronously (Kafka → mod-roles-keycloak). A 403 right after
+  entitlement is usually propagation lag or an unassigned capability — triage
+  before filing a bug.
+- New capabilities are **not** auto-added to existing roles; assign them (or
+  their capability-set) explicitly.
+- A merged module change reaches tenants only after: release → application
+  descriptor update → entitlement upgrade.
 
 ## Find resources, don't guess them
 
