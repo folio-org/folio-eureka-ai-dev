@@ -14,6 +14,7 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 - `code-review` - Reviews branch diffs and produces a structured code quality report.
 - `document-feature` - Documents implemented behavior by analyzing code changes and writing feature docs.
 - `ecs-user-setup` - Guides ECS and multi-tenant user setup for FOLIO automated tests.
+- `folio-ecosystem` - Bootstraps FOLIO/Eureka platform context, resource lookup, and skill routing for all roles.
 - `implement-automated-test` - Generates or updates Cypress E2E tests for FOLIO Stripes.
 - `liquibase-migration` - Guides FOLIO Liquibase migration authoring, structure, naming, and database conventions.
 - `review-generated-automated-test` - Reviews Cypress E2E test changes against FOLIO Stripes testing conventions.
@@ -33,6 +34,7 @@ Install only the preset that matches your role:
 
 ```bash
 npx skills add folio-org/folio-eureka-ai-dev \
+  --skill folio-ecosystem \
   --skill write-user-story \
   --skill write-bug \
   --skill skill-feedback
@@ -53,6 +55,7 @@ This installs the PO skills together with the official Atlassian Jira MCP server
 
 ```bash
 npx skills add folio-org/folio-eureka-ai-dev \
+  --skill folio-ecosystem \
   --skill write-user-story \
   --skill unit-testing \
   --skill liquibase-migration \
@@ -66,6 +69,7 @@ npx skills add folio-org/folio-eureka-ai-dev \
 
 ```bash
 npx skills add folio-org/folio-eureka-ai-dev \
+  --skill folio-ecosystem \
   --skill write-user-story \
   --skill write-testrail-cases \
   --skill build-app-context \
@@ -78,6 +82,7 @@ npx skills add folio-org/folio-eureka-ai-dev \
 
 ```bash
 npx skills add folio-org/folio-eureka-ai-dev \
+  --skill folio-ecosystem \
   --skill implement-automated-test \
   --skill review-generated-automated-test \
   --skill ecs-user-setup \
@@ -119,6 +124,8 @@ The feedback loop should stay lightweight: you can create feedback through the `
 - Unit testing guidelines: `docs/testing/unit-testing.md`
 - PR description guide: `docs/pr/pr-description.md`
 - Eureka developer flow (platform bring-up, endpoint sequences, tests, per-module watch-outs): `docs/eureka-dev-flow.md`
+- Skill engineering guide: `docs/skill-engineering.md`
+- Skill test scenarios: `docs/skill-test-scenarios.md`
 
 ### Feature documentation
 

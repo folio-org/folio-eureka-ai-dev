@@ -93,7 +93,7 @@ Since you just created it yourself, answer yes.
 The FOLIO Product Owner preset ships as a **Claude Code plugin** called
 `folio-po`. One install gives you:
 
-- the PO skills — `write-user-story`, `write-bug`, `skill-feedback`;
+- the PO skills — `folio-ecosystem`, `write-user-story`, `write-bug`, `skill-feedback`;
 - the **official Atlassian Jira MCP server**, pre-configured (you only log
   in — see [Section 5](#5-connect-jira)).
 
@@ -197,8 +197,8 @@ Start a new session in `folio-jira-drafts` and ask:
 Which FOLIO skills do you have available?
 ```
 
-The agent should mention `write-user-story` and `write-bug`. You can also
-check visually: in the Desktop app, click **+ → Plugins** and confirm
+The agent should mention `folio-ecosystem`, `write-user-story`, and
+`write-bug`. You can also check visually: in the Desktop app, click **+ → Plugins** and confirm
 `folio-po` is listed and enabled (in the CLI, run `/plugin`).
 
 > **Troubleshooting:** if the marketplace is rejected with a policy
@@ -214,7 +214,7 @@ for third-party marketplaces.)
 
 > The developer-oriented `write-pr-description` skill also lives in the
 > same repo but is **not** bundled in the `folio-po` plugin. If you want
-> it, see [Appendix A.3](#a3-npx-skills-alternative).
+> it, install it separately with `npx skills add folio-org/folio-eureka-ai-dev --skill write-pr-description`.
 
 ---
 
@@ -589,7 +589,7 @@ If you already use the [skills.sh](https://skills.sh/docs) workflow from the
 [README](../../README.md), the Product Owner skill set installs with:
 
 ```bash
-npx skills add folio-org/folio-eureka-ai-dev --skill write-user-story --skill write-bug --skill write-pr-description --skill skill-feedback
+npx skills add folio-org/folio-eureka-ai-dev --skill folio-ecosystem --skill write-user-story --skill write-bug --skill skill-feedback
 ```
 
 This requires Node.js and installs only the skills — you still add the Jira

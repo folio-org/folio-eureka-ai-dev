@@ -11,13 +11,14 @@
     {
       "name": "folio-po",
       "source": "./",
-      "description": "FOLIO Product Owner preset: draft user stories and bug reports, write PR descriptions, capture skill feedback, and work with Jira through the official Atlassian MCP server.",
+      "description": "FOLIO Product Owner preset: bootstrap FOLIO context, draft user stories and bug reports, capture skill feedback, and work with Jira through the official Atlassian MCP server.",
       "version": "0.1.0",
       "author": {
         "name": "FOLIO Eureka AI Dev"
       },
       "strict": false,
       "skills": [
+        "./skills/folio-ecosystem",
         "./skills/write-user-story",
         "./skills/write-bug",
         "./skills/skill-feedback"
