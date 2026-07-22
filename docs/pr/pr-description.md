@@ -74,6 +74,13 @@ Rules:
 - **One bullet per logical change** — a new class, a changed contract, a new config property, etc.
 - **Up to 2 sentences per bullet.** First sentence: what was done. Optional second sentence: why,
   or a notable consequence (e.g. backward-compatibility note).
+- **Write for a human, not for a diff viewer.** Each bullet should read as a plain sentence about what
+  changed and why. The reviewer has the diff already; the bullet exists to explain it.
+- **Name the code artifact when it helps the reviewer find the change.** Usually one per bullet — the
+  class, or the schema/config file — is enough to anchor it. Do not stack every method, annotation,
+  type parameter and exception into one bullet just because they appear in the diff, and do not leave
+  a bullet unanchored ("in one shared utility") when naming the class would tell the reviewer exactly
+  where to look.
 - **No test changes** — do not list added/updated tests unless the PR is exclusively about testing.
 - **No documentation changes** — do not list README or Javadoc updates unless the PR is
   exclusively about documentation.
@@ -101,8 +108,14 @@ Rules:
 - Updated unit tests for EnabledTenantMessageFilter.      ← test changes, omit
 - Fixed Javadoc in TenantAwareEvent.                      ← doc change, omit
 - Made some improvements to the filter class.             ← vague, no specifics
+- Defined the tenant contract in one shared interface.    ← which one? name it, so the reviewer
+                                                             knows where to look
 - Changed the type bound, added blank tenant handling, added concurrency, updated package-info files,
   bumped version, fixed README. ← one bullet for too many unrelated changes
+- Changed `EnabledTenantMessageFilter<K, V>#filter(ConsumerRecord<K, V>)` to invoke
+  `TenantAwareEvent#getTenant()`, guard the result with `StringUtils.isBlank`, emit a `WARN` through
+  `log4j2`, and return `true` without calling `EntitlementService#isTenantEntitled`.
+  ← reads as a transcript of the diff; say what it does and why instead
 ```
 
 ---
@@ -123,6 +136,16 @@ applies to the PR:
 | **Environment Recreation Test** | When infrastructure or startup configuration changes |
 
 Leave unchecked items unchecked — do not delete them.
+
+---
+
+## No tool attribution
+
+The PR description must not mention Claude, Anthropic, Copilot, or any other AI tool, and must not end
+with a "Generated with ..." or "Co-Authored-By" trailer. This applies however the description was
+produced. The description is a statement about the change, not about how it was written.
+
+Several coding agents append such a trailer by default — remove it before opening the PR.
 
 ---
 

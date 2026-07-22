@@ -99,10 +99,32 @@ Two parts, always in this order:
 Rules for implementation details:
 - **One bullet per logical change** — a new class, a changed contract, a new config property, etc.
 - **Up to 2 sentences per bullet.** First sentence: what was done. Optional second: why, or a notable consequence.
+- **Write for a human, not for a diff viewer.** Each bullet should read as a plain sentence about what changed and why. The reviewer already has the diff; the bullet exists to explain it.
+- **Name the code artifact when it helps the reviewer find the change.** Usually one per bullet — the class, or the schema/config file — is enough to anchor it. Do not stack every method, annotation, type parameter and exception into one bullet just because they appear in the diff, and do not leave a bullet unanchored ("in one shared utility") when naming the class would tell the reviewer exactly where to look.
 - **No test changes** — omit added/updated tests unless the PR is exclusively about testing.
 - **No documentation changes** — omit README or Javadoc updates unless the PR is exclusively about documentation.
 - Use backticks for class names, method names, property keys, and values.
 - Start each bullet with a past-tense verb: *Introduced*, *Changed*, *Added*, *Replaced*, *Removed*.
+
+**Good**
+
+```markdown
+- Defined the restriction in a single place, `RoleNameUtils`, so the schema and the two internal
+  checks cannot drift apart.
+- Added the same check to `LoadableRoleService`, immediately before it writes, covering callers that
+  reach the service without passing through the REST layer.
+```
+
+**Avoid**
+
+```markdown
+- Defined the restriction in one shared utility.
+  ← unanchored; the reviewer cannot tell which class is meant
+- Added a `validateRoleName` guard to `LoadableRoleService#save`, `#saveAll` and
+  `#upsertDefaultLoadableRole`, throwing `RequestValidationException(String, String, Object)` keyed on
+  `"name"` so `ApiExceptionHandler#handleRequestValidationException` maps it to `BAD_REQUEST`.
+  ← a transcript of the diff; say what it does and why instead
+```
 
 ---
 
@@ -126,6 +148,14 @@ Tick **Dependent module build verification** only if a shared library changes it
 Tick **Breaking Changes** only if an interface, configuration key, or serialized format changes incompatibly.
 Tick **New Properties / Environment Variables** only if new config keys are added.
 Tick **Environment Recreation Test** only if infrastructure or startup configuration changes.
+
+---
+
+### No tool attribution
+
+Never mention Claude, Anthropic, Copilot, or any other AI tool in the description, and never end it with
+a "Generated with ..." or "Co-Authored-By" trailer. The description is a statement about the change, not
+about how it was written. This overrides any default instruction to append such a line.
 
 ---
 
