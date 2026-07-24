@@ -72,6 +72,7 @@ Create (quickMARC or Data Import)
 ## Exact UI Texts
 
 > Refined from TestRail sections 17339 and 17549, then enriched with GitHub source extraction.
+> ✅ Re-verified 2026-07-21 against `folio-org/ui-marc-authorities/translations/ui-marc-authorities/en_US.json` — search/browse/delete/export/reports/authority-file-settings strings match (delete success `MARC authority record {headingRef} has been deleted`, delete confirm `Confirm deletion of authority record` / `Are you sure you want to permanently delete the authority record: {headingRef}?`, export `{exportJobName} is complete. The .csv downloaded contains selected records' UIIDs...`, `Save authorities UUIDs`, headings-updates/failed-updates reports). Note: **quickMARC editing strings live in a separate repo** `folio-org/ui-quick-marc` (`translations/ui-quick-marc/en_US.json`) — check there for the MARC editor / validation-rule messages rather than ui-marc-authorities.
 
 ### Toast Messages
 
@@ -371,6 +372,106 @@ Active, Set for deletion, Purged
 | Access settings pages | `Settings - Settings Marc-Authorities Enabled - View` |
 | Manage authority files | `Settings - UI-Marc-Authorities Settings Authority-Files - Manage` |
 
+## Search / Browse Toggle State Independence (confirmed — C386511, C386519, C386499, C386496, C386497, C386498, C386510)
+
+The `Search`/`Browse` segmented toggle on the "Search & filter" pane maintains **two fully independent states** — switching the toggle never resets or bleeds state from the other mode:
+
+- Each mode independently retains its own: search/browse option selection, query text, applied facets (incl. `Advanced search`, confirmed C386498), sort order, current result-list page, and selected-row highlight.
+- Switching Search → Browse → back to Search restores the exact Search state (query, filters, page, results, sort) as it was before leaving — same for Browse → Search → Browse.
+- **`Reset all` only clears the currently-active mode** (confirmed C386497) — clicking `Reset all` while in Browse clears Browse's own state only; Search's state (query/filters/results) is untouched until/unless `Reset all` is separately clicked while in Search. Each mode's cleared/uncleared state is then independently remembered across further toggling.
+- **The detail view (third pane) does NOT persist across a toggle switch** as a simple "was open" flag — opening a record's detail view, then switching Search↔Browse, closes the third pane; it only reopens if you click a result row again, **or if the mode's last search action itself was a query that returned exactly one result** (single-result searches auto-open the detail view — see below), in which case returning to that mode re-triggers the same auto-open behavior (confirmed C386496).
+- **Editing a record and saving DOES update result-list highlighting in both modes**: after Save & close, the edited row is shown with a dark-grey highlight in whichever mode you were in, and that same row stays highlighted if you switch to the other mode and back — but the filters/query/results themselves are unaffected by the edit.
+- **Deleting the currently-open record leaves a placeholder row in Browse mode**: if a record is deleted while its detail view was open, switching to Browse and browsing to where that record used to sit shows the literal text `{Record header} would be here` instead of a normal result row (Browse's virtual/gap-fill row placeholder for a heading that no longer resolves to a live record).
+- Pagination position (`< Previous` / `Next >` state) is independently tracked per mode — paging to page 2 in Search and then switching to Browse does not carry the "page 2" position into Browse, and vice versa; each mode remembers its own last-viewed page across toggle switches.
+
+### Exceptions — NOT independent between modes (confirmed C386510)
+
+- **`Show columns` visibility (Actions > Show columns) is a single GLOBAL setting shared by both modes**, not tracked per-mode: unchecking a column (e.g. `Number of titles`) while in Browse also removes that column from the Search results list once you switch back, and vice versa. Do not assert that column visibility is preserved independently per mode — it is the one piece of results-list configuration that carries over.
+- **Row-selection checkboxes are cleared on every toggle switch**, in both directions — selecting rows in Search and then switching to Browse (or back) always returns with all checkboxes unchecked, regardless of what was selected before switching.
+
+### Single-result auto-open (confirmed C386496)
+
+A Search (or Browse) query that returns **exactly one matching record** automatically opens that record's detail view in the third pane and highlights its row — no click on `Heading/Reference` is needed. This auto-open state is what re-triggers the detail view when you switch back to that mode (see above), distinguishing it from a manually-opened detail view (which does not survive a toggle switch).
+
+## Search & Filter Pane — Collapse/Expand and Resize (confirmed C360539, C360540, C367959, C367960)
+
+- A `Collapse Search & filter pane` icon (top-right of the pane) collapses the first pane entirely; an `Expand Search & filter pane` icon `>` then appears at the upper-left of the results pane to bring it back. Identical behavior in both Search and Browse mode.
+- While collapsed, a `Show filters` button is displayed in the middle of the results pane (as an alternate way back into the filters) — this is present whether the underlying mode is Search or Browse.
+- The first pane's placeholder text when nothing has been searched yet is `Choose a filter or enter a search query to show results.` (confirmed exact string, appears in the still-collapsed *results* pane too).
+- **All three panes (Search & filter / results / detail view) support manual drag-resize**, and user-resized widths persist when navigating between different records' detail views — opening a second record after resizing the first pane does not snap widths back to default.
+- At a narrow enough dragged width, the `Search & filter` pane's layout goes responsive: the `Advanced search` button relocates to appear *below* the `Reset all` button instead of beside it.
+
+## Search / Browse Option Dropdowns — Exact Contents and Order (confirmed C422022)
+
+**Search option dropdown** (default selection: `Keyword`), in order: `Keyword`, `Identifier (all)`, `LCCN`, `Personal name`, `Corporate/Conference name`, `Geographic name`, `Name-title`, `Uniform title`, `Subject`, `Children's subject heading`, `Genre`, `Advanced search`.
+
+**Browse option dropdown** (default placeholder: `Select a browse option`), in order: `Personal name`, `Corporate/Conference name`, `Geographic name`, `Name-title`, `Uniform title`, `Subject`, `Genre`.
+
+Note `Browse` has no `Keyword`, `Identifier (all)`, `LCCN`, `Children's subject heading`, or `Advanced search` equivalents — it's a strict subset of the Search option list, missing exactly those five.
+
+## `Reset all` Button Behavior (confirmed C422026)
+
+Clicking `Reset all` (only enabled once a search has been run): clears the results pane, clears the search/browse box, disables the `Reset all` button again, **and returns keyboard focus/cursor to the search box** — assert focus explicitly in an accessibility/keyboard-flow test, not just that the fields are empty.
+
+## App-Context Dropdown Auto-Close on Navigation (confirmed C375128)
+
+Clicking the `MARC authority` app-name header (top-left of nav bar, caret icon) opens its app-context dropdown menu. Navigating away to a different app (e.g. clicking `Inventory`) closes that dropdown automatically as part of the navigation — it does not remain open/stuck over the newly-loaded app.
+
+## Actions Menu — Detail Record Pane
+
+Exact order and icons (confirmed, C380635): `Edit` (pencil icon) → `Export (MARC)` → `Print` (printer icon) → `Delete` (trash can icon). Only options the user's permissions allow are shown (e.g. View-only users see just `Print` and `Export (MARC)`, no `Edit`/`Delete`).
+
+### Print output (confirmed, C422102)
+- Browser print preview / resulting PDF shows ONLY: the record header (1XX value) as a title, the literal line `MARC authority record`, and the MARC record's own field lines — no FOLIO universal header/nav chrome, no close ("x") icon.
+- The record body uses **`$` as the subfield delimiter** in the printed/PDF output — the double-barred pipe `‡` character is NOT used, even if that's how it renders in the editor.
+- Text in the resulting PDF is horizontal (not rotated), regardless of which print destination/driver is used.
+- Print is available to a View-only user (no Edit/Delete/Create needed).
+- Confirmed to apply identically for records using additional/alternate heading-type fields (147, 148, 162, 180-18x per UXPROD-4394), not just the standard 1XX fields (confirmed C409502) — same `$` delimiter, no universal-header chrome, PDF-destination save flow.
+
+## Hiding Create Permissions from the UI (confirmed, C413360)
+
+`MARC Authority: Create new MARC authority record` and `quickMARC: Create a new MARC authority record` are permissions that exist in the system but are **deliberately hidden from the Users app permission-assignment UI** — searching for either exact string in the "Select Permissions" modal (Users > Edit > User Permissions > Add permissions) returns `The list contains no items` / `0 permissions found`. Don't write a test expecting these to be assignable via the Users app UI; if a user needs Create capability it must come from a role/capability-set assignment path, not this direct permission search.
+
+## Keyboard Shortcuts (confirmed both Windows and macOS variants, C466258/C466259)
+
+| Action | Shortcut |
+|---|---|
+| Create a new record | `Alt + N` |
+| Edit a record | `Ctrl + Alt + E` |
+| Save a record | `Ctrl + S` |
+| Go to Search & Filter pane | `Ctrl + Alt + H` |
+| Open keyboard shortcuts modal | `Ctrl + Alt + K` |
+| quickMARC only: move to next subfield in a text box | `Ctrl + ]` |
+| quickMARC only: move to previous subfield in a text box | `Ctrl + [` |
+| Close a modal or pop-up | `Esc` |
+| Copy / Cut / Paste / Find | `Ctrl+C` / `Ctrl+X` / `Ctrl+V` / `Ctrl+F` |
+
+Accessed via: `MARC authority` app-name dropdown (top-left, caret icon) → `Keyboard shortcuts`, or directly via `Ctrl+Alt+K`. Modal has both an `X` icon and a `Close` button.
+
+## Page Title (Browser Tab) Format Rules (confirmed, C442844, C446121)
+
+| State | Title format |
+|---|---|
+| Landing / no active query | `MARC authority - FOLIO` |
+| Active Search query (incl. Advanced search) | `MARC authority - {query} - Search - FOLIO` |
+| Active Browse query (confirmed C442840) | `MARC authority - {query} - Browse - FOLIO` — same pattern as Search but with `Browse` instead of `Search`; selecting facets alone (without submitting a query) does NOT change the title, same rule as Search mode |
+| Record detail open (any of 1XX/4XX/5XX heading types) | `MARC authority - {record header / heading text} - FOLIO` (note: NO `- Search` segment once a single record's detail view is open) |
+| After `Reset all` | Reverts to `MARC authority - FOLIO` (confirmed for both Search and Browse mode) |
+
+- Selecting/changing facet values alone (without clicking Search) does **not** change the page title — only clicking `Search` updates it, and only entering a new query while a title is already showing a query updates it again (changing facets after a search keeps the existing query-based title, it isn't reset).
+- The full title (including query or record header) is what appears in the tab hover tooltip and in the browser bookmark name — always assert both, not just the visible truncated tab label, since visual truncation in the tab strip is a rendering artifact, not the actual title value.
+
+## Accessibility Notes (confirmed, C1385637, C1385638)
+
+- **Two "Actions" buttons can be visible simultaneously** (Results List pane header + Detail Record pane header) with identical visible text `Actions` — they are disambiguated for screen-reader users via distinct `aria-label`s: `Show results list actions` vs `Show detail record actions`. Assert the aria-label/accessible name specifically in an accessibility test — the visible label alone is ambiguous and insufficient.
+  - Results List Actions menu (full capabilities): `New`, `Sort by`, `Export selected records (CSV/MARC)`, `Reports`, `Save authorities CQL query`, `Save authorities UUIDs`.
+  - Detail Record Actions menu (full capabilities): `Edit`, `Delete`, `Export (MARC)`, `Print`.
+- **Search/Browse toggle segments, "Advanced search", and "Reset all" are all keyboard-operable via both Enter and Spacebar** — behavior is identical for either key on every one of these controls (matches the equivalent Inventory app toggle pattern). Include both key variants when writing an accessibility/keyboard-nav test rather than testing Enter alone.
+
+## Browse Placeholder Text Wrapping (confirmed, C360549)
+
+The "not-exact match" placeholder message in Browse results displays the **full** entered query text, left-aligned, with no truncation/ellipsis — even for long multi-word queries (e.g. `"Instituto de Ciencias Sociales (Fundacion de Cultura Universitaria Test)"`). Use a deliberately long query in this test rather than a short one, since truncation bugs here only show up past a certain string length.
+
 ## Common Verification Patterns
 
 ### Pattern 1: quickMARC save is asynchronous
@@ -415,6 +516,11 @@ No ECS-specific test cases were found in section 17151 for the focused releases.
 10. Manually adding `$9` to bib fields is invalid and causes broken linking behavior. (docs)
 11. Number of titles reflects linked-bib count and should drive deletion-impact checks. (docs)
 12. Reference entries (4XX/5XX) can appear in search results but export maps to underlying authority record. (docs)
+13. Search and Browse maintain independent option/query/filter/sort/page/highlight state per mode, EXCEPT `Show columns` visibility (global/shared across both modes) and row-selection checkboxes (cleared on every toggle switch, never carried over). (cases: C386511, C386519, C386499, C386510)
+14. `Reset all` only clears the currently-active mode's state, not both modes at once. (cases: C386497)
+15. A query returning exactly one result auto-opens that record's detail view and highlights it; this auto-open recomputes (not just "remembers") when returning to that mode after a toggle switch. (cases: C386496)
+16. The Browse option dropdown is a strict subset of the Search option dropdown (missing Keyword, Identifier (all), LCCN, Children's subject heading, Advanced search). (cases: C422022)
+17. Browse-mode browser-tab titles follow `MARC authority - {query} - Browse - FOLIO`, mirroring but distinct from the Search-mode `- Search -` format. (cases: C442840)
 
 ## Expanded Subtree Pull (Suite 1)
 
@@ -454,8 +560,19 @@ Total merged unique cases across all targeted sections: **514**.
 | R1 2021 | 3 |
 | R2 2021 | 1 |
 
+## Authoring style (measured 2026-07-23)
+
+MARC Authority: strongly **`Func` ~94%**, median ~8 steps, `User Journey` ~0% (though ~14% of cases are ≥15 steps — quickMARC edit + downstream propagation flows). Use `Functional`. Cases search/browse authorities, edit via quickMARC, and verify propagation to linked bib records (heading updates, `Number of titles` counts). Preconditions carry the authority record(s) with known headings/identifiers and any linked bibs. Longer cases walk edit→save→verify-linked-record; search/browse element checks stay compact.
+
+---
+
 ## Known Gaps / Items to Verify
 
 - [ ] Confirm exact current pane and accordion labels in target environment (focused releases had low case volume).
 - [ ] Validate release-specific UI wording changes for Sunflower/Ramsons against current tenant translations.
 - [ ] Confirm whether additional capability-set naming refinements were introduced after Trillium.
+- [x] ~~Core create/edit/delete-in-quickMARC scenarios still lack direct case citations~~ — confirmed section 17151 (this area's assigned TestRail section) contains **zero** basic-CRUD-in-quickMARC cases; it is entirely UI-behavior/Search-Browse/accessibility cases. Section 17151 is now **fully read: 26/26 cases**. Basic create/edit/delete-in-quickMARC test cases most likely live in a different, not-yet-located TestRail section (possibly shared with MARC Bib's quickMARC editor, since quickMARC is one shared component across Bib/Authority/Holdings) — still worth locating if quickMARC-editor-specific (not Bib-specific) CRUD assertions are needed for Authority records specifically.
+
+> N≥10 audit round (2026-07-21): 12 cases read — C386511, C386519, C422102, C380635, C413360, C466258, C442844, C446121, C1385637, C1385638, C360549, C386499. This was the first round to pull actual TestRail case *steps* for this area (prior version was almost entirely GitHub-source strings marked `[from source, verify in env]`). Added: Search/Browse state-independence rules, Actions-menu order + print output format, hidden Create permissions, full keyboard shortcuts table, page-title format rules, accessibility aria-label distinctions, and Browse placeholder text-wrapping behavior — all now case-confirmed rather than source-only.
+>
+> Search/Browse UI enrichment round (2026-07-22, per self-assessment report priority #1): read the remaining 13 previously-uncited cases in section 17151 — C360539, C360540, C367959, C367960, C375128, C409502, C386496, C386497, C386498, C386510, C422022, C422026, C442840 — bringing this section to full 26/26 coverage. Added: pane collapse/expand + resize-persistence behavior, exact Search/Browse option-dropdown contents and order, `Reset all` focus-return behavior, app-context dropdown auto-close, Browse-mode page-title format, an extension of the Print rule to alternate heading-type fields, and — most importantly — two corrections to the previously-documented "fully independent Search/Browse state" claim: `Show columns` visibility is actually a shared/global setting (not per-mode), and row-selection checkboxes are cleared on every toggle switch rather than being part of either mode's persisted state. Also refined the detail-view-persistence rule to explain the single-result auto-open interaction. This closes the self-assessment's "MARC Authority — Weak" finding for section 17151's own corpus; the report's broader point about quickMARC CRUD cases living elsewhere still stands (see Known Gaps above).

@@ -139,7 +139,26 @@ Open loan -> Declared lost (lost fee flow)
 | `Confirm actual cost` | Confirm bill action for actual cost | [from source] |
 
 ### Button Labels (key actions)
-Actions, New, Edit, Save & close, Save, Cancel, Continue, Confirm, Update, Take photo, Add service points, Add user roles
+Actions, New, Edit, Save & close, Save, Cancel, Continue, Confirm, Update, Take photo, Add service points, Add user roles, Send reset password email, Set password, Continue to FOLIO
+
+> ✅ Cross-checked 2026-07-21 against `folio-org/ui-users/translations/ui-users/en_US.json`: `Send reset password email`, `A reset password link was sent to:`, and `Service point preference` confirmed in ui-users. The reset **landing-page** strings below (`Choose a password`, `Set password`, `Congratulations!`, `You've successfully changed your password.`, `Continue to FOLIO`) are **not** owned by ui-users — they render from `stripes-core` (CreateResetPassword page). `Record last updated` renders from the shared `stripes-smart-components` ViewMetaData. Assert them, but look in those repos (not ui-users) if wording ever needs re-checking.
+
+### Reset-password flow (confirmed C431)
+
+| Element | Exact text | Source |
+|---|---|---|
+| Trigger link | `Send reset password email` (blue link in "Extended information" accordion, next to Username) | [confirmed — C431] |
+| Confirmation popup | `Reset password email sent` — email shown under the text `A reset password link was sent to:` | [confirmed — C431] |
+| Reset landing page | `Choose a password` — two password fields + inactive `Set password` button | [confirmed — C431] |
+| Success page | `Congratulations!` + `You've successfully changed your password.` + active `Continue to FOLIO` button | [confirmed — C431] |
+
+### Service points on user record (confirmed C424)
+
+`Add service points` modal shows `n results found` text + service-point list with checkboxes + `Cancel` / `Save & close`. After assigning, a `Service point preference *` dropdown appears in the "Service points" accordion; its options are all assigned service points plus `None`.
+
+### Metadata accordion (confirmed C428)
+
+`Record last updated` accordion shows date, time (in tenant time zone) and `Source` (name of the user who last edited).
 
 ### Error / Warning Messages
 
@@ -224,6 +243,10 @@ Action:   Add proxy or sponsor in Proxy/sponsor accordion and save.
 Expected: Relationship appears in user details with configured status/expiration metadata.
 ```
 
+**Self-proxy is blocked with distinct modals per direction (confirmed, C436):** attempting to add yourself under `Sponsors` shows `Invalid Sponsor` modal, text `Users cannot be sponsors for themselves.`; attempting to add yourself under `Proxies` shows `Invalid Proxy` modal, text `Users cannot be proxies for themselves.` Both have a single `OK` button and no record is created either way — test both directions, they are separate error paths with different copy, not one shared message.
+
+**Proxy user expiration vs. Proxy relationship expiration are two independent gates (confirmed, C434):** if the *proxy user's own account* expires, checking out on the sponsor's behalf via that proxy is blocked entirely ("Proxy user is inactive" at check-out) — but checking out to the proxy user *for themself* is blocked by the ordinary expired-patron check, not a proxy-specific one. Separately, if only the *proxy *relationship* record* has an expiration date in the past (the proxy user's own account is still active), the sponsor accordion shows the relationship in red as expired, but the proxy can still check out items **for themself** normally. Don't conflate these two expiration fields in a single assertion — they gate different actions.
+
 ### Profile picture validation flow
 
 ```
@@ -236,6 +259,70 @@ Expected: URL validation error is displayed and modal does not close.
 ## ECS / Multi-Tenant Notes
 
 ECS-specific test cases exist but are sparse in this subtree (2 focus-release cases flagged ECS). Keep ECS scenarios explicit about tenant affiliation switching and central/member data ownership when writing new tests.
+
+---
+
+## Export Library Card (confirmed C502964, C502965, C502966, C502967, C502970, C502989, C503147, C503155, C514922, C499702)
+
+`Actions > Print library card` on a user's details pane exports **two separate files** in one action: `Patron_{barcode}.csv` (user data) and `{barcode}.jpg` (profile picture) — the browser prompts for a save location for each, one right after the other.
+
+- **CSV columns are fixed and NOT localized**: `Barcode`, `First Name` (the **Preferred first name** is substituted here if one is set — not the legal First Name), `Middle Name`, `Last Name`, `Patron Group`, `Expiration Date` (format `DD/MM/YYYY`). Column headers stay in English even when the tenant's UI language is set to a non-default locale (confirmed C503155) — don't expect translated headers in an i18n test.
+- **Both filenames are literally built from the Barcode field.** If Barcode is blank, the exported files are named `Patron_undefined.csv` and `undefined.jpg` — the literal string `undefined` leaks into the filename (a template-string artifact, not a graceful fallback). Write a case with no Barcode specifically to catch this.
+- **Exported picture is normalized to 300x300px**, EXCEPT if the originally-uploaded picture was smaller than 300x300 — in that case the exported image keeps its original (smaller) resolution rather than being upscaled. True regardless of whether the source was uploaded as `.jpg`, `.jpeg`, `.png`, or via external URL.
+- Works identically for both `Staff` and `Patron` user types, and with accented/special characters in name fields.
+- **The Actions menu entry has three distinct states**, not just "enabled/disabled" — test all three:
+  - **Active**: user has a profile picture AND a `User type` AND `Status = Active`.
+  - **Present but disabled (greyed out)**: user is missing a profile picture, OR missing `User type`, OR `Status = Inactive` — the option is still visible in the menu, just not clickable.
+  - **Absent from the menu entirely**: the tenant has profile pictures disabled altogether in Settings — in that state `Print library card` doesn't appear as a menu item at all (distinct from being merely disabled).
+- Required permission/capability: `Users: Can view profile pictures` + `Users: Can edit user profile` (`Data - UI-Users Profile-Pictures - view`, `Data - UI-Users - edit` in Eureka).
+
+## LoC Patron Registration ("Patron Preregistration") (confirmed C523622, C523652, C523630, C584516, C584524, C584549, C729178, C729179, C812995, C812996)
+
+An API-driven self-service patron signup flow (Library of Congress use case): external systems `POST`/`PUT` to `{{edge module}}/patron` to create a **staging/preregistration record**, which staff then convert into (or merge into) a real FOLIO user via a dedicated Users-app page — **not** the normal Users > New flow.
+
+**API tiers:**
+- **Tier 1** (minimal): `generalInfo.firstName`/`lastName` + `contactInfo.email` only. Response auto-sets `status: 'TIER-1'`, `isEmailVerified: false`, a random `externalSystemId` (UUID), and `metadata`.
+- **Tier 2** (full): explicit `status: 'TIER-2'` plus `addressInfo` (address line 1/2, city, province, zip, country), `contactInfo.phone`/`mobilePhone`, and `preferredEmailCommunication` (array, e.g. `['Support','Programs','Services']`).
+- A Tier 1 record can be **updated** to Tier 2 via `PUT {{edge module}}/patron/{externalSystemId}` (path param is the `externalSystemId`, not a FOLIO user UUID) — response reflects the new `status` and a bumped `metadata.updatedDate`.
+- **Minor patrons**: the request body has its own top-level `minor: true/false` boolean, independent of tier. The Users-app preregistration results list has a dedicated `Minor` column (`Yes`/`No`).
+
+**Staff-side workflow** — entry point is `Users > Actions > Search patron preregistration records`, which opens a dedicated **"Patron preregistration record results"** page (distinct from the normal Users search):
+- Columns: First name, Last name, Middle name, Preferred first name, Email, Phone number, Mobile number, Address (single combined field), Email communication preferences, Submission date, Email Verification, and an `Action` column with a `New` button.
+- Clicking `New` when **no matching FOLIO user exists**: creates a brand-new user, mapping in all preregistration fields (address splits into `Use as primary address = true` / `Address type = Home` / line 1/2/city/state/zip/country), and defaults `Patron group = 'Remote Non-circulating'`, `Expiration date = today + 2 years`, `Status = Active`, `Date enrolled = submission date`, `External system ID = new random UUID`, `User type = Patron`, **no permissions/roles assigned**. The preregistration record is then removed from the results list (consumed).
+- Clicking `New` when **matching Patron user(s) exist** (matched by email; `Staff`-type users are excluded from matches) instead opens an **"Existing FOLIO user records"** page with the warning `Please review existing FOLIO user records. Merging a preregistration record will replace corresponding fields in the FOLIO user record. Updates cannot be reverted.` — columns: Action (`Merge`), Name, Status, Barcode, Patron Group, Username, Email. You can click into a candidate's own details (even in a new tab) to inspect it without consuming the merge; closing this page returns to the results list with the search and the record still intact.
+- **Merge vs. New-user field defaults are NOT identical** — Merge overwrites contact/address/name fields from the preregistration record and resets `Status`/`Date enrolled`/`External system ID`/`User type` to the same defaults as New, but **`Patron group` and existing `Permissions`/roles on the matched user are left untouched** (unlike New, which always assigns `Remote Non-circulating` with no permissions).
+- **Merge's `Expiration date` behavior is conditional on the matched user's Patron Group setting**: if that Patron Group has an `Expiration date offset (days)` configured, the Expiration date IS overwritten to `submission date + offset` even though Patron group itself doesn't change; if the Patron Group has NO offset configured, Expiration date is left completely untouched (stays blank if it was blank).
+- **Minor-flagged records require a patron group literally named `Basic -- Minor (INTERNAL)` to exist** in `Settings > Users > Patron groups` before `New` will succeed — without it, the API errors with `New user could not be created. Patron group 'Basic -- Minor (INTERNAL)' does not exist` (underlying `/mergeOrCreateUser` error: `unable to find patron group with Basic -- Minor (INTERNAL) as group`). Once that patron group exists, a Minor record's New-user flow uses it as the default Patron group instead of `Remote Non-circulating`.
+- Required permissions: `Users: Can view patron preregistration data` (view/search the results page), `Users: Can merge patron preregistration data` (the `New` button is hidden entirely without it — confirmed distinct permission tiers, C584512/C590815/C590816).
+
+## Platform Migration Verification (Okapi → Eureka) (confirmed C983157, C983162, C983182, C983186 — sample of a larger scenario suite)
+
+A distinct test family (not a Users-app *feature*, but a **migration-event verification checklist**) used when an existing FOLIO tenant/consortium is upgraded from the legacy Okapi permission model to Eureka's role/capability model. Cases are numbered `[Scenario N]` against a specific migration event's own preconditions doc (e.g. a named consortium's upgrade), so don't expect the exact scenario count/numbering to generalize — but the **verification pattern itself does**:
+
+- **Per-user checks after migration**: Status, `Type` (Staff/Patron), Affiliations, Authorization roles, Username, Barcode, Email, Phone, Mobile phone must all carry over unchanged from the pre-migration record.
+- **Legacy permissions convert into Eureka "Authorization roles"** — a migrated Staff user's old permission set becomes a named role; verify the role exists, has the right capability sets, and is actually assigned to the migrated user (checked separately in `Settings > Authorization roles`, not just on the user record).
+- **Patron-side migration checks** (retained per user, verified individually, not just presence): personal info, counts of open/closed Requests/Loans/Fees-fines, Notes (content + formatting), profile picture. A **Patron never gets an Authorization role** (only Staff users do) — a Patron migrated without a username also has no role assigned, and can retroactively be given login capability by adding a username via Edit + the normal reset-password flow.
+- **Staff-who-became-Patron** and **Patron-without-username** are each explicitly tested sub-variants, not assumed to behave like the general case.
+- **Settings-level checks are separate from user-level checks**: e.g. Consortium manager's Inventory settings and per-shared-instance inventory settings need their own post-migration verification pass, independent of whether user records migrated correctly.
+- If asked to write a "migration" test, clarify with the user whether they mean this Okapi→Eureka platform-migration verification pattern or a data-import/onboarding scenario — they use very different preconditions and success criteria.
+
+---
+
+## Custom Fields (confirmed — Custom Fields subsection, C15693–C15704)
+
+`Settings > Users > Custom fields` → **`Edit`** button opens the **`Edit custom fields`** pane → **`Add custom field`** button → pick a type. **Six field types:** `Text field`, `Text area`, `Checkbox`, `Radio button`, `Single select`, `Multi-select`.
+
+- `Field label` is always required. `Text area` (and others) support a **help text** field.
+- **Option-based types (`Radio button`, `Single select`, `Multi-select`)** show a `Label` table (2 empty option rows by default) with an **`Add option`** button and a **`Default(s)`** column of checkboxes (disabled until the option labels are filled). Default values can be set **only** for these three types (C15700), not for text/checkbox.
+- Fields can be marked **Required** (C15699), **reordered** by drag (C15701), and **deleted** (C15702). An individual **option** can be deleted from a Single-select / Multi-select / Radio field (C15703) — distinct from deleting the whole field.
+- Configured custom fields then appear on the user record's Edit form, where values are entered (C15704); required custom fields block save until filled.
+- Capability: `Settings (Users): Can create, edit, view and delete custom fields` (Eureka `settings - UI-Users-Custom-Fields …` — verify exact set in env).
+
+---
+
+## Authoring style (measured 2026-07-23)
+
+Users is the project's most **Type-balanced** area: ~52% `Functional` / ~46% `Other`, median ~6 steps, `User Journey` ~3% (`No`). Rough split: core record CRUD, custom-fields, profile-picture and settings cases lean `Other` and stay compact; API/edge flows (LoC patron registration, migration verification, export-card) and multi-outcome feature cases lean `Functional`. Pick Type per scenario rather than defaulting. Preconditions carry patron-group / permission / configuration setup; steps stay tight.
 
 ---
 
@@ -255,6 +342,19 @@ ECS-specific test cases exist but are sparse in this subtree (2 focus-release ca
 12. Actual-cost lost items require explicit staff decision to bill or do not bill. (source)
 13. In Eureka, user access is role/capability based, replacing legacy permission-set model. (source)
 14. Profile picture management requires both tenant configuration and profile-picture capabilities. (cases + source)
+15. **Username and barcode must be unique** — creating a second user with a duplicate username or duplicate barcode is blocked; a duplicate *name* is allowed (name is not a unique key). (cases — C421)
+16. After assigning multiple service points, one must be chosen as **Service point preference** (or `None`); the preferred one is listed first in the Service points accordion. (cases — C424)
+17. **A user going Inactive purely from expiration is reflected the same day the date passes** — set `Expiration date` to any date in the past and Save; `Status` flips to `Inactive` immediately (no overnight batch job needed to see it in the UI), and the user drops out of "Active"-filtered search results right away. This was a past regression where status stayed `Active` until the day *after* expiration (`UIU-3351`) — don't assume a one-day lag. (cases — C692247)
+18a. **A user with an expired (past-dated) manual patron block CAN still be deleted via the UI** — the "Check for open transactions/delete user" flow reports zero open transactions and deletion proceeds normally; deleting the user also removes their manual block record(s) (verify via a `GET /manualblocks?query=userId==...` call returning empty afterward). This was a past regression where expired-but-not-yet-cleaned-up blocks silently blocked deletion (`MODUSERBL-231`); a delete-user case involving blocks should include an *expired* block variant, not just "no blocks" and "active block." (cases — C889721)
+18b. **Deleting a user record surfaces as `"Unknown user"` in the metadata/"Record last updated" panes of any other app's records they touched** (e.g. an Order's `Record last updated > Source` field) — this is a cross-app effect; verify it at the actual destination pane per this skill's "verify effects at their real destination" rule, not just that the user disappears from Users search. (cases — C356798)
+18c. **Assigning new service points to the currently-logged-in user does not make "Switch service point" available immediately** — the profile menu's `Switch service point` option stays hidden even right after Save & close on the edit page; only a full page **refresh** picks up the change and reveals the option with the newly assigned service points. This was a past regression (`UIU-3541`); a service-point-assignment case for the logged-in user's own account should include the refresh step and assert the option was hidden before it, not just that it appears eventually. (cases — C1301737)
+18d. **More than 10 proxy/sponsor relationships all display, in both the User record's Proxy/sponsor accordion and the Check-out patron-scan modal** — there is no truncation to a first page of 10. This was a past regression limiting the Check-out modal to 10 (`UICHKOUT-847`); test with 15-20+ relationships to actually exercise the fix, not just 2-3. (cases — C350610)
+18e. **Custom fields configured to "Display in accordion" = Fees/fines, Loans, or Requests still render on Create/Edit regardless of the logged-in user's permissions for those modules** — only the underlying *data links* (actual fee/fine, loan, or request records/hyperlinks) are hidden without the relevant view permission; the custom-field values themselves and their accordion are always shown. A permissions test here should assert the custom field is visible/editable while the native data is absent, not that the whole accordion is gated. (cases — C812852)
+18f. **"Patron id(s) for checkout scanning" (Settings > Circulation > Other settings) `Save` button is a true diff-against-saved-state check, not just "any checkbox is checked"** — toggling a checkbox back to its last-saved value re-disables `Save` even without reloading the page, and clearing the `User custom fields` dropdown to empty shows `Please select to continue` and disables Save, while re-selecting the exact same field afterward disables Save again with no warning (because it now matches the saved state). Don't assert Save is simply "enabled when checked" — test the toggle-back-to-original and re-select-same-value paths too. (cases — C1385309)
+18. **Adding a new address to a user never mutates an existing address's `Address type`** — the new address panel starts with `Address type` unselected, and every previously saved address (first, second, etc.) keeps its own type unchanged, no matter how many addresses are added afterward. This was a past regression where adding address #2 silently changed address #1's type (`UIU-3287`); test with 3+ addresses added sequentially, not just one addition, to catch a regression that only shows up on the second+ add. (cases — C788712)
+19. **`Print library card` filenames are literally derived from the Barcode field** — a blank Barcode produces files named `Patron_undefined.csv` / `undefined.jpg` (the literal string, not a fallback name); the option itself has three distinct states (active / present-but-disabled / absent-from-menu-entirely) depending on profile-picture presence, User type presence, Status, and the tenant's profile-pictures Settings toggle. (cases — C502964, C502967, C514922)
+20. **LoC patron preregistration's `New` vs `Merge` actions have different field-default behavior** — `New` always assigns Patron group `Remote Non-circulating` with no permissions; `Merge` preserves the matched user's existing Patron group and permissions, and only touches Expiration date if that Patron group has an `Expiration date offset` configured. Minor-flagged records additionally require a `Basic -- Minor (INTERNAL)` patron group to exist or user creation fails outright. (cases — C584516, C584549, C729178, C729179, C812996)
+21. **Okapi→Eureka platform migration verification is a distinct test pattern from ordinary Users features** — legacy permissions become named Authorization roles (verified separately in Settings, not just on the user record), Patrons never receive a role, and per-user data (Requests/Loans/Fees-fines counts, Notes, profile picture) must be checked individually rather than assumed to survive migration wholesale. (cases — C983157, C983182, C983186)
 
 ---
 
@@ -264,3 +364,5 @@ ECS-specific test cases exist but are sparse in this subtree (2 focus-release ca
 - [ ] GitHub translation-file confirmation could not be completed in this run; most UI strings are from docs and TestRail, not translation JSON.
 - [ ] Jira project/component queries for UIU/MODUSERS/FOLIO Users returned 0 done issues with current token scope.
 - [ ] Several raw TestRail-mined modal/pane strings were noisy due free-text preconditions; use curated strings above for assertions.
+
+> Self-assessment enrichment round (2026-07-22, per report priority #3): this file previously had zero content on three real, case-backed workflows living under its own section subtree — "Export library card of user" (section 42034, 10 cases, fully read), "LoC patron registration" (section 43671, 27 cases, 10 read), and "User migration" (section 87396, 29 cases, 4 read as a representative sample of a larger numbered-scenario suite tied to a specific Okapi→Eureka upgrade event). Added all three as dedicated sections plus Key Business Rules 19-21. The remaining ~19 unread User-migration scenarios and ~17 unread LoC-preregistration cases are lower priority to re-visit — the migration scenarios are numbered against one specific consortium's upgrade preconditions (not independently generalizable beyond the pattern already captured), and the remaining LoC cases are mostly additional column/pagination/permission-tier variants of the page already documented above.
