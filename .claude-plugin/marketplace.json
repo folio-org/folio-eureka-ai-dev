@@ -1,0 +1,33 @@
+{
+  "name": "folio-ai-dev",
+  "owner": {
+    "name": "FOLIO Eureka AI Dev"
+  },
+  "metadata": {
+    "description": "FOLIO Eureka AI development skills, role presets, and tool integrations",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "folio-po",
+      "source": "./",
+      "description": "FOLIO Product Owner preset: draft user stories and bug reports, write PR descriptions, capture skill feedback, and work with Jira through the official Atlassian MCP server.",
+      "version": "0.1.0",
+      "author": {
+        "name": "FOLIO Eureka AI Dev"
+      },
+      "strict": false,
+      "skills": [
+        "./skills/write-user-story",
+        "./skills/write-bug",
+        "./skills/skill-feedback"
+      ],
+      "mcpServers": {
+        "atlassian": {
+          "type": "http",
+          "url": "https://mcp.atlassian.com/v1/mcp"
+        }
+      }
+    }
+  ]
+}

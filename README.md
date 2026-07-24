@@ -2,32 +2,99 @@
 
 This repository contains installable AI agent skills for FOLIO development workflows, plus supporting prompts and documentation.
 
+![Role-based install demo](docs/assets/install-po-preset-2026-07-02.gif)
+
 ## 🤖 AI Agent Skills
 
 This repository serves as a skills registry containing guidelines (`SKILL.md`). These skills can be loaded into AI assistants like Cursor, Claude Code, or Copilot using the skills.sh CLI.
 
 ### Available skills
 
-- `build-app-context` - Builds or refreshes a business-logic context file for a FOLIO application area by pulling live data from TestRail (existing cases), GitHub (translations, capability sets, Cypress fragments), and Jira (closed stories and bugs). Run this once per application area before using `write-testrail-cases`.
+- `build-app-context` - Builds or refreshes `references/context/<area>.md` from live TestRail, Jira, and GitHub sources for manual test design.
 - `code-review` - Reviews branch diffs and produces a structured code quality report.
 - `document-feature` - Documents implemented behavior by analyzing code changes and writing feature docs.
+- `ecs-user-setup` - Guides ECS and multi-tenant user setup for FOLIO automated tests.
+- `implement-automated-test` - Generates or updates Cypress E2E tests for FOLIO Stripes.
 - `liquibase-migration` - Guides FOLIO Liquibase migration authoring, structure, naming, and database conventions.
+- `review-generated-automated-test` - Reviews Cypress E2E test changes against FOLIO Stripes testing conventions.
 - `skill-feedback` - Captures user-validated feedback after a skill session and prepares a GitHub-ready report.
+- `testrail-bug-report` - Generates Jira-ready bug reports from failed FOLIO TestRail cases.
 - `unit-testing` - Applies Java unit testing guidance for JUnit 5, Mockito, strict stubbing, and clear test structure.
 - `write-testrail-cases` - Generates structured manual test cases from a Jira story and posts them directly to TestRail. Uses app-specific context files and automatically enriches from Jira, GitHub, and TestRail when context is insufficient.
 - `write-bug` - Drafts reproducible FOLIO bug reports with steps, expected and actual results, and supporting evidence.
 - `write-pr-description` - Drafts PR descriptions following team conventions for purpose, approach, and checklist.
+- `write-testrail-cases` - Writes structured manual TestRail cases from user stories and application context.
 - `write-user-story` - Drafts user stories with scope, requirements, acceptance criteria, and manual testing guidance.
 
-### Installing skills
+### Installing skills by role
 
-To install these skills in your project, run:
+Install only the preset that matches your role:
+
+#### Product Owner
+
+```bash
+npx skills add folio-org/folio-eureka-ai-dev \
+  --skill write-user-story \
+  --skill write-bug \
+  --skill skill-feedback
+```
+
+##### Product Owner via Claude Code plugin (no terminal)
+
+If you use [Claude Code](https://code.claude.com/docs/en/quickstart), install the Product Owner preset as a plugin instead — no terminal or Node.js required. In the Claude Code chat, run:
+
+```
+/plugin marketplace add folio-org/folio-eureka-ai-dev
+/plugin install folio-po@folio-ai-dev
+```
+
+This installs the PO skills together with the official Atlassian Jira MCP server. Full walkthrough: [Product Owner Onboarding: Claude Code + Jira MCP](docs/onboarding/po-claude-code-onboarding.md).
+
+#### Backend Developer
+
+```bash
+npx skills add folio-org/folio-eureka-ai-dev \
+  --skill write-user-story \
+  --skill unit-testing \
+  --skill liquibase-migration \
+  --skill code-review \
+  --skill document-feature \
+  --skill write-pr-description \
+  --skill skill-feedback
+```
+
+#### QA Manual
+
+```bash
+npx skills add folio-org/folio-eureka-ai-dev \
+  --skill write-user-story \
+  --skill write-testrail-cases \
+  --skill build-app-context \
+  --skill testrail-bug-report \
+  --skill write-bug \
+  --skill skill-feedback
+```
+
+#### QA Automation
+
+```bash
+npx skills add folio-org/folio-eureka-ai-dev \
+  --skill implement-automated-test \
+  --skill review-generated-automated-test \
+  --skill ecs-user-setup \
+  --skill write-bug \
+  --skill skill-feedback
+```
+
+### Advanced install
+
+To install every skill in this repository instead of a role preset, run:
 
 ```bash
 npx skills add folio-org/folio-eureka-ai-dev
 ```
 
-Running this command in the terminal of a target project will automatically download our AI context. This ensures that your AI assistant is aware of our specific architectural and testing standards when generating or refactoring code.
+Run the install command in the target project so your AI assistant picks up the right local skill set and FOLIO guidance.
 
 For more information about skills.sh, see the [official documentation](https://skills.sh/docs).
 
