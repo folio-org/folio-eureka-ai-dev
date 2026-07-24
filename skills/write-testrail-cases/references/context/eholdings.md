@@ -139,10 +139,14 @@ Providers tab is highlighted by default when opening eHoldings app. [confirmed]
 
 ### Toast Messages
 
+> ✅ Re-verified against `folio-org/ui-eholdings/translations/ui-eholdings/en_US.json` (2026-07-21): every row below matches, including all previously `[from source]` settings/export toasts — treat them as confirmed. The one exception is the last row (title-selection lag warning), which is only in an open Jira story, not the translation file.
+
 | Event | Toast text | Source |
 |---|---|---|
 | Custom package created | `Custom package created.` | [confirmed] |
 | Custom title created | `Custom title created.` | [confirmed] |
+| Custom package name already exists | `Custom Package with the provided name already exists` | [confirmed — C1404904] |
+| Custom title name already exists | `Custom Title with the provided name already exists` | [confirmed — C1404905] |
 | Provider record saved | `Updates saved. Note: A proxy update may take a few minutes and may require refreshing page.` | [confirmed] |
 | Package record saved | `Package saved. Note: A proxy or token update may take a few minutes and may require refreshing page.` | [confirmed] |
 | Resource (Title+Package) saved | `Title was updated.` | [confirmed] |
@@ -180,7 +184,7 @@ Providers tab is highlighted by default when opening eHoldings app. [confirmed]
 | Modal | Body text | Source |
 |---|---|---|
 | Remove package | `Are you sure you want to remove this package and all its titles from your holdings? All customizations will be lost.` | [from source] |
-| Delete custom package | `Are you sure you want to delete this package? By deleting this package it will no longer be available for selection and all customization will be lost.` | [from source] |
+| Delete custom package | `Are you sure you want to delete this package? By deleting this package it will no longer be available for selection and all customization will be lost. If a title only appears in this package it will no longer be available for selection.` (full sentence — don't truncate after "lost.") | [confirmed — C605986] |
 | Confirm navigation | `Your changes have not been saved. Are you sure you want to leave this page?` | [confirmed] |
 | Delete agreement line | `Are you sure you want to delete this agreement line: {recordName}?` | [from source] |
 
@@ -190,7 +194,7 @@ Providers tab is highlighted by default when opening eHoldings app. [confirmed]
 `Edit`, `Actions`, `Cancel editing`, `Save & close`, `Cancel`, `Delete`
 
 **Holdings actions:**
-`Add to holdings`, `Remove from holdings`, `Remove title from holdings`, `Add all titles in a package to holdings`, `Add package (all titles) to holdings`
+`Add to holdings`, `Add package to holdings` (Actions menu option + button on package record; opens the "Add package to holdings" modal), `Remove from holdings`, `Remove title from holdings`, `Add all titles in a package to holdings`, `Add package (all titles) to holdings` (button inside that modal). [confirmed — C688]
 
 **Navigation modal buttons:**
 `Continue without saving`, `Keep editing`
@@ -356,6 +360,16 @@ Expected: "Export settings" modal closes.
 - Columns: Title name, Tags (added Trillium UIEH-1449), Managed coverage, Custom coverage (Trillium UIEH-1442)
 - Hidden title visibility shown in status column (Umbrellaleaf UIEH-1464)
 
+**Full "Actions" menu contents on the Titles accordion (confirmed, C1259792)** — the Actions button opens all of the following in a single dropdown (don't split these into separate menus in expected results):
+- `Search by tags only` checkbox
+- `Search by access status types only` checkbox
+- `Sort options`: `Relevance`, `Title`
+- `Selection status`: `All`, `Selected`, `Not selected`
+- `Publication type` single-select dropdown — full option list: `All` (default), `Audiobook`, `Book`, `Book Series`, `Database`, `Journal`, `Newsletter`, `Newspaper`, `Proceedings`, `Report`, `Streaming Audio`, `Streaming Video`, `Thesis & Dissertation`, `Website`, `Unspecified`
+- `Show columns` checkboxes (all checked by default): `Status`, `Managed coverage`, `Custom coverage`, `Managed embargo period`, `Custom embargo period`, `Publication type`, `Access status type`, `Tags`
+
+**Provider record's own Packages accordion mirrors this pattern (C1375907–C1375917, C1385306–C1385308):** same search/filter/sort/column-chooser controls, with column selections and applied filters persisting across navigating to a Package record and back, and across editing the Provider record. `Package name` is the one column that can never be hidden via the column chooser.
+
 ---
 
 ## Settings → eHoldings
@@ -468,19 +482,32 @@ No ECS-specific test cases found in this section (0 cases with `custom_ecs_enabl
 10. **Usage & analysis requires two conditions** — the `Data - UI-Eholdings Costperuse - View` capability AND Usage Consolidation configured in Settings with valid SUSHI credentials (cases x5)
 11. **Agreement linking is bidirectional** — linking a package/title in eHoldings creates an Agreement Line in the Agreements app; visible in both places (cases + github)
 12. **Tags can be removed from records but not deleted from the system** — removing a tag only unlinks it; the tag remains available for selection (cases)
-13. **Filter by Tag is hidden when user lacks tag permissions** — not shown rather than shown disabled (cases + UIEH-1313)
+13. **Filter by Tag is hidden when user lacks tag permissions** — not shown rather than shown disabled; applies to every Tags-related control consistently: the `Search by tags only` checkbox AND the `Tags` checkbox in `Show columns` are both fully absent (not disabled) — confirmed on both the Titles-accordion Actions menu and the Provider record's own Packages accordion; every other filter/sort/column control remains usable for the restricted user (cases + UIEH-1313, C1385307)
 14. **Search defaults to Relevance sort** — alphabetical sort must be explicitly selected (cases)
 15. **Selection status filter defaults to "All"** — both selected and unselected are shown by default (cases)
 16. **Multiple packages per title** — the same title can appear in multiple packages; each is a separate Resource with independent selection/configuration (cases)
 17. **Provider records not editable beyond proxy/tags/notes** — names, package lists, title data come from EBSCO KB and cannot be changed in FOLIO (cases + github)
-18. **Export goes through Export Manager (async)** — triggered from Actions menu; files downloaded from Export Manager app, not directly; max 10k titles per package export (cases x10+ + UIEH-1336)
+18. **`Export package (CSV)` / `Export title package (CSV)` were DEPRECATED and removed entirely** (per UIEH-1324/UIEXPMGR-57, confirmed C359166) — neither Actions menu item exists anymore on Package or Title detail views, and Export Manager's own `Job type` facet no longer has an `eHoldings` checkbox at all. Don't write a case expecting these actions to exist; this correction supersedes any older documentation (including this file's own prior wording) that described a working async Package/Title CSV export via Export Manager — that feature is gone, not just permission-gated.
 19. **"Export" button disabled when no fields selected** — user must select at least one field in the Export settings modal (cases x2)
 20. **A user already assigned to one KB cannot be assigned to another KB** — modal "Already assigned to a knowledge base" is shown (cases x1)
 21. **Assigned users are sorted by Last name alphabetically** — in the Assigned Users list at Settings (cases)
-22. **Deleting an Access status type removes it from all assigned records** — confirmation modal shows count of affected records (jira UIEH story)
+22. **Deleting an Access status type removes it from all assigned records** — confirmation modal shows count of affected records; also confirmed the deleted type disappears from the Packages tab's own `Access status types` filter/facet accordion, not just from individual records (jira UIEH story + C590793)
+22a. **Settings access is independent of main-app access** — a user whose eHoldings app view fails with the "missing permissions" access error can still open `Settings > eHoldings` directly and use every settings sub-page (`Root proxy`, `Custom labels`, `Access status types`, `Assigned users`, `Usage consolidation`) as long as they hold the corresponding Settings-level permissions; don't assume a blocked main app means Settings is blocked too. (cases — C357013)
 23. **Hidden title visibility indicated in Titles list (Umbrellaleaf+)** — "Hidden" shown in status column of Package title list MCL (github UIEH-1464)
 24. **Packages facet on Titles search opens a "Filter packages" modal** (Ramsons+) — selection persists as facet filter; cancel clears facet (cases + UIEH-1350)
 25. **Agreements accordion "New" button opens new Agreement in new tab** (Trillium+) — prevents losing eHoldings navigation context (jira UIEH-1446)
+26. **Custom package/title duplicate-name creation shows a clean, user-facing toast — never the raw backend error** — `Custom Package with the provided name already exists` / `Custom Title with the provided name already exists`; the toast must NOT include the raw "400 Bad Request on POST request for ..." text or a "1009:" error-code prefix. The name uniqueness check is **case-insensitive** (entering the existing name in a different case still triggers the toast). On this toast, the New pane stays open/unsaved and no duplicate record is created. (cases — C1404904, C1404905)
+27. **Custom Embargo period field is conditionally rendered, like Coverage** — a Resource without any Custom embargo period set does not show the "Custom embargo period" field at all in the detail view; it only appears once a value has been added via Actions → Edit. Adding/editing/removing Custom embargo is independent of whether a Managed embargo period exists on the same Resource — test the with/without-Managed-embargo variants separately since the expected end-state differs only in whether the Managed field also shows. (cases — C421984, C421988)
+28. **`proxiedUrl` is a real field on the `/eholdings/resources/{id}` API response** (Sunflower+, UIEH-1419) — present with a value whenever the Resource's effective Proxy is not "None"; verify via Network tab response body, not just UI display, since this is the field backing the "Proxied URL" UI label. (cases — C387517)
+29. **"Packages" facet on Titles search only appears after a search returns results** — it is not shown on the empty/pre-search state, and it does not exist at all on the Providers or Packages toggles (Titles-search-only). Facet selections and the search query persist when opening a Title record from the result list and closing it again (`x` icon) — user returns to the exact same filtered/faceted list, not a reset one. Changing the facet selection while a Title record is open updates the facet's dropdown options to only the packages returned by the underlying title search. (cases — C386520)
+30. **Usage Consolidation's "Start month for usage statistics" setting controls the 12-month window shown in every Usage & analysis table** — regardless of which `Platform` option (`All platforms` / `Publisher platforms only` / `Non-publisher platforms only`) or `Year` is subsequently selected, the table's 12 month-columns always start from the configured start month, not from January. Re-verify the start month after switching Platform, not just after the initial View click. (cases — C357547)
+31. **Usage & Analysis CSV export column names are literally `Cost` and `Cost_per_use`** — these are the two columns whose number formatting follows the tenant's locale (set via `PUT /locale`), confirmed with a non-English locale (e.g. `fa-IR`) producing visibly different digit formatting than the English-locale export of the same data. (cases — C1030063)
+
+---
+
+## Authoring style (measured 2026-07-23)
+
+eHoldings leans **`Functional` (~62%)** with ~35% `Other`, median ~6 steps, `User Journey` ~9%. Cases are compact and behavior-focused: most verify one accordion/filter/search/toast behavior on a Provider/Package/Title record (e.g. "filter retained after editing the Provider", "duplicate custom-package name toast"). Preconditions carry the KB configuration (KB credentials in Settings, a Selected package/title, tags/access-status-types set up) and any Usage-Consolidation setup for cost-per-use cases. Use `Functional` for record/search/filter behavior; `Other` for pure display/label checks. Because the Provider record's own Packages accordion mirrors the Titles accordion, filter/column/sort behaviors are tested on **both** surfaces — don't assume one covers the other.
 
 ---
 
@@ -491,6 +518,8 @@ No ECS-specific test cases found in this section (0 cases with `custom_ecs_enabl
 - [ ] Toast for lag warning `"Updates to title selection status in the Titles accordion may take several seconds to display."` — found in Jira story (open) only; not yet in test cases
 - [ ] Exact text of the "Are you sure you want to unassign agreement?" revised message (Sunflower UIEH-1420) — not captured in test cases
 - [ ] Exact confirmation modal body when selecting an entire package (`Add all titles in a package to holdings`) — from source only
-- [ ] "Proxied URL" field label exact text on Resource detail record (Sunflower+) — from UIEH-1419; verify in env
+- [x] ~~"Proxied URL" field label exact text on Resource detail record (Sunflower+)~~ — resolved: API field is `proxiedUrl` on `/eholdings/resources/{id}` response, confirmed present whenever Proxy ≠ "None" (see Rule 28, C387517)
 - [ ] Column chooser behavior in Titles accordion Actions menu (Umbrellaleaf UIEH-1455) — in Jira/changelog but no test case covering it yet
 - [ ] Agreements accordion tooltip text for New and Add buttons (Sunflower UIEH-1424) — verify in env
+
+> Self-assessment enrichment round (2026-07-22, per report priority #4): read C359166, C357013, C590793 to close the 3 misses the self-assessment flagged for this file. Most valuable finding: Rule 18's description of a working Package/Title CSV export was **stale** — that export was deprecated (UIEH-1324) and this file has been corrected rather than just appended to, since the old wording would have led to writing a test for a feature that no longer exists. Also added the Settings-access-independent-of-app-access rule (22a) and a refinement to the Access-status-type deletion rule (22) re: the Packages-tab filter accordion.

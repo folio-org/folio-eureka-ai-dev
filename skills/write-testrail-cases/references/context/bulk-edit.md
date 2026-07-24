@@ -122,14 +122,26 @@ Log-oriented statuses used in this area:
 
 Use these verbatim in expected results. Never paraphrase.
 
+> ✅ Confirmed 2026-07-21 against `folio-org/ui-bulk-edit/translations/ui-bulk-edit/en_US.json` — all rows below match; `[from source]` upgraded to confirmed and the commit/preview flow + record-count callouts added.
+
 ### Toast Messages
 
 | Event | Toast text | Source |
 |---|---|---|
 | Profile create | Profile successfully created. | [confirmed] |
 | Profile update | Profile successfully updated. | [confirmed] |
-| Match summary | {count, number} {recordType} records matched | [from source] |
-| Change summary | {count, number} {recordType} records changed | [from source] |
+| Profile delete | Profile successfully deleted. | [confirmed] |
+| Profile delete failed | Failed to delete profile. | [confirmed] |
+| Records changed (commit result) | `{value, number} records have been successfully changed` | [confirmed] |
+| Match summary | `{count, number} {recordType} records matched` | [confirmed] |
+| Change summary | `{count, number} {recordType} records changed` | [confirmed] |
+| File uploaded | `{fileName} successfully uploaded.` | [confirmed] |
+| File formatted incorrectly | `{fileName} is formatted incorrectly. Please correct the formatting and upload the file again.` | [confirmed] |
+| Empty file | `The uploaded file is empty.` | [confirmed] |
+
+### Commit / Preview flow (confirmed)
+
+Confirmation modal `Bulk edit: <b>{fileName}</b>` / `{count} records will be updated if the <b>Commit changes</b> button is clicked.`; preview modal `Preview of records to be changed` with buttons `Download preview in CSV format`, `Commit changes`, `Keep editing`; unsaved-changes guard `Are you sure?` / `There are unsaved changes` (`Close without saving`). Invalid file: `Invalid file` / `Only file with .csv extension can be uploaded.` Job statuses: `New`, `Retrieving records`, `Saving records`, `Data modification`, `Reviewing changes`, `Apply changes`, `Completed`, `Completed with errors`, `Failed`.
 
 ### Modal / Dialog Titles
 
@@ -153,6 +165,11 @@ Actions, Confirm changes, Commit changes, Test query, Run query, Build query, St
 | CSV formatting invalid | {fileName} is formatted incorrectly. Please correct the formatting and upload the file again. | [confirmed] |
 | Query too broad | Warning: this query returns more records than the maximum allowed. Modify the query to limit your results. | [from source] |
 | Matching errors export | Download matching/committing errors CSV is available from Actions | [from cases] |
+| LINKED_DATA source instance uploaded | `Bulk edit of instances with source set to LINKED_DATA is not supported.` (shown in Errors & warnings, both UUID and HRID identifier flows) | [cases — C651537] |
+| MARC instance, SRS record missing/old | `SRS record associated with the instance is missing.` (0 records matched; only "Download errors (CSV)" available under Actions — no Show columns) | [cases — C692112] |
+| MARC instance, invalid 008 field (<40 char positions) | `Underlying MARC record contains invalid data and the record cannot be updated.` | [cases — C850013] |
+| Query-tab MARC-only combined form run against non-MARC instances | `No instances can be updated because none have source MARC.` — applies even to the "Bulk edits for administrative data" half of the combined form when accessed via the MARC-instances entry point; Preview shows "The list contains no items"; Download preview (CSV/MARC) and Commit changes all stay disabled | [cases — C663253] |
+| Optimistic locking conflict on commit | `The record cannot be saved because it is not the most recent version. Stored version is {X}, bulk edit version is {Y}.` plus a `View latest version` link (opens the current Inventory record in a new tab) — shown per-record in Errors & warnings, does NOT block the rest of the batch | [cases — C808444, C468224] |
 
 ---
 
@@ -213,11 +230,68 @@ Expected: Are you sure? modal opens with preview controls (Keep editing / Downlo
 Action: Click Commit changes and wait for completion.
 Expected: Changed-records summary is shown and Actions offers Download changed records (CSV) and error CSV when applicable.
 
+### Changing Record identifier resets the whole landing page — even after a completed job
+
+Action: With a matched-records preview (or even a fully committed job) on screen, open the `Record identifier` dropdown and pick a different option.
+Expected: The landing page snaps all the way back to its pre-job baseline state, not just clearing the identifier field: record-count label reverts to `Set criteria to start bulk edit`, the `Identifier` tab becomes selected by default again, the main panel reverts to its `Drag and drop or choose file with...` baseline text, the record-type radio buttons re-enable per the user's permissions, and the drag-and-drop area is (re-)enabled. This holds identically whether the change happens before any upload, after a matched-preview, or after a completed Commit changes — there is no partial/preserved state once the identifier changes. (cases — C353650)
+
 ---
 
 ## ECS / Multi-Tenant Notes
 
 ECS-specific coverage exists in this subtree (sections include Bulk Edit - ECS, Central tenant, Member tenant). Cases verify that shared and local properties (for example note types, locations, relationships) are resolved correctly by tenant context in both preview columns and output CSV files.
+
+## Bulk Delete Users — entirely new feature (confirmed, C1385648)
+
+> Distinct from "Start bulk edit" — deletes matched User records outright rather than editing a field.
+
+- After matching Users (identifier or query flow), the Actions menu offers `Start bulk delete` alongside the usual `Download matched records (CSV)` / `Start bulk edit` / `Select users bulk edit profile`.
+- Clicking it opens `Delete user records?` with: a warning banner `{n} user records will be deleted if the Delete button is clicked.` (n = matched count), a note `This action cannot be undone but a file of deleted user records will be available for download in Logs for 30 days.` (the "30 days" reflects the tenant's configured log-retention period, not a hard-coded value), `Cancel` (enabled) and `Delete` (enabled AND focused by default — a single Enter keypress confirms deletion).
+- Confirmation screen after deletion shows `{matched} user records match {deleted} user records deleted` — **the deleted count can be LESS than the matched count**: Users with open transactions (e.g. active loans/fees) are silently excluded from deletion even though they matched. Success toast: `{n} user records have been successfully deleted.` (n = actually-deleted count). No `Preview of records changed` accordion and no `Actions` menu appear after a bulk delete (unlike bulk edit) — there's nothing left to preview or re-download from that screen.
+- Logs tab entry for the delete job has downloadable files: `File that was used to trigger the bulk edit` (original uploaded CSV) and `File with the matching records` (named `{yyyy-mm-dd}-Matched-Records-{original-filename}.csv`) — there is no "changed records" file, since records were deleted rather than modified.
+
+### Bulk Delete Users — full requirement set from MODBULKOPS-659 (story-sourced; UI part UIBULKED-767)
+
+> Extends the C1385648 behavior above. These items come from the story requirements — verify exact strings on first execution where noted.
+
+- **Two capabilities are required together** to delete user records: the bulk-delete capability `UI-Bulk-Delete Users (delete)` AND the functional user-delete capability `UI-User (delete)`. A user missing either cannot perform the delete (verify exact Eureka capability-set names in env — likely `Data - UI-Bulk-Edit Users Delete - ...` and a `mod-users` delete set).
+- **Deletion criteria come from mod-users, not bulk-ops.** The mod-users delete API (via the `/open-transactions` check) is the source of truth: a user is blocked from deletion if they have open loans, open requests, unpaid fees/fines, unexpired proxies, or manual blocks. Bulk delete does not re-implement these rules — it reports what mod-users returns.
+- **Per-record failure logging:** for every matched user that could NOT be deleted, the error log contains the record **UUID** and the **reason** returned by the mod-users API for why it could not be removed. Any other (non-business-rule) failures are reported the same way Bulk edit reports errors.
+- **Downloadable files for a delete job (Logs tab), full set:**
+  - File that was used to trigger the bulk edit (original uploaded identifiers CSV) — identifier flow.
+  - **NEW — query flow only:** file with the query used to trigger the job, containing the **user-friendly** query text as shown in the Query builder. File name: `QueryStatement-{jobid}.txt`.
+  - File with the matching records (`{yyyy-mm-dd}-Matched-Records-{original-filename}.csv`).
+  - File with errors encountered when **retrieving** the records.
+  - File with errors encountered when **deleting** the records — named like the bulk-edit commit-errors file: `{yyyy-mm-dd}-Committing-changes-Errors-{name of the file with identifiers or bulk job id}.csv`.
+- **ECS: cross-tenant user deletion is NOT supported** — only users associated with the given tenant can be deleted; a bulk delete run in a tenant deletes only that tenant's users. (story — MODBULKOPS-659)
+
+## MARC Field Protection Interaction (confirmed, C569592)
+
+> `Settings > Data import > MARC field protection` rules (field + Ind1 + Ind2 + Subfield + Data, each `*` = wildcard) are honored by Bulk Edit's MARC actions, not just by Data Import.
+
+- A bulk-edit action targeting a field/indicator/subfield/data combination that matches an active protection rule is **silently skipped** — the field is left completely untouched in both the preview (Download preview in MARC/CSV) and the committed result; it is NOT reported as an error or warning.
+- Protection is evaluated at the **exact combination level**, not just the 3-digit tag — e.g. a rule protecting `942 0 \ r US` only blocks edits where the existing `$r` value is literally `US`; a `942` field with a different `$r` value would still be editable. Don't assume "field X is protected" means every action on field X is blocked — check the specific indicator/subfield/data the rule specifies.
+- Adding a brand-new field/subfield instance that doesn't already exist (e.g. a new `562` occurrence) is unaffected by protection rules for *other* existing fields — protection only prevents modification of matching existing content, not the addition of new content elsewhere in the record.
+- This applies uniformly across all six MARC bulk-edit actions (Add, Find+Append, Find+Remove subfield, Find+Remove field, Find+Replace with, Remove all) — test at least one protected-field case per action type since protection is checked independently per action.
+
+## Item Material Type — "Replace with" action (confirmed, C1348671)
+
+- `Material type` appears under a `Item data` group header in the in-app bulk-edit Options dropdown, positioned between `Administrative data` and `Item notes` groups.
+- Unlike most Item-data options (which offer a choice of actions), Material type has exactly **one fixed, read-only action label: `Replace with`** — there is no dropdown of alternative actions for this option — followed by a `Select material type` dropdown populated dynamically from the tenant's configured material types.
+- Standard confirm/preview/commit flow applies afterward (Preview of records to be changed shows a "Material type" column with the new value; changed records CSV likewise reflects it).
+
+## Query Builder — "in" / "not in" Operator Value Formatting (confirmed, C477624)
+
+- When `Operator` = `in` or `not in` and the field is a UUID-type column (e.g. `Item — UUID`), the `Value` box accepts a comma-separated paste of multiple UUIDs; the query preview textbox auto-formats them with quotes: `(items.id not in ("{uuid1}","{uuid2}"))` / `(items.id in ("{uuid1}","{uuid2}"))`. Verify the exact quoting/comma placement in the generated query string, not just that the right records come back — malformed quoting here has historically been a bug source.
+- `Test query` becomes enabled only once Field + Operator + Value are all populated; while a test is running the button is disabled and shows a `Test query in progress` label with a spinner (query text itself does not re-render during this), and `Cancel` remains available; `Run query` stays disabled until a completed test query exists.
+
+## Holdings → Item Field Recalculation Trigger List (confirmed, C1347164)
+
+Bulk-editing a Holdings record only triggers **Item effective-location/effective-call-number recalculation** for its associated Items when the edit touches one of these exact fields: `permanentLocationId`, `temporaryLocationId`, `callNumber`, `callNumberPrefix`, `callNumberSuffix`, `callNumberTypeId`. Editing any other Holdings field (e.g. a note, or Suppress from discovery) does not trigger Item-side recalculation. This matters most for load-testing scenarios (Holdings with very large Item counts, e.g. 16k+) — pick one of these six fields specifically when the test's purpose is to verify recalculation-at-scale, not an arbitrary Holdings field.
+
+## Read-Only / Authority-Linked Subfield Handling (partially confirmed, needs env re-verification — C663262)
+
+MARC fields linked to an authority record (e.g. `610`, `240` with populated `$0`/`$9`) can still have their non-linking subfields (e.g. `$a`) edited via the normal Find → Replace with / Remove subfield actions, and the resulting Subject/Uniform-title preview columns update accordingly. Whether the linking subfields themselves (`$9` authority UUID, `$0` authority URI) can be independently removed/edited without breaking the authority link was not fully confirmed from this case's available detail — verify in env before asserting either way, and don't assume `$9`/`$0` edits are silently blocked the same way protected fields are (that's a different mechanism).
 
 ---
 
@@ -238,9 +312,16 @@ ECS-specific coverage exists in this subtree (sections include Bulk Edit - ECS, 
 13. Errors and warnings are downloadable independently from changed records. (cases + source)
 14. Item status and some inventory transitions remain constrained by inventory/circulation rules. (source)
 15. Query and logs tabs are capability-gated; users without required capabilities cannot execute those flows. (cases)
-16. MARC-protected fields are not editable via Bulk Edit (for example control fields and protected 999 ff behavior). (source)
+16. **MARC-protected fields are not editable via Bulk Edit** — protection is evaluated at the exact field+indicator+subfield+data combination (not the whole 3-digit tag), and a protected match is silently skipped (no error/warning), leaving that specific field/value untouched while other actions in the same job still apply. (cases — C569592)
 17. Logs are durable audit history and include method, actor, processing counts, and completion status. (cases)
 18. Bulk edit profiles in Settings control reusable options/actions and include lock/delete management paths. (cases)
+19. **Bulk edit of instances with source `LINKED_DATA` is entirely unsupported** — such instances are always routed to Errors & warnings with a dedicated reason string, for both Identifier and Query flows; they never appear in Preview of records matched. (cases — C651537)
+20. **MARC instances with a missing or stale (`OLD` status) underlying SRS record, or an invalid/short `008` field, cannot be matched for MARC-flow bulk edit** — each produces its own specific Errors & warnings reason and the Instance ends up with "0 instance records matched" if that's the only record in the batch. (cases — C692112, C850013)
+21. **Optimistic-locking conflicts on Commit produce a per-record error (not a silent overwrite and not a whole-batch abort)** — the specific record shows `The record cannot be saved because it is not the most recent version...` with a link to the live record; other records in the same job still commit normally. Applies to Instances (incl. their SRS/MARC counterpart, which is also NOT updated on this error — the whole Instance+SRS pair updates atomically or not at all) and to Holdings. (cases — C808444, C468224)
+22. **Bulk Delete (Users) is a separate, irreversible action from Bulk Edit** — reachable from the same Actions menu after matching, with its own confirmation modal and its own Logs file set; deleted-count can be less than matched-count when some matched Users have open transactions blocking deletion. (cases — C1385648)
+23. **Item effective-location/call-number recalculation after a Holdings bulk edit is scoped to six specific Holdings fields** — `permanentLocationId`, `temporaryLocationId`, `callNumber`, `callNumberPrefix`, `callNumberSuffix`, `callNumberTypeId`; editing any other Holdings field does not cascade to Items. (cases — C1347164)
+24. **Changing the `Record identifier` dropdown always fully resets the Bulk Edit landing page to its pre-job baseline**, regardless of what stage the previous job had reached (unstarted, matched-preview only, or fully committed) — there is no "are you sure you want to discard" gate on this action, and no in-between partial-reset state. (cases — C353650)
+25. **Bulk delete of users requires two capabilities together** (`UI-Bulk-Delete Users (delete)` + `UI-User (delete)`); the deletion criteria are enforced by mod-users (open loans/requests, unpaid fees/fines, unexpired proxies, manual blocks) so blocked users are excluded with a per-record UUID + reason in the deletion-errors log; in ECS, only users of the tenant the job runs in can be deleted. The query-triggered variant additionally produces a `QueryStatement-{jobid}.txt` file with the user-friendly query. (story — MODBULKOPS-659, UIBULKED-767)
 
 ---
 
@@ -249,3 +330,8 @@ ECS-specific coverage exists in this subtree (sections include Bulk Edit - ECS, 
 - Exact modern Eureka capability names for profile lock/create/delete actions (legacy-style strings appear in older case preconditions).
 - Some extracted toast/error strings in TestRail include long step concatenations and are intentionally excluded from exact-text tables.
 - Jira story/bug distillation for Bulk Edit was empty in this run; validate with alternate component taxonomy if needed.
+- [ ] Whether authority-linked `$9`/`$0` subfields (240, 610, etc.) can be directly edited/removed via Bulk Edit or are protected by a separate mechanism from field-protection rules — not conclusively confirmed this round (C663262).
+
+> N≥10 audit round (2026-07-21): 12 cases read — C651537, C692112, C850013, C569592, C663262, C1348671, C1385648, C468224, C477624, C1347164, C663253, C808444. This round surfaced an entirely new feature (Bulk Delete for Users) plus concrete MARC-protection granularity, LINKED_DATA/corrupted-SRS/invalid-008 error reasons, the Material-type "Replace with" action, in/not-in query formatting, the Holdings→Item recalculation trigger-field list, and the exact optimistic-locking conflict message/behavior.
+
+> Random spot-check (2026-07-23): picked one fresh uncited case at random from the 741-case section tree (C353650, section 17142) — found the "change Record identifier → full landing-page reset" behavior undocumented, including that it applies even after a fully committed job. Added as a new Common Verification Pattern and Key Business Rule 24.

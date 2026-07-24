@@ -93,36 +93,77 @@ Create/Save -> Refresh -> View/Filter/Export
 
 > Use these verbatim in expected results. Never paraphrase.
 
-### Toast Messages
+> ✅ Corrected/confirmed 2026-07-21 against `folio-org/ui-lists/translations/ui-lists/en_US.json` — placeholders (`{listName}`, `{count}`) and bold (`<strong>…</strong>`) restored to the exact rendered form. Earlier stripped versions ("List saved") replaced.
 
-| Event | Toast text | Source |
-|---|---|---|
-| Save list | List saved | [from cases] |
-| Refresh completed | Refresh complete with records: View updated list | [from cases] |
-| Export success | List was successfully exported to CSV | [from cases] |
-| Export in progress | Export of is being generated. This may take some time for larger lists. | [from cases] |
-| Delete success | List deleted | [from cases] |
+### Toast / Callout Messages — [confirmed]
 
-### Modal / Dialog Titles
+| Event | Toast text |
+|---|---|
+| List saved | `List <strong>{listName}</strong> saved.` |
+| List save error | `Error: <strong>{listName}</strong> was not saved.` |
+| List created | `List <strong>{listName}</strong> was created. Reload to see changes. Note: the list may not appear based on filters.` |
+| List deleted | `List <strong>{listName}</strong> deleted.` |
+| Refresh complete | `Refresh complete with <strong>{count}</strong> records:` (+ link `View updated list`) |
+| List is active (needs refresh) | `<strong>{listName}</strong> is active. Refresh <strong>{listName}</strong> to see list contents` |
+| CSV export begin | `Export of <strong>{listName}</strong> is being generated. This may take some time for larger lists.` |
+| CSV export success | `List <strong>{listName}</strong> was successfully exported to CSV.` |
+| CSV export cancelled | `The export for <strong>{listName}</strong> was successfully cancelled` |
+| Refresh cancelled | `The refresh for <strong>{listName}</strong> was successfully cancelled.` |
 
-| Modal | Trigger | Source |
-|---|---|---|
-| Build query | Create/edit query actions | [from cases] |
-| Keyboard shortcuts | Keyboard shortcuts action/help | [from cases] |
+### Modal / Dialog Messages — [confirmed]
 
-### Button Labels (key actions)
+| Modal | Heading / message |
+|---|---|
+| Delete list | `Delete list` / `Are you sure you want to delete the list <strong>{listName}</strong>?` |
+| Unsaved changes (cancel) | `Are you sure?` / `There are unsaved changes` (buttons `Keep editing`, `Close without saving`) |
+| Inactive-status warning | `Warning: making status inactive will clear list contents.` |
+| Cross-tenant tip | `Lists with cross-tenant query can only be set to Private.` |
 
-Test query, Select field, Actions, Build query, Run query & save, View updated list, Duplicate list, New
+### Button / Field Labels — [confirmed]
+Actions: `New`, `Actions`, `Refresh list`, `Cancel refresh`, `Delete list`, `Edit list`, `Duplicate list`, `Cancel export`, `Show columns`, `Export all columns (CSV)`, `Export selected columns (CSV)`, `Run query & save`, `Edit query`. Fields: `List name`, `Description`, `Visibility` (`Shared`/`Private`), `Status` (`Active`/`Inactive`), `Record type`, `Source`. Required-field validation: `Please fill this in to continue`.
 
-Source tags: [from cases]
+### Error Messages (blocked operations) — [confirmed]
 
-### Error / Warning Messages
+| Condition | Message text |
+|---|---|
+| Delete during refresh | `Error: <strong>{listName}</strong> was not deleted. Lists can't be deleted while a refresh is in progress.` |
+| Update during export | `Error: changes to <strong>{listName}</strong> were not saved. Lists can't be updated while an export is in progress.` |
+| Optimistic lock conflict | `Error: someone else modified <strong>{listName}</strong>. Reload the page to view the latest version of this list.` |
+| Refresh while inactive | `Error: <strong>{listName}</strong> was not refreshed because it is inactive. Set the list status to active to refresh the list.` |
+| Refresh missing query | `Error: <strong>{listName}</strong> was not refreshed. Add a query before refreshing the list.` |
+| Refresh exceeds max size | `Error: refresh for <strong>{listName}</strong> failed because the refreshed list contains too many records.` |
+| Query invalid (deleted field) | `Unable to complete action. Query is no longer valid due to a deleted field(s). Please edit the list query or delete the list.` |
 
-| Condition | Message text | Source |
-|---|---|---|
-| Export target list not found | Error: export of failed because the list was not found. Verify the list location and try again | [from cases] |
-| Concurrent modification conflict | Error: someone else modified . Reload the page to view the latest version of this list | [from cases] |
-| Save blocked by in-progress export | Error: changes to were not saved. Lists can't be updated while an export is in progress | [from cases] |
+## Permission / Entity-Type Access Gating (confirmed, C476848, C476851)
+
+- **A user with zero Lists capability sets cannot see the Lists app at all** — it's absent from the Apps dropdown, and navigating directly to `/lists` shows `You don't have permission to view this app/record` (this is a generic FOLIO access-denied page, not a Lists-specific message). Having entity-type permissions (e.g. `Users: Can view user profile`) alone, with no Lists capability, is not sufficient to unlock the app.
+- **Entity-type permission is re-checked at view time, not just at list-creation time** — a user with full Lists Admin creates a list scoped to the `Users` entity type while they hold `Users: Can view user profile`; if that entity permission is later removed, navigating back to that same list's URL shows the same `You don't have permission to view this app/record` page, even though the user still has full Lists Admin capability. Write both halves of this as separate test steps: create-and-verify-access, then remove-permission-and-verify-blocked.
+
+## Queryable vs. Displayable Fields (confirmed, C451499)
+
+**Some array-type fields cannot be used in the Query Builder but ARE still available as columns / in CSV export** — e.g. `User — Address` and `User — Department` don't appear as selectable query fields, yet both appear in the `Show columns` list and populate correctly in the exported CSV once selected. Don't assume "not queryable" implies "not visible anywhere" — test the column-selection and export paths for these fields independently of the query-builder field list. (Companion cases per entity type: POL, Items, Holdings, Instances all have their own non-queryable-but-exportable array fields — verify per entity type, they aren't the same fields.)
+
+## Query Builder — Operator/Value Interaction Rules (confirmed, C651429, C651430, C1259783, C1312673, C740199)
+
+- **Switching between "comparable" operators preserves the entered value**: `equals` → `NOT IN` (or vice versa) keeps the value populated for UUID fields; this generalizes to other operator-family switches (`contains`↔`starts with`, `IN`↔`NOT IN`, `contains all`↔`contains any`) — same underlying "comparison" or "comparison array" operator family retains the value across the switch.
+- **Switching TO `is null/empty` always resets/clears the value field** — regardless of which operator you're switching from. This is the one operator change that is destructive to the current value; every other operator-family switch preserves it.
+- **The human-readable "user-friendly query" line never shows the literal string `Undefined`** — even immediately after an operator switch (e.g. `equals` → `IN`) before a new value is picked, the display should show the already-selected value cleanly (e.g. `(instance.languages in [English])`), not a placeholder artifact. When re-opening a saved query for editing, the value shown is the human-readable label (e.g. `English`), not the underlying code/ID it maps to — assert on the label, not the code.
+- **Value-field UI depends on operator**: single-value operators (`equals`, etc.) show a `Select value` placeholder that opens a searchable `Filter options list` dropdown (substring-filterable, case-insensitive per existing docs); multi-value operators (`IN`, `NOT IN`) show no placeholder text at all in the Value field.
+- **`NOT IN` (and other "not"/negation) operators do not exclude records with a null/empty value for that field** — a `not in [...]` query on a field can still return rows where the field is empty/null, because "empty" isn't logically "in" the excluded set either. This applies across String, UUID, date, and integer field types (each has its own confirming case) — don't assume `not in`/`not equal to` acts as a strict "everything except these values" filter; it implicitly includes empty/null rows too. Call this out explicitly in any negation-operator test's expected results.
+
+## Historical Migration Note: Regex Operators Removed (confirmed, C831960)
+
+Lists created before a certain release stored `Starts with`/`Contains` query conditions using a raw `$regex` operator internally. These have since been migrated: inspecting the `GET /lists/entity_type_id` request's `fqlQuery` property for an old list now shows `$contains` / `$starts_with` operators, never `$regex`. If a test needs to assert on the underlying FQL query shape for a `Contains`/`Starts with` condition, use `$contains`/`$starts_with`, not `$regex` — the latter is legacy and no longer produced.
+
+## Concurrent Edit / Multi-User Conflict Behavior (confirmed, C411739)
+
+Two users opening the same list's Edit mode simultaneously: the **first** to click Save succeeds normally (`List {name} saved.`); the **second** user's subsequent Save attempt (even on an unrelated field like just the list name) fails with the optimistic-lock error `Error: someone else modified {listName}. Reload the page to view the latest version of this list.` — this is a real multi-user race, not just a theoretical error string; test it with two actual concurrent sessions rather than asserting the message in isolation.
+
+## Large-Scale Export Details (confirmed, C451513, applies to the >10,000-row export case)
+
+- CSV column headers may differ slightly in exact wording from the UI's `Show columns` labels but must remain understandable/traceable to the UI column (e.g. `loans.status_name` for a "Status" UI column) — don't require byte-identical header text.
+- Columns hidden in the UI (unchecked in Show columns) are excluded from the export, **except certain ID columns** (e.g. `loans.id`) which may still appear in the CSV even when not shown in the UI — don't assert "zero ID/UUID columns ever appear," only that no UUID column is shown that corresponds to a UI-visible field the user didn't ask for.
+- Record count in the exported file must match the query's result count exactly, even at >10,000 rows — this is the primary scale-correctness assertion for this class of test, more important than exact column-name wording.
 
 ---
 
@@ -153,6 +194,10 @@ New, Deleted, Active (status terms observed in cross-entity query-builder cases)
 ---
 
 ## Common Verification Patterns
+
+### MARC Authority as a queryable Record type [confirmed — C1322605]
+
+`Authority` is a selectable `Record type` in the New-list `Build query` form — not just Instance/Item/User/etc. Authority-specific query fields observed include `Authority — See also from reference — Tracing` and `Authority — See also from reference — Tracing type`, combinable with the standard operator set (`starts with`, `contains`, `equals`, `not equal to`, `in` with a multi-value picklist e.g. `Personal name`/`Personal name title`/`Corporate name`/`Corporate name title`). `Test query` runs the count/preview before `Run query & save`, same as any other record type. Treat this as one more entry in the Record-type list alongside whatever the file already covers — MARC Authority fields follow the same query-builder mechanics as every other record type, just with their own field vocabulary.
 
 ### Actions menu availability on list details
 
@@ -198,6 +243,17 @@ ECS-focused test sections are present under the Lists subtree (for example, memb
 8. Query builder supports complex field/operator logic and must preserve query editability across edit/duplicate flows. (cases)
 9. Non-queryable array fields may still be available for export/column selection in supported record types. (cases)
 10. Multi-user concurrency must be handled for refresh/export/edit collisions with explicit error feedback. (cases)
+11. **Lists app access requires a Lists capability set; entity-type permissions alone are never sufficient**, and are themselves re-checked at view time (not cached from list-creation time) — removing the entity permission after list creation blocks that list's URL for the same user even with full Lists Admin. (cases — C476848, C476851)
+12. **Switching to `is null/empty` always clears the current query value; every other operator-family switch (equals↔NOT IN, contains↔starts with, IN↔NOT IN, contains all↔contains any) preserves it.** (cases — C651429, C651430)
+13. **Negation operators (`NOT IN`, `not equal to`) do not exclude null/empty field values** — a record with no value for the queried field can still appear in a `not in`/`not equal to` result set, across String/UUID/date/integer field types. (cases — C740199 and sibling cases for other types)
+14. **Query-builder value display never shows literal "Undefined"** and re-editing a saved query always shows the human-readable label for a value, not its underlying code. (cases — C1259783)
+15. **MARC Authority is a supported `Record type`** for the query builder, with its own field vocabulary (e.g. `See also from reference — Tracing`/`Tracing type`) — don't assume Lists only covers circulation/acquisitions-style entities. (cases — C1322605)
+
+---
+
+## Authoring style (measured 2026-07-23)
+
+Lists (FQM): **`Other` ~65%** / Func ~35%, median ~6 steps, `User Journey` ~0%. Cases build/test/refresh/export a query-based list or check a query-builder operator/field behavior. `Other` for list management (create/duplicate/refresh/export, capability gating); `Functional` for query-semantics behavior (operator families, null handling, value display). Preconditions carry the record data the query targets and the Lists capability sets. Query-builder cases assert exact match counts before/after.
 
 ---
 
@@ -207,3 +263,7 @@ ECS-focused test sections are present under the Lists subtree (for example, memb
 - [ ] No [confirmed] UI string set could be established because accessible GitHub source did not include Lists UI translation bundles.
 - [ ] Some extracted toast/error texts include placeholder truncation (for example, missing list names) and should be verified in the target environment before strict exact-match assertions.
 - [ ] Capability naming variants (+/-, view/View casing) appear across cases; normalize to current Eureka naming in the tenant under test.
+
+> N≥10 audit round (2026-07-21): 12 cases read — C476848, C476851, C451499, C451514, C651429, C651430, C740199, C831960, C1259783, C1312673, C411739, C451513. Added: entity-permission access-gating rules (including the "removed permission blocks existing list" edge case), queryable-vs-displayable field distinction, operator/value-retention rules, the "not in doesn't exclude nulls" gotcha, the $regex→$contains/$starts_with historical migration note, and concrete concurrent-edit and large-scale-export behavior.
+
+> Random spot-check (2026-07-23): picked one fresh uncited case at random from the 436-case section tree (C1322605) — found that MARC Authority is a supported query-builder Record type with its own field vocabulary, previously absent from this file entirely. Added a new subsection and Key Business Rule 15.

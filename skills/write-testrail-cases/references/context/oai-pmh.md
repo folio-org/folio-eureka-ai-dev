@@ -26,6 +26,25 @@ OAI-PMH in FOLIO provides a metadata harvesting endpoint for discovery systems a
 | Deleted records support | Policy controlling whether deletions are represented in responses. |
 | Suppressed records processing | Policy controlling whether suppressed records are exported or skipped. |
 
+> **This area is API/protocol testing, not UI.** Cases assert HTTP responses, not toasts. The request shape is a URL against the edge endpoint, e.g. `https://<edge_url>/oai?verb=ListRecords&metadataPrefix=marc21&apikey=<key>&from=<yyyy-mm-dd>&until=<yyyy-mm-dd>`. Key request params: `verb` (`ListRecords` / `ListIdentifiers` / `GetRecord` / `Identify` / `ListMetadataFormats` / `ListSets`), `metadataPrefix` (`marc21` or `marc21_withholdings`), `from` / `until` (date format `yyyy-mm-dd`), `apikey`, `resumptionToken`. Harvest is triggered by changes to the **SRS** record (not the Inventory record) when Settings > OAI-PMH > Behavior > Record source = "Source record storage". [confirmed — C13781, C13782]
+
+### `marc21_withholdings` — holdings/items → MARC field mapping (confirmed C13782)
+
+Holdings/item data populates MARC `952` subfields; electronic access populates `856`:
+`952$a/$b/$c/$d` = Effective location Institution/Campus/Library/Name; `952$e/$f/$g/$h` = Effective call number call number/prefix/suffix/type; `952$i` = Material type; `952$j` = Volume; `952$k` = Enumeration; `952$l` = Chronology; `952$m` = Barcode; `952$n` = Copy number. `952$r` = **ILL Policy name** (populated from Holdings' ILL policy field; appears in `952 ff` — confirmed for both a Holdings-only ILL policy and after adding an Item to that Holdings — cases C423498). `856$u/$y/$3/$z` = Electronic access URI / Link text / Materials specified / Public note (separate `856` datafield per URL, from both holding and item level); `856` 1st indicator `4`, 2nd indicator encodes Relationship (`8`=No display constant, blank/empty=No information, `2`=Related resource, `0`=Resource, `1`=Version of resource).
+
+### Other confirmed field mappings
+
+- **`022 $l` = Linking ISSN** (indicators blank/blank, i.e. `022 \\ $l {identifier}`) — confirmed identical in both `marc21` and `marc21_withholdings` output (cases — C411725).
+- **Bound-with items appear in BOTH instances' harvested records** — if Item 1.2 (belonging to Instance 1 / Holding 1) is bound-with to Holding 2 (belonging to Instance 2), that item shows up under Instance 1's response AND under Instance 2's response when harvesting `marc21_withholdings` (cases — C411613). Don't assume a bound-with item only appears once, under its "home" instance.
+- **LINKED_DATA-sourced instances (created via the "Marigold" linked-data editor) are harvested through their associated SRS record**, regardless of the `Record source` setting (`Source record storage` / `Inventory` / `Source record storage and Inventory` — all three return the same SRS-backed record for a LINKED_DATA instance). The `999 ff` field carries four linkage subfields: `$i` = Instance UUID, `$s` = SRS record UUID, `$l` = **Linked_Data record UUID** (unique to this source type — not present for plain MARC or FOLIO-native instances), `$t` = `0`. The `856` field's own `$t` subfield is likewise `0` when electronic access ("URL of Instance") is populated. (cases — C663352)
+
+### Deleted-record visibility depends on "Deleted records support" — NOT just LDR05 (confirmed, C376963, C388546)
+
+- **Only LDR05 = `d` triggers "deleted" treatment.** Any other Leader/05 code — including non-standard/test values like `s` or `x` — is harvested as a completely normal, non-deleted record; a record's header status is never set to `deleted` for these. (cases — C376963)
+- **When "Deleted records support" = `No`**: a record whose LDR05 = `d` is **not returned at all**, in any verb — `GetRecord` returns `<error code="idDoesNotExist">No matching identifier in repository.</error>` instead of a deleted-status header, and it's silently absent from `ListRecords`/`ListIdentifiers` result sets (no header entry of any kind, not even a "deleted" stub). This is a materially different behavior from `Persistent`/`Transient`, which DO return a `deleted`-status header for such records — don't reuse a `Persistent`-mode expected result for a `No`-mode test. (cases — C388546)
+- Flipping a record's LDR05 back to a non-`d` value (e.g. `a`, `n`, `p`) makes it immediately harvestable again as a normal record on the next request — this transition is not sticky/cached.
+
 ---
 
 ## Record Hierarchy / Architecture
@@ -84,10 +103,27 @@ Harvest response
 
 ### Toast Messages
 
+> ✅ Resolved 2026-07-21 against `folio-org/ui-oai-pmh/translations/ui-oai-pmh/en_US.json` — the earlier "text not stable" placeholders are replaced with the exact settings/set strings below.
+
 | Event | Toast text | Source |
 |---|---|---|
-| Save settings | Exact save toast text not stable across extracted cases | [from cases, verify in env] |
-| Run harvest from logs flow | Exact run-success toast text not stable across extracted cases | [from cases, verify in env] |
+| Settings saved (Behavior/General/Technical) | `Setting was successfully updated.` | [confirmed] |
+| Set created | `Set was successfully created` | [confirmed] |
+| Set updated | `Set was successfully updated` | [confirmed] |
+| Set deleted | `Set was successfully deleted` | [confirmed] |
+| Set delete failed | `Failed to delete a set` | [confirmed] |
+| Set save module error | `Unable to save due to a module error. Please try again. If a problem persists please contact your system administrator` | [confirmed] |
+| No permission to edit | `You lack necessary permissions to edit OAI-PMH settings. Please, contact the system administrator.` | [confirmed] |
+
+### Settings — Sets (confirmed strings below, BUT NOT CURRENTLY EXPOSED IN UI — see warning)
+
+> ⚠️ **C376937 (confirmed, current env) shows the "Sets" configuration option is NOT present at all under Settings > OAI-PMH** — the pane only lists `General`, `Technical`, `Behavior` (and `Logs`, confirmed separately by C410816). The strings below describe the `Sets` feature as documented in source/older cases; treat "Sets" as **hidden/unavailable in the current UI build** until re-confirmed in env. Do not write a test case that assumes a visible "Sets" settings option without first verifying it exists on the target tenant.
+
+`New set` / `Edit {name}` / `View {name}` panes; fields `Set name`, `Set description`, `Set specification`; accordions `General information`, `Filtering conditions`. Delete modal: `Confirm deletion of set` / `Set {name} will be removed.` Validation: `Set name or set specification isn't unique...`, `Specification can only use A-Z a-z 0-9 - _ . ! ~ * ' ( )`, `This field cannot be empty`. Empty list: `There are no OAI-PMH Sets exist at the moment.`
+
+### Settings — General/Behavior/Technical field labels (confirmed)
+
+General: `Enable OAI service`, `Repository name`, `Base URL`, `Administrator email(s)`, `Time granularity`. Behavior: `Deleted records support` (No/Transient/Persistent), `Suppressed records processing` (`Transfer suppressed records with discovery flag value` / `Skip suppressed from discovery records`), `OAI-PMH errors processing` (`Associate with HTTP status 200` / `Associate with HTTP error statuses`), `Record source` (`Source records storage` / `Inventory` / `Source records storage and Inventory`). Technical: `Max records per response` (validation: `Max records per response cannot be more than 500`), `Enable validation`, `Formatted output`. Service-disabled banner: `OAI service is <b>disabled</b>. To affect OAI-PMH features by settings please <b>Enable OAI service</b>...`
 
 ### Modal / Dialog Titles
 
@@ -106,6 +142,33 @@ Save, Cancel, Run, Download, Actions, Save and close. [from cases, verify in env
 |---|---|---|
 | OAI service disabled | OAI-PMH request must return error response when service disabled | [from source] |
 | Validation enabled and response malformed | Validation/schema error should be returned | [from source] |
+
+### Default Settings Values (fresh/first-time deployment, confirmed C375138)
+
+| Setting | Default value |
+|---|---|
+| Deleted records support | `Persistent` |
+| Suppressed records processing | `Transfer suppressed records with discovery flag value` |
+| OAI-PMH errors processing | `Associate with HTTP status 200` |
+| Record source | `Source records storage` |
+
+Only verify these on an environment where the module has never had its OAI-PMH settings touched — any tenant that's been configured before will show whatever was last saved, not these defaults.
+
+### Logs Pane Details (confirmed, C400648)
+
+- Header label (exact): `Logs are available for completed harvests and kept for 30 days based on UTC time. The time displayed in the 'Last update' column is based on the time zone selected in tenant settings.`
+- Columns: `Started` (harvest start time), `Last update` (time of last OAI-PMH service response), `Harvest Id`, and a 4th column with a `Download` link for the error log (link is **omitted entirely**, not just disabled, when a harvest had zero errors).
+- Retention is exactly **30 days**, backed by the `cleanErrorsInterval` config value — confirm via `GET /oai-pmh/configuration-settings?name=technical`, which returns `"cleanErrorsInterval": "30"` in the config's `value`. A harvest's Download link disappears from the Logs table once it crosses the 30-day threshold (harvests older than 30 days are removed from the list entirely, not just stripped of their download link).
+
+### Settings HTML Page Title Format (confirmed, C410816)
+
+| State | Title |
+|---|---|
+| OAI-PMH settings landing (no sub-section selected) | `OAI-PMH settings - FOLIO` |
+| General selected | `OAI-PMH settings - General - FOLIO` |
+| Technical selected | `OAI-PMH settings -Technical - FOLIO` (note: **no space** before "Technical" — a real product inconsistency, don't "fix" it when writing the expected result) |
+| Behavior selected | `OAI-PMH settings -Behavior - FOLIO` (same missing-space quirk) |
+| Logs selected | `OAI-PMH settings -Logs - FOLIO` (same missing-space quirk) |
 
 ---
 
@@ -191,6 +254,15 @@ OAI-PMH release-focused cases in this subtree include cross-tenant setup pattern
 14. Logs retain completed harvest history for 30 days and expose downloadable error detail files only for failed record subsets. (cases + source)
 15. Time granularity controls accepted precision for from/until selective harvesting parameters. (source)
 16. Base URL must match real endpoint URL; mismatch can break continuation and downstream harvester workflows. (source)
+17. **`resumptionToken`'s `cursor` attribute increments exactly by the configured "Max records per response" page size** — e.g. with max=100: page 1 has `cursor="0"`, page 2 (after following the token) has `cursor="100"`, page 3 has `cursor="200"`, and so on; the final page omits `resumptionToken` entirely. Each page's record count is capped at the configured max. Summing every page's record count across the full resumptionToken chain must not exceed the true total record count for the query's date range (verify independently via `instance-storage` API count) — this is the standard way to validate pagination correctness end-to-end rather than trusting any single page. (cases — C380633)
+18. **Moving Holdings/Items from one MARC instance to another triggers incremental harvesting for BOTH the source and destination instances**, not just the instance that gained the holdings — assert both instances appear in the next incremental `ListRecords`/`ListIdentifiers` harvest window after the move. (cases — C1347154)
+19. **A plain edit to an Item (e.g. Material type, Temporary location, Electronic access) — with no Holdings/Instance move involved — is itself sufficient to make the parent FOLIO Instance appear in the next incremental `ListRecords` window** (Record source = Inventory, `metadataPrefix=marc21_withholdings`, `from`/`until` bracketing the edit timestamp). The harvested `marc21_withholdings` record's `999`, `952`, and `856` fields carry a `t` subfield set to `'0'` (not `'1'`) for a normal, non-suppressed item — `t=0` is the baseline/non-suppressed counterpart to the already-documented `t=1` transfer-suppression marker (Rule 8); don't assume the `t` subfield only appears in suppressed-mode exports. (cases — C375209)
+
+---
+
+## Authoring style (measured 2026-07-23)
+
+OAI-PMH: **`Other` ~84%** / Func ~16%, median ~8 steps, `User Journey` ~0%. This is an **API/protocol** area — cases are Postman-style: a harvest request (`verb=ListRecords&metadataPrefix=marc21_withholdings&from=…&until=…`) and the expected result is response content / exact MARC field mappings / resumptionToken cursor behavior, not UI toasts. Execution Type is often `Karate`/`Backend Component` rather than Manual, and `Other` type. Preconditions carry the Settings > OAI-PMH config (record source, deleted-records support, suppression mode) plus the Inventory/SRS data being harvested.
 
 ---
 
@@ -200,3 +272,9 @@ OAI-PMH release-focused cases in this subtree include cross-tenant setup pattern
 - [ ] Exact labels and control names in Logs filter accordion in current UI build.
 - [ ] Release-tag consistency in TestRail custom release field for all subtree cases.
 - [ ] Jira project usage for OAI-PMH work: corrected Phase 3 query over MODOAIPMH/UIOAIPMH/EDGOAIPMH also returned zero done items.
+- [x] ~~"Sets" configuration UI existence~~ — resolved this round: NOT present in current Settings > OAI-PMH pane (C376937); documented strings are source-only until re-confirmed live.
+- [ ] Whether `s`/`x`/other non-standard LDR05 codes are actually valid per the MARC standard or environment-specific test artifacts (C376963 used `s`, which isn't a standard Leader/05 code) — treat the "only `d` = deleted" rule as solid, but don't assume `s`/`x` are meaningful production values.
+
+> N≥10 audit round (2026-07-21): 12 cases read — C375138, C400648, C376937, C410816, C423498, C411725, C411613, C376963, C388546, C1347154, C663352, C380633. Added: default settings values, Logs pane retention/columns, exact (buggy-spacing) page-title formats, 952$r ILL Policy and 022$l Linking ISSN mappings, bound-with dual-instance visibility, LINKED_DATA source type mapping (999$l), Deleted-records-support=No hard-exclusion behavior vs Persistent/Transient, resumptionToken cursor semantics, and cross-instance incremental harvest on holdings move. Also surfaced a discrepancy: the "Sets" settings feature documented in this file appears NOT to exist in the current UI.
+
+> Random spot-check (2026-07-23): picked one fresh uncited case at random from the 275-case section tree (C375209) — confirmed that a plain Item edit (no move/transfer involved) is by itself enough to trigger incremental re-harvest of the parent Instance, and surfaced the `t=0` non-suppressed counterpart to the already-documented `t=1` suppression marker. Added Key Business Rule 19.

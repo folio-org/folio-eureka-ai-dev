@@ -122,6 +122,9 @@ Instance  (bibliographic — one per work/edition)
 **Instance record accordions** [confirmed from source code]:
 Administrative data, Title data, Identifier, Contributor, Descriptive data, Instance notes, Electronic access, Subject, Classification, Instance relationship, Related instances
 
+**Administrative data accordion — key editable fields** [confirmed — C602, C603]:
+`Instance status term`, `Mode of issuance`, `Cataloged date`, `Instance HRID` (auto-generated, read-only), `Source`, `Statistical code`, `Previously held`, `Staff suppress`, `Suppress from discovery`. Reference-data dropdowns (e.g. `Instance status term`, `Mode of issuance`) are populated from `Settings > Inventory > <corresponding reference list>` (e.g. Instance Status Types) — a common verification is that the dropdown options match the settings list.
+
 **Holdings record accordions** [confirmed from source code]:
 Administrative data, Holdings details, Holdings notes, Electronic access, Acquisition, Receiving history
 
@@ -157,6 +160,10 @@ Alternative title types, Call number types, Classification identifier types, Con
 > Use these verbatim in expected results. Never paraphrase.
 
 ### Toast Messages
+
+> ✅ Re-verified against `folio-org/ui-inventory/translations/ui-inventory/en_US.json` (2026-07-21): all rows below match, including every one previously tagged `[from source, verify in env]` (shared-instance, ownership-update, settings HRID, local-instance-shared, bound-piece, barcode-copied) — treat them as confirmed.
+
+**Validation (uniqueness):** `This barcode has already been taken`; `This HRID has already been taken`; empty required field `Please fill this in to continue`; select required `Please select to continue`. [confirmed]
 
 | Event | Toast text | Source |
 |---|---|---|
@@ -224,7 +231,9 @@ All confirmed from GitHub source code:
 | Instance suppressed warning | `Warning: Instance is marked suppressed from discovery` | [confirmed] |
 | Holdings suppressed warning | `Warning: Holdings is marked suppressed from discovery` | [confirmed] |
 | Item suppressed warning | `Warning: Item is marked suppressed from discovery` | [confirmed] |
-| Instance set for deletion + suppressed warning | `Warning: Instance is set for deletion, suppressed from discovery, and staff suppressed` | [from source, verify in env] |
+| Instance set for deletion + suppressed warning | `Warning: Instance is set for deletion, suppressed from discovery, and staff suppressed` | [confirmed — C663275, via LEADER 05 = "d" MARC update] |
+| Fast Add duplicate HRID (toast) | `Saving inventory records failed` | [confirmed — C436872] |
+| Fast Add duplicate HRID (backend response, via DevTools Network) | `HRID value already exists in table instance: {value}` | [confirmed — C436872] |
 | Instance staff suppressed warning | `Warning: Instance is marked staff suppressed` | [from source, verify in env] |
 | Browse — no results loaded | `Browse for results entering a query or choosing a filter.` | [from source, verify in env] |
 | No in-transit items | `There are no items with the status In transit.` | [from source, verify in env] |
@@ -340,6 +349,67 @@ Key ECS patterns:
 - **Affiliation switching** is required to view or manage Holdings/Items in a different member tenant from Central.
 - **Settings > Inventory** configuration scoped to Central tenant can be shared consortium-wide for call number type, classification type, etc.
 - Central tenant administrators can manage Instance-level shared data; member tenants manage their own Holdings/Items independently.
+- **"Share local instance"** is the action that promotes a **local** Instance to a **shared** (central) one: `Actions > Share local instance` → `Are you sure you want to share this instance?` modal → toast `Local instance {instanceTitle} has been successfully shared`; the record then saves centrally (`This shared instance has been saved centrally, and updates to associated member library records are in process.`). Requires the instance-sharing permission.
+- **Local vs Shared** is a first-class distinction on member tenants: instances are labelled Local or Shared, and the create action can produce a new **local** or **shared** record; a shared instance cannot be edited the same way a local one can (edits route to the Central tenant).
+- **Non-consortial-tenant negatives are a whole tested cluster** (the `(NON-CONSORTIA)` case family): on a tenant that is NOT part of a consortium, the **`Share local instance` button does not appear**, the **create-new-local/shared choice is absent** (only a plain New action), the **instance-sharing permission is not shown**, and the Instance header omits the Local/Shared labeling. When writing ECS instance cases, include the mirror non-consortia negative — the team verifies the feature is correctly hidden off-consortium. (cases — C411383, C405565, C404514, C404387, C407752)
+
+---
+
+## RTAC API — Enumeration/Chronology/Volume Field Mapping (confirmed C446084)
+
+`POST /rtac-batch` (body: `{ "instanceIds": [...] }`) is a real-time-availability-check API used by external discovery/ILL systems, not the Inventory UI. Its response's per-item `volume` field is built from the item's "Enumeration data" accordion (`Enumeration`, `Chronology`, `Volume`, `Display summary`) using a **fixed precedence, not a simple concatenation of every filled field**:
+
+| Fields filled on the item | Resulting `volume` value |
+|---|---|
+| `Enumeration` only | `Enumeration` |
+| `Enumeration` + `Chronology` | `Enumeration, Chronology` |
+| `Enumeration` + `Chronology` + `Volume` | `Enumeration, Chronology` — **`Volume` is dropped** |
+| `Volume` only | `Volume` |
+| `Chronology` + `Volume` (no Enumeration) | `Volume` — **`Chronology` is dropped** |
+| `Chronology` only | `Chronology` |
+| `Display summary` only (none of the above three) | `Display summary` |
+
+In short: **if `Enumeration` is present, `Volume` never appears in the mapped value** (only `Enumeration`, optionally with `Chronology`); **if `Enumeration` is absent, `Volume` takes precedence over `Chronology`** whenever both are filled; `Display summary` is only used as a fallback when none of `Enumeration`/`Chronology`/`Volume` are set. Write a case with all seven of these field combinations if testing this endpoint — testing only 1-2 combinations will miss the precedence rule entirely, since several combinations produce visually identical-looking output.
+
+---
+
+## Instance Relationships & Preceding/Succeeding Titles (confirmed — Instance subsection, C9215/C9216/C343223–C343230/C619)
+
+Two distinct linking features on an Instance:
+
+- **Preceding / Succeeding titles** — added in the **`Title data`** accordion of the Instance edit form via `Add "Preceding title"` / `Add "Succeeding title"`, entering `Title`, `ISBN`, `ISSN`. They can be **linked** (connected to an existing Instance) or **unlinked** (free-text only, no connected record) — the "unlinked preceding/succeeding titles present" variant is tested explicitly and interacts with other edits (e.g. assigning tags, C358144/C358962). Result shows on the Instance detail view.
+- **Instance relationship (parent / child instances)** — in the **`Instance relationship`** accordion: `Actions > Edit` → add a relationship connecting a **parent** or **child** Instance with a **Type of relation** (e.g. multipart monograph, etc., configured in Settings). Distinct operations each get their own case: **Add** a new parent/child relationship, **Update** the connected title's metadata (the link reflects changes to the connected Instance), and **Replace** the connected title with a different Instance. Test parent-side and child-side separately.
+
+---
+
+## Result List — column chooser, suppression display, CSV export (confirmed — Result list subsection)
+
+- **Column Chooser** (C196760): a control on the results list to pick which columns are displayed; selection changes the visible columns of the Instance/Holdings/Item result tabs.
+- **Suppression visual indication** (C343210, C343237): a record marked **Staff suppressed** and/or **Suppressed from discovery** gets a clear visual marker in the result list (and on the Instance record) — the two suppression flags are shown distinctly, including when both apply at once.
+- **Export from the result list to CSV** (C773250–C784416): the result list can export selected results directly to CSV — per record-type tab (Instance / Holdings / Item), for 1 or multiple selected rows, across 1 or multiple result pages, and with an **"export only selected columns"** option. This is a result-list export, distinct from the Data Export app's quick export; large multi-page exports are marked as load/performance cases.
+
+---
+
+## ISRI / Z39.50 Target Profiles — Single Record Import config (confirmed — Settings subsection, C374176/C374178; refs UIIN-2248 et al.)
+
+The **Inventory Single Record Import (ISRI)** feature (import one bib from an external Z39.50/SRU source, Rule 12) is backed by a settings profile at **`Settings > Inventory > Integrations > Z39.50 target profiles`** (`New` to create).
+
+- Field `Name*` (unique). Two job-profile linkage sections, each required and each allowing **multiple** entries with one marked **Default** (radio) and removable via trash icon:
+  - **`Job profiles for import/create *`** — `Add job profile for import/create` → `Select job profile for import/create` dropdown.
+  - **`Job profiles for overlay/update *`** — `Add job profile for overlay/update` → `Select job profile for overlay/update` dropdown.
+- Plus Z39.50 connection settings (target URL, authentication, external identifier index) on the same profile.
+- Permissions: `Inventory: Import single bibliographic records` + `Settings (Inventory): Configure single-record import`.
+- View mode vs create/edit mode are tested separately (C374176 view, C374178 create/edit); the create/edit case is long (~21 steps) because it exercises adding/defaulting/removing job profiles in both sections.
+
+---
+
+## Keyboard Shortcuts (confirmed — Keyboard shortcut subsection, C345298/C456114/C459541/C476695)
+
+Inventory exposes a **"Keyboard shortcuts" modal**, opened from the arrow/caret dropdown next to the "Inventory" logo + app name in the top menu → click **"Keyboard shortcuts"**; the modal has separate **Windows** and **macOS** variants (the displayed key combos differ by OS). Confirmed shortcuts:
+- **New instance** — `Alt + N` (Windows) / `Option + N` (macOS).
+- **Open "Edit MARC record"** — `Ctrl + Shift + E` on a MARC-source instance's detail view (only for a user with edit permission).
+
+Shortcut cases are short (3–5 steps) and are typically written per-OS (a Windows case and a macOS case) because the key labels differ.
 
 ---
 
@@ -353,19 +423,19 @@ Key ECS patterns:
 3. User can add an Item to a Holdings record; Item requires a Material type and Permanent loan type (cases)
 4. Instance, Holdings, and Item each have an independent 'Suppress from discovery' flag; suppression at any level hides the record from patron-facing discovery (cases)
 5. Item Status is set automatically by circulation events (check out, check in, in transit, paged) and cannot be manually set to those values (cases)
-6. Effective Call Number on an Item resolves from Item-level first, then Holdings, then Instance in that priority order (cases)
+6. Effective Call Number on an Item resolves from Item-level first, then Holdings, then Instance in that priority order (cases). **Exact composition (confirmed, C9230)**: `Effective call number string` = `<prefix> <call number> <suffix> <Volume> <Enumeration> <Chronology> <Copy number>`, space-separated, where prefix/number/suffix use item-level values if present else fall back individually to holdings-level, and Volume/Enumeration/Chronology/Copy always come from the Item record; any blank element is omitted entirely from the string (not left as a double space). Test with a mix of item-level and holdings-level values to confirm the per-element fallback, not just an all-item or all-holdings case.
 7. User can move an Item from one Holdings to another Holdings within the same or a different Instance (cases)
-8. User can move a Holdings record from one Instance to another Instance; all Items under the Holdings move with it (cases)
+8. User can move a Holdings record from one Instance to another Instance; all Items under the Holdings move with it (cases). **"Move holdings/items to another instance" is available in the Actions menu even when the Instance was opened via Browse** (Call Number Browse, Subject Browse, etc.), not just via a regular Search result — this was previously blocked (`UIIN-2518`, fixed) and is a good multi-entry-point scenario per this skill's entry-point coverage rule: test Move from both Search-opened and Browse-opened records, not just one (cases — C411508).
 9. A MARC-sourced Instance cannot be edited via the standard Instance editor — staff must use quickMARC or Data Import (cases)
-10. Optimistic locking prevents a user from overwriting changes made by another user since the record was last loaded; the second user sees a conflict error and must reload (cases)
+10. Optimistic locking prevents a user from overwriting changes made by another user since the record was last loaded; the second user sees a conflict error and must reload (cases). **A MARC-sourced Instance's own `_version` (used for optimistic locking) must NOT change when its Holdings or Items are created, edited, or deleted** — only editing the Instance itself (via quickMARC) should bump it. This was a past regression (`MODINVSTOR-1186`); verify by checking the `_version` field in the `GET /inventory/instances/{id}` response before and after a Holdings/Item change, not just that the edit succeeded (cases — C466062).
 11. User can browse the entire catalog by Call Number, Subject, Contributor, or Classification; browse results anchor at the entered term (cases)
-12. Single Record Import allows importing one bib record from an external Z39.50/SRU source directly into Inventory (cases)
+12. Single Record Import allows importing one bib record from an external Z39.50/SRU source directly into Inventory; the source connection + its import/create and overlay/update job profiles are configured as an **ISRI / Z39.50 target profile** in `Settings > Inventory > Integrations` (see the ISRI section). (cases — C374176, C374178)
 13. Bound-with links one physical Item to Holdings from multiple Instances; the Item appears in all linked Instance detail panes (cases)
 14. Version History shows all create/edit events for an Instance, Holdings, or Item with timestamp, user, and changed field details (cases)
 15. 'Set record for deletion' marks an Instance with a deletion flag; the physical deletion must be confirmed separately by staff (cases)
 16. An Item cannot be deleted while it has an active loan; it cannot be deleted while it has an open request (cases)
 17. Statistical codes can be attached to Instance, Holdings, and Item records and are managed in Settings > Inventory > Statistical codes (cases)
-18. Advanced search in Inventory supports multi-field queries with AND/OR operators; results can be filtered by Holdings and Item fields as facets (cases)
+18. Advanced search in Inventory supports multi-field queries with the operators **`AND`, `OR`, `NOT`** and match options including **`Exact phrase`** (plus `Contains all`/`Starts with`/etc.), and runs **per record-type tab** — the same advanced-search modal is exercised separately for **Instances, Holdings, and Items** (each its own case). A thorough advanced-search case set covers each operator and each record type, not just `AND` on Instances. (cases — C466156, C414977, C422016, C422017)
 19. User without the 'create instance' capability does not see the New button in Inventory (cases)
 20. Tenant can configure default display columns for the Inventory results list (UIIN-3422, Trillium) (jira)
 21. In ECS, the 'Held by' facet defaults to the current tenant context to filter results by local holdings (UIIN-2820, Trillium) (jira + cases)
@@ -374,7 +444,30 @@ Key ECS patterns:
 24. Bound-with action button on an Item is disabled while the Item record is unsaved (UIIN-3631, Trillium) (jira)
 25. Instance detail pane may exhibit performance degradation when an Instance has very large numbers of Holdings — known boundary (UIIN-3660) (jira)
 26. Item status values displayed in the Actions menu must use translated (localized) strings, not raw system keys (UIIN-3666) (jira)
+27. **A Bound-with item can be linked to multiple Holdings, not just one** — the `Add Bound-with and analytics` modal on the item accepts multiple Holdings HRIDs entered sequentially (paste one, it saves and stays open for the next) before a single final `Save & close`; all entered HRIDs become separate Bound-with connections on that one item. Don't write a bound-with case that only links one Holdings record if the story is about the multi-link capability. (cases — C422034)
+28. **Once an Instance is set for deletion (whether via the UI action or via a MARC update setting LEADER position 05 to `d`), the "Set record for deletion" option disappears from the Actions menu entirely** — it is not merely disabled, and there is no menu-driven "undo" path back to un-set it from that same menu. `View source` on the record will show LEADER 05 = `d` for MARC-derived Instances. (cases — C663275)
+29. **Moving a Holdings record between Instances works at scale (10k+ items)** without errors or timeouts, following the same `Move to` → `Confirm move` (`Cancel`/`Continue`) flow as a small holding; a large-holdings move case should still assert item count/integrity post-move, not just "no error occurred." (cases — C1282790)
+30. **Cancelling "New fast add record" via the X button restores the exact prior pane state** — whatever was in the second/third panes before opening Fast Add (empty search prompt, a single opened record, or a multi-result list) reappears unchanged; there is no leftover empty third pane. This was a past regression on multiple fronts (`UIIN-2497`, `UIIN-2690`); test all three starting states (no search yet / one result open / many results), not just one. (cases — C422095)
 27. Tags applied to Instance, Holdings, or Item records are searchable via the Tags facet in Search & filter (cases)
+31. **"Prevent redundant updates in Inventory" is a tenant-level feature flag (one flag for Instance + Holdings + Item together).** When ENABLED, an update whose incoming data does not actually change any FOLIO-mapped field is skipped: the record's `metadata.updatedDate` ("Record last updated") does NOT advance, no Version-history entry is created, and no domain events / reindex / audit are triggered (the ~9 subscribed downstream modules are not notified). When DISABLED (the **default** — pre-Sunflower behavior), any update to either record representation advances the update date. This produces a deliberate SRS-vs-FOLIO update-date divergence: editing a MARC bib subfield that does not map to a FOLIO Instance field advances the SRS `updatedDate` but, with the flag on, leaves the FOLIO Instance `metadata.updatedDate` unchanged. Introduced by MODINVSTOR-1577 (flag) over the MODINVSTOR-1363 optimization. (story — MODINVSTOR-1577)
+
+---
+
+## "Prevent Redundant Updates in Inventory" — Feature Flag (MODINVSTOR-1577)
+
+A tenant-level optimization flag governing Instance, Holdings, and Item updates as a single switch.
+
+**API (exact, confirmed from a real team case):**
+- `GET {host}/inventory-settings/inventory.optimize-updates.enabled` — retrieves the setting by key. Available on non-ECS **and** ECS tenants (central and member).
+- `PATCH {host}/inventory-settings/inventory.optimize-updates.enabled` with body `{"value": true}` — updates it. Allowed on **non-ECS tenants and the ECS central tenant only**; ECS **member** tenants receive the value by **automatic propagation from the central tenant** (a member cannot PATCH it directly).
+- Default value = **disabled** (`false`) — updates always occur, matching pre-Sunflower behavior.
+
+**How the team actually tests it — Manual / Extended, through the UI, NOT as a backend/API-only case.** Despite being a back-end story, the real case is `Execution Type = Manual`, `Test Group = Extended`, `Dev Team = Spitfire`, `Release = R2 2026 Umbrellaleaf`, `refs = MODINVSTOR-1577`. It is a **two-area (Inventory + Data Import)** test:
+- Setup builds full Data Import **create** and **update** job profiles (mapping + action + match profiles, with exact subfields like `918$a` → Item Barcode, `050$a` → Holdings Call number, `010$a` for the bib match), creates an Instance (Source = MARC) + Holdings + Item, and notes the current "Record last updated" for all three.
+- The test re-imports an **unchanged** file (no change to any FOLIO-mapped field) via the update job profile with the flag ENABLED, then asserts the optimization at the **user-visible surfaces**: the **"Record last updated"** date/time in each record's **"Administrative data"** accordion is unchanged for Instance, Holdings, AND Item, and **"Version history"** shows no new version entry (latest entry predates the import).
+- **Mandatory NOTE (MODDATAIMP-1290):** with the optimization enabled, the **Data Import log may still show the record as "Updated"** — a known display behavior that does NOT by itself mean the FOLIO metadata changed. A case must include this note so an executor doesn't fail it on the log status alone; the real proof is the unchanged "Record last updated" + no new Version-history entry.
+
+> **Lesson (2026-07-23, human-vs-generated diff):** a "back-end" / feature-flag label does not imply a Backend-Component/Karate API-only case. This team verifies even a storage-layer optimization through the end-user workflow (Data Import re-import → Inventory "Record last updated" + Version history), Manual/Extended. Prefer the UI-observable surface (`Record last updated`, `Version history`) over raw `metadata.updatedDate` API reads unless the story is explicitly an API/contract test.
 
 ---
 
@@ -489,6 +582,8 @@ Verification patterns observed in actual spec files:
 
 **`item-moved-from-one-shelf-to-another.cy.js`** — moves item between Holdings, verifies old Holdings no longer shows item, new Holdings does. Asserts effective location updated.
 
+**Move item across Instances — search index must not duplicate (confirmed pattern, C365635):** after `Actions > Move holdings/items to another instance` moves an item to a different Instance's Holdings (via the side-by-side "Select instance" + per-row `Move to` flow, confirmed via the `Confirm move` modal), searching Inventory by that item's exact `Barcode` must return **exactly one** record, opened directly in full view, with the `Instance` link in the heading pointing to the **new** (destination) Instance — not the old one, and not two matches. This is a real regression class (MSEARCH-439/MODINVSTOR-966: "Transferring items from one instance to another results in multiple matches when searching on barcode") — any move-item case should include this barcode-search-uniqueness step, not just check the item disappeared from the old Instance pane.
+
 **`browse-call-number-all-matching-format.cy.js`** — enters call number prefix in Browse tab, verifies anchor row highlighted, adjacent rows visible. Checks that clicking row opens Instance pane.
 
 **`marc-instance-version-not-updated-after-deleting-holdings-and-item.cy.js`** — deletes Holdings+Item from MARC-sourced instance; verifies instance version number is NOT incremented (MARC-source boundary rule).
@@ -505,5 +600,13 @@ Verification patterns observed in actual spec files:
 - [ ] Translation key for ECS "Held by" facet label — key not found in `ui-inventory/en_US.json`; may be in `ui-inventory-es6` or a separate ECS module; verify actual UI label
 - [ ] Default column list in Inventory results list — controlled by tenant configuration; not in translation file
 - [ ] Canonical label "Set record for deletion" vs "Mark for deletion" — translation key `setForDeletion.modal.header` = "Are you sure you want to set this record for deletion?" confirms "set for deletion" is the canonical form
+
+> Random spot-check (2026-07-22): picked one fresh uncited case at random (C446084) to sanity-check this file's "Partial" verdict. Landed on a genuinely undocumented API-only feature — the `/rtac-batch` real-time-availability-check endpoint's Enumeration/Chronology/Volume-to-`volume`-field mapping, which has a non-obvious precedence order (Enumeration beats Volume; Volume beats Chronology). Added as its own section above. This confirms the self-assessment's general pattern for this file: misses tend to be whole undocumented (often API-level, not just UI) subsections rather than edge-case wording.
 - [ ] `ui-inventory.item.markasdeclaredlost` and `ui-inventory.item.markaswithdawn` appear in old TestRail cases but are absent from current `package.json` — do not use in new tests
 - [ ] quickMARC and MARC Holdings Eureka capability sets — `ui-quick-marc` permissions are not in `ui-inventory/package.json`; check `ui-quick-marc` package.json separately
+
+---
+
+## Authoring style (measured 2026-07-23)
+
+Inventory (sampled across Instance/Holdings/Item + Linked data/Optimistic locking/Keyboard shortcut, ~294 cases) skews **`Functional` ~67%** / `Other` ~30%, **median ~5 steps**, `User Journey` ~0% (`No`). Cases are mostly compact and atomic — one record operation or one facet/browse/shortcut behavior per case — with the setup (instance/holdings/item records, source MARC vs FOLIO, permissions) in Preconditions. Concurrent-edit (optimistic locking) and keyboard-shortcut cases are per-variant (per record type / per OS). Reserve longer flows for genuine cross-record operations (bound-with multi-link, move-holdings-at-scale). Prefer `Functional` for record-behavior cases; `Other` for pure display/label checks.
