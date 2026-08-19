@@ -14,6 +14,7 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 - `code-review` - Reviews branch diffs and produces a structured code quality report.
 - `document-feature` - Documents implemented behavior by analyzing code changes and writing feature docs.
 - `ecs-user-setup` - Guides ECS and multi-tenant user setup for FOLIO automated tests.
+- `fat-creator` - Creates FAT Jira review tasks for TestRail manual test cases, one per case or one combined ticket.
 - `implement-automated-test` - Generates or updates Cypress E2E tests for FOLIO Stripes.
 - `liquibase-migration` - Guides FOLIO Liquibase migration authoring, structure, naming, and database conventions.
 - `review-generated-automated-test` - Reviews Cypress E2E test changes against FOLIO Stripes testing conventions.
@@ -71,6 +72,7 @@ npx skills add folio-org/folio-eureka-ai-dev \
   --skill write-testrail-cases \
   --skill build-app-context \
   --skill testrail-bug-report \
+  --skill fat-creator \
   --skill write-bug \
   --skill skill-feedback
 ```
