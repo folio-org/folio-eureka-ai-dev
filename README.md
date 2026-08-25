@@ -129,7 +129,6 @@ The feedback loop should stay lightweight: you can create feedback through the `
 
 - Document Feature skill: `docs/reference-document-feature-skill.md`
 - Unit testing guidelines: `docs/testing/unit-testing.md`
-- PR description guide: `docs/pr/pr-description.md`
 
 ### Feature documentation
 
@@ -152,5 +151,5 @@ Fetch and follow instructions from https://raw.githubusercontent.com/folio-org/f
 To write a consistent, reviewable pull request description following our conventions, use the snippet.
 
 ```text
-Fetch and follow instructions from https://raw.githubusercontent.com/folio-org/folio-eureka-ai-dev/refs/heads/master/docs/pr/pr-description.md
+Fetch and follow instructions from https://raw.githubusercontent.com/folio-org/folio-eureka-ai-dev/refs/heads/master/skills/write-pr-description/SKILL.md
 ```

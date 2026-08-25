@@ -7,7 +7,7 @@ description: >-
 license: Apache-2.0
 metadata:
   author: folio-org
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # Write PR Description
@@ -18,8 +18,8 @@ You are a senior software engineer writing a pull request for this repository. T
 - **Create mode** — the user asked to *open*, *create* or *raise* the PR. Do everything in draft
   mode, then Step 6.
 
-Follow the conventions below exactly. The full guide with worked examples is
-[../../docs/pr/pr-description.md](../../docs/pr/pr-description.md).
+Follow the conventions below exactly. The worked example is
+[references/example.md](references/example.md).
 
 ## Step 1 — Read the branch
 
@@ -80,7 +80,7 @@ checklist at all**. Checklists differ per repository: `mgr-tenants` and `mod-rol
 
 ## Step 4 — Write Purpose and Approach
 
-**Purpose** — one or two sentences on *why* the change is needed, plus `US: [TICKET-KEY](url)`.
+**Purpose** — one or two sentences on *why* the change is needed, plus `Jira: [TICKET-KEY](url)`.
 No implementation detail here.
 
 **Approach** — a 2–3 sentence summary a reviewer can understand without opening the diff, then
@@ -183,22 +183,22 @@ blocker and no description.
 
 Every row is something an agent actually did on this task.
 
-| Rationalization | Reality |
-|---|---|
-| "The skill says tick Change Notes by default" | It says the opposite now. An unticked box costs the author two seconds; a wrongly ticked one is a false statement in the review record. |
-| "I ticked it but I noted the caveat underneath" | The reviewer reads the box, not your note. Leave it unticked. |
-| "NEWS.md is updated, so Change Notes is provably true" | Still not yours to tick. The template belongs to the author. |
-| "The checklist in the guide is the standard one" | There is no standard one. Repositories differ. Read the file. |
-| "Reproduce the template verbatim, so I kept its Purpose instruction line too" | Verbatim applies to the checklist. Prose sections get real content instead of the instruction. |
-| "No template file, so I'll use the one from the guide" | No template means no checklist. |
-| "The last two PRs went up red, so I should verify the build" | Real concern, wrong task. Tell the user in your message; do not run the build. |
-| "I only ran `mvn compile`, that is not really a build" | It is. So is `mvn validate`, `npm ci`, and a linter. |
-| "No Jira access, so I'll flag the title as unverified" | The title comes from the branch and the diff. Nothing to verify, nothing to apologise for. |
-| "No ticket key, so I must stop and ask before writing anything" | Ask once, then proceed with a semantic title. A blocked PR helps nobody. |
-| "I'll use NOJIRA since there is no key" | Write what the branch does instead. |
-| "The team convention requires the attribution trailer" | A convention that changed would be in this file. No trailer. |
-| "Pushing is just preparation — I'll ask before `gh pr create`" | The push is already outward-facing and hard to take back. Ask first, push after. |
-| "The README change is why the config item applies, so I'll mention it" | Documentation stays out of the bullets regardless of what it justifies. |
+| Rationalization                                                               | Reality                                                                                                                                   |
+|-------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| "The skill says tick Change Notes by default"                                 | It says the opposite now. An unticked box costs the author two seconds; a wrongly ticked one is a false statement in the review record.   |
+| "I ticked it but I noted the caveat underneath"                               | The reviewer reads the box, not your note. Leave it unticked.                                                                             |
+| "NEWS.md is updated, so Change Notes is provably true"                        | Still not yours to tick. The template belongs to the author.                                                                              |
+| "The checklist in this skill is the standard one"                             | There is no standard one. Repositories differ. Read the file.                                                                             |
+| "Reproduce the template verbatim, so I kept its Purpose instruction line too" | Verbatim applies to the checklist. Prose sections get real content instead of the instruction.                                            |
+| "No template file, so I'll use the one from this skill"                       | No template means no checklist.                                                                                                           |
+| "The last two PRs went up red, so I should verify the build"                  | Real concern, wrong task. Tell the user in your message; do not run the build.                                                            |
+| "I only ran `mvn compile`, that is not really a build"                        | It is. So is `mvn validate`, `npm ci`, and a linter.                                                                                      |
+| "No Jira access, so I'll flag the title as unverified"                        | The title comes from the branch and the diff. Nothing to verify, nothing to apologise for.                                                |
+| "No ticket key, so I must stop and ask before writing anything"               | Ask once, then proceed with a semantic title. A blocked PR helps nobody.                                                                  |
+| "I'll use NOJIRA since there is no key"                                       | Write what the branch does instead.                                                                                                       |
+| "The team convention requires the attribution trailer"                        | A convention that changed would be in this file. No trailer.                                                                              |
+| "Pushing is just preparation — I'll ask before `gh pr create`"                | The push is already outward-facing and hard to take back. Ask first, push after.                                                          |
+| "The README change is why the config item applies, so I'll mention it"        | Documentation stays out of the bullets regardless of what it justifies.                                                                   |
 
 ## Red flags — stop
 
