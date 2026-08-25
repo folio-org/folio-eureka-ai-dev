@@ -214,7 +214,9 @@ for third-party marketplaces.)
 
 > The developer-oriented `write-pr-description` skill also lives in the
 > same repo but is **not** bundled in the `folio-po` plugin. If you want
-> it, see [Appendix A.3](#a3-npx-skills-alternative).
+> it, see [Appendix A.3](#a3-npx-skills-alternative). It drafts the PR text
+> for you; opening the PR itself additionally needs the GitHub CLI (`gh`)
+> installed and logged in.
 
 ---
 

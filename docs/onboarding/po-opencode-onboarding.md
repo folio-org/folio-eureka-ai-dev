@@ -239,6 +239,10 @@ You should see `write-user-story` and `write-bug` listed. If not, re-run
 the install command above. You should also see `write-pr-description` and
 `skill-feedback`, because they are part of the Product Owner preset.
 
+`write-pr-description` drafts the PR text from a branch. It can also open the
+PR for you, which additionally needs the GitHub CLI (`gh`) installed and
+logged in — not required for drafting.
+
 ---
 
 ### 4.1 Launch OpenCode in that folder *(both options)*

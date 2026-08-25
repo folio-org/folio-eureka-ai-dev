@@ -1,20 +1,31 @@
 # PR Description Guide
 
-A reference for writing consistent, reviewable pull request descriptions in this repository.
-The canonical template is [PULL_REQUEST_TEMPLATE.md](PULL_REQUEST_TEMPLATE.md).
+A reference for writing consistent, reviewable pull request descriptions.
+
+The canonical template is the target repository's own `.github/PULL_REQUEST_TEMPLATE.md`. There is no
+single shared template: `mgr-tenants` and `mod-roles-keycloak` have no "Dependent module build
+verification" item and split Breaking Changes into three sub-items, while `applications-poc-tools`
+is the reverse. This guide defines what goes *into* the sections; the repository's template defines
+which sections and which checklist items exist.
 
 ---
 
 ## Title
 
-Place the PR title as an H2 heading **above** the template sections.
-
 **Format:** `TICKET-KEY: <title>`
+
+When the PR is opened through `gh`, the title goes in the title field and must **not** be repeated as
+an `##` heading in the body. When the description is drafted as text for a human to paste, place it as
+an H2 heading above the template sections.
 
 Rules:
 - Start with the Jira ticket key (`APPPOCTOOL-85:`, `KEYCLOAK-102:`, etc.).
-- **Copy the title verbatim from the Jira user story title.** Only when explicitly told otherwise
-  should the title be formed from the purpose of the changes instead.
+- **Resolve the key from what the user said, then the branch name, then the commit messages.** If no
+  key exists anywhere, ask once; if there is no ticket, write a plain semantic title describing what
+  the branch does and omit the ticket link. Do not write `NOJIRA`, and do not emit a Jira URL for a
+  key you inferred rather than read.
+- **Write the title from the branch and the diff, not from Jira.** Looking the story title up is not
+  required and not expected — no apology for lacking tracker access belongs in a PR description.
 - Use sentence case; do not end with a period.
 - Keep it under ~80 characters.
 
@@ -122,20 +133,22 @@ Rules:
 
 ## Pre-Review Checklist
 
-Keep the checklist exactly as it appears in the template. Before submitting, tick every item that
-applies to the PR:
+The checklist is copied from the repository's own `.github/PULL_REQUEST_TEMPLATE.md` — verbatim: same
+items, same wording, same order, same indentation, same blockquote notes, same sub-items. Do not
+reproduce a checklist from memory or from this guide; the items differ per repository. If a
+repository has no template file, the description carries no checklist.
 
-| Item | When to tick |
-|---|---|
-| **Self-reviewed Code** | Always |
-| **Change Notes** | Always — add an entry to `NEWS.md` |
-| **Testing** | Always — local run or dev-env verification |
-| **Dependent module build verification** | When a shared library changes its public API |
-| **Breaking Changes** | When an interface, configuration key, or serialized format changes incompatibly |
-| **New Properties / Environment Variables** | When `application.kafka.*` or similar config keys are added |
-| **Environment Recreation Test** | When infrastructure or startup configuration changes |
+**The checklist is the author's signature.** Whoever opens the PR ticks the boxes. A drafted
+description — and anything an assistant produces — leaves every box unticked. Ticking
+*Self-reviewed Code*, *Change Notes* or *Testing* asserts that a human reviewed the code, updated
+`NEWS.md` and ran the change; none of that is visible in a diff. Ticking a box and adding a prose
+caveat underneath is the same defect with a disclaimer attached.
 
-Leave unchecked items unchecked — do not delete them.
+Do not tick, untick, reword, reorder, delete or add an item.
+
+The template's **prose** sections are different: keep the heading, delete the template's instruction
+line ("Explain why these changes are needed…"), and write real content in its place. Verbatim
+reproduction applies to the checklist only.
 
 ---
 
@@ -149,7 +162,30 @@ Several coding agents append such a trailer by default — remove it before open
 
 ---
 
+## Opening the PR
+
+Writing a PR description is a read-only task. Reading the repository, `git`, and `gh` are in scope;
+builds, tests, linters, formatters, generators, migrations and CI workflows are not — a broken branch
+is worth telling the author about, but not worth running a build to confirm.
+
+Nothing in the description may claim what the diff does not show: no testing performed, no
+verification run, no Jira title that was not read, no ticket link for a key that was inferred.
+
+When the PR is actually opened rather than drafted:
+
+- Base branch is always `master`.
+- Verify the effective `gh` identity from the target repository first — repository-local setup such
+  as `.envrc` exporting `GH_TOKEN` overrides the global account.
+- Push only the current head branch, never another branch and never with `--force`, and push it when
+  the branch has no upstream or has commits the remote does not.
+
+---
+
 ## Complete example
+
+Drafted output for a repository whose template is the `applications-poc-tools` variant. Another
+repository's checklist will differ — this example is not a checklist to copy. Every box is unticked:
+the author ticks them when opening the PR.
 
 ```markdown
 ## APPPOCTOOL-85: Generalize Kafka consumer tenant filter to support custom event types
@@ -183,12 +219,12 @@ threads per listener.
 
 ### **Pre-Review Checklist**
 
-- [x] **Self-reviewed Code** — Reviewed code for issues, unnecessary parts, and overall quality.
-- [x] **Change Notes** — NEWS.md updated with clear description and issue key.
-- [x] **Testing** — Confirmed changes were tested locally or on dev environment.
+- [ ] **Self-reviewed Code** — Reviewed code for issues, unnecessary parts, and overall quality.
+- [ ] **Change Notes** — NEWS.md updated with clear description and issue key.
+- [ ] **Testing** — Confirmed changes were tested locally or on dev environment.
 - [ ] **Dependent module build verification** — Ran manually when library changes impact downstream modules.
   > Actions → Verify Dependent Modules → Run workflow → select branch → Run.
-- [x] **Breaking Changes (if any)** — Handled if changes affect integration with other services.
-- [x] **New Properties / Environment Variables** — Updated README.md if new configs were added.
+- [ ] **Breaking Changes (if any)** — Handled if changes affect integration with other services.
+- [ ] **New Properties / Environment Variables** — Updated README.md if new configs were added.
 - [ ] **Environment Recreation Test (if needed)** — Verified that environment can be recreated successfully.
 ```
