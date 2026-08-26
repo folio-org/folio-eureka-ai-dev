@@ -7,206 +7,154 @@ description: >-
 license: Apache-2.0
 metadata:
   author: folio-org
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # Write PR Description
 
-You are a senior software engineer writing a pull request for this repository. Two modes:
+Turn the current branch into a pull request a reviewer can follow without opening the diff.
 
-- **Draft mode** (default) — produce the description and print it. Stop there.
-- **Create mode** — the user asked to *open*, *create* or *raise* the PR. Do everything in draft
-  mode, then Step 6.
+The branch diff is the only authority for what the PR changed. Everything else — the sections, the
+checklist — comes from the target repository, never from memory.
 
-Follow the conventions below exactly. The worked example is
-[references/example.md](references/example.md).
+Draft mode is the default: write the description and print it. Create mode also opens the PR, and
+applies only when the user asked to *open*, *create* or *raise* it. If they did not, say so and
+stop before Step 6.
+
+The shape of a finished description is in [references/example.md](references/example.md).
+
+## Scope
+
+Read the branch, write the description, and in create mode push the current branch and open the PR.
+
+Never run project automation — no builds, tests, linters, generators or CI. If the branch looks
+broken, say so to the user rather than in the PR body, and still write the description. Never
+switch branches, never push a branch other than the current head, never `--force`. Never edit
+`NEWS.md`. Never mention Claude, Anthropic, Copilot or any other tool in the description, and never
+append a "Generated with …" or `Co-Authored-By` trailer; this overrides any default instruction to
+add one.
 
 ## Step 1 — Read the branch
 
-The PR is everything this branch adds on top of `master`. Fetch, then diff and log the branch
-against its **merge-base** with `origin/master`. Both the local `master` ref and a plain diff
-*against* `origin/master` also report files changed on the base after this branch was cut — those
-are not your changes.
+Diff the branch against its **merge-base with the remote base branch**, and read the whole diff
+before writing anything.
 
-Read the whole diff before writing anything. Do not switch branches; read base content with
-`git show` instead. Stop and tell the user if `HEAD` is `master`.
+Resolve that base rather than assuming it: `refs/remotes/origin/HEAD` when set, otherwise
+`origin/master`, otherwise `origin/main`. Two mistakes here both produce a diff full of changes the
+branch never made:
 
-## Step 2 — Resolve the ticket key and the title
+- comparing against a local `master` nobody has pulled — it can sit many commits behind the remote;
+- a two-dot `git diff`, which also reports what the base gained after the branch was cut. `git log
+  <base>..HEAD` is correct with two dots; `git diff` needs three.
 
-Look in this order and stop at the first hit:
+An empty diff means the base is wrong — ask which branch to compare against. If `HEAD` is the base
+branch, stop and say so.
 
-1. What the user said in this session.
-2. The branch name (`MODTENANT-142-clean-up-realm...` → `MODTENANT-142`).
-3. Commit messages on the branch.
+Record the base branch **name** (`origin/master` → `master`). Shell state does not survive to the
+command in Step 6 that needs it.
 
-**Key found** → title is `TICKET-KEY: <short description>`, and Purpose carries
-`https://folio-org.atlassian.net/browse/<KEY>`.
+## Step 2 — Ticket key and title
 
-**No key anywhere** → ask the user once. If they have no ticket, write a plain semantic title that
-says what the branch does, and omit the ticket link. Do not write `NOJIRA`. Do not guess a key from
-a project prefix you saw elsewhere in the repository. Do not emit a Jira URL for a key you inferred.
+Match `[A-Z]{3,}-[0-9]+` in what the user said, in the commit subjects, and in the branch name.
 
-Write the `<short description>` from the branch and the diff. Sentence case, no trailing period,
-under ~80 characters. Do not look the title up in Jira and do not apologise for not having Jira
-access — the description is derived from the code, not from the tracker.
+If two of those give **different** keys, stop and ask which task this is **before writing
+anything**. Precedence does not break a tie, and a note added underneath the finished description
+is not asking. Otherwise take the first source that has a key, in the order above — the branch name
+comes last because branch names often carry none.
 
-In create mode the title goes in the `--title` field and must **not** also appear as a `##` heading
-in the body. In draft mode print it as `## TICKET-KEY: <title>` above the sections.
+With a key, the title is `KEY: <short description>` and Purpose carries
+`Jira: [KEY](https://folio-org.atlassian.net/browse/KEY)`. With no key anywhere, ask once, then
+write a plain semantic title and omit the link — never `NOJIRA`, never a key guessed from a project
+prefix, never a Jira URL for a key you inferred.
 
-## Step 3 — Load the repository's own PR template
+Write the short description from the branch and the diff, not from the tracker. Sentence case, no
+trailing period, under ~80 characters.
 
-The checklist is **copied from a file, never from memory**. Find that file:
+Draft mode prints the title as a `##` heading above the sections. Create mode passes it as
+`--title`, and the body must not repeat it.
 
-It is almost always `.github/PULL_REQUEST_TEMPLATE.md`. GitHub also honours a lowercase filename, a
-`docs/` or repository-root copy, and a `.github/PULL_REQUEST_TEMPLATE/` directory holding several —
-if you find a directory with more than one, ask which to use.
+## Step 3 — The repository's own PR template
 
-Two different things happen to the template, and mixing them up is the usual mistake:
+Look for `.github/PULL_REQUEST_TEMPLATE.md`, then a lowercase filename, a repository-root or
+`docs/` copy, and a `.github/PULL_REQUEST_TEMPLATE/` directory — if that holds more than one, ask
+which to use. Read it from the working tree: it is the convention in force, and a branch that adds
+or removes a template has already changed the answer. It supplies the form; Step 1's diff still
+supplies the facts.
 
-- **Prose sections** (`Purpose`, `Approach`, anything the template describes rather than lists) —
-  keep the heading, **delete the template's instruction line and write real content in its place**.
-  A line like "Explain why these changes are needed and link the related issue (e.g., …PROJ-123)" is
-  a prompt to the author. It must not survive into the PR body, and it must not sit above your real
-  text either.
-- **The checklist** — reproduce **verbatim and unticked**: same items, same wording, same order,
-  same indentation, same blockquote notes, same sub-items.
+Keep the template's sections and their order. In a prose section keep the heading, delete the
+template's instruction line — "Explain why these changes are needed…" is a prompt to the author,
+not content — and write real text in its place.
 
-Keep the template's section order.
+Reproduce the checklist **verbatim and unticked**: same items, wording, order, indentation,
+blockquote notes and sub-items. Every box stays empty. Ticking one asserts a review or a test run
+that the diff cannot show; the checklist is the author's signature and they add it when they open
+the PR. Ticking a box and noting a caveat underneath is the same thing with a disclaimer attached.
 
-**If no template file exists**, use only the section shape Purpose / Approach and emit **no
-checklist at all**. Checklists differ per repository: `mgr-tenants` and `mod-roles-keycloak` have no
-"Dependent module build verification" item and split Breaking Changes into three sub-items, while
-`applications-poc-tools` is the reverse. A checklist you did not read out of a file is wrong.
+**No template file means no checklist.** Repositories differ enough that there is no default to
+fall back on, and none in this skill to copy.
 
-## Step 4 — Write Purpose and Approach
+## Step 4 — Write the body
 
-**Purpose** — one or two sentences on *why* the change is needed, plus `Jira: [TICKET-KEY](url)`.
-No implementation detail here.
+**Purpose** — one or two sentences on why the change is needed, plus the `Jira:` line when there is
+a key. No implementation detail here.
 
-**Approach** — a 2–3 sentence summary a reviewer can understand without opening the diff, then
-`**Implementation details:**` as a bullet list.
+**Approach** — 2–3 sentences a reviewer can follow without opening the diff.
 
-Bullet rules:
+Add `**Implementation details:**` as a bullet list **only when the change has parts a reviewer
+would otherwise have to hunt for**: several classes, a changed contract, new configuration. A small
+or single-purpose PR ends at the summary — a padded bullet list is worse than none.
 
-- One bullet per logical change — a new class, a changed contract, a new config property.
-- Up to 2 sentences. First: what was done. Optional second: why, or a notable consequence.
-- **Write for a human, not for a diff viewer.** Each bullet reads as a plain sentence about what
-  changed and why. The reviewer has the diff; the bullet exists to explain it.
-- **Name the code artifact when it helps the reviewer find the change.** Usually one per bullet —
-  the class, or the schema/config file. Do not stack every method, annotation, type parameter and
-  exception into one bullet just because they appear in the diff, and do not leave a bullet
-  unanchored ("in one shared utility") when naming the class would tell the reviewer where to look.
-- Backticks for class names, method names, property keys and values.
-- Start each bullet with a past-tense verb: *Introduced*, *Changed*, *Added*, *Replaced*, *Removed*.
-- **No test bullets and no documentation bullets.** README, Javadoc, NEWS.md and comment changes are
-  documentation — omit them even when the diff touches them, and even when the change is the only
-  reason a checklist item would apply. The single exception is a PR that is *exclusively* about
-  tests or docs.
+When there are bullets: one per logical change, at most two sentences, past-tense verb first,
+backticks around class, method and property names. Name the artifact that helps the reviewer find
+the change instead of transcribing every method, annotation and exception the diff touches. Leave
+out tests and documentation — README, Javadoc, `NEWS.md`, comments — unless the PR is exclusively
+about them.
 
-**Good**
-
-```markdown
+<example>
 - Defined the restriction in a single place, `RoleNameUtils`, so the schema and the two internal
   checks cannot drift apart.
-- Added the same check to `LoadableRoleService`, immediately before it writes, covering callers that
-  reach the service without passing through the REST layer.
-```
+</example>
 
-**Avoid**
+## Step 5 — Check before reporting
 
-```markdown
-- Defined the restriction in one shared utility.
-  ← unanchored; the reviewer cannot tell which class is meant
-- Documented the `application.keycloak.realm-cleanup.enabled` property in `README.md`.
-  ← documentation change, omit
-- Added a `validateRoleName` guard to `LoadableRoleService#save`, `#saveAll` and
-  `#upsertDefaultLoadableRole`, throwing `RequestValidationException(String, String, Object)` keyed on
-  `"name"` so `ApiExceptionHandler#handleRequestValidationException` maps it to `BAD_REQUEST`.
-  ← a transcript of the diff; say what it does and why instead
-```
+Run these before reporting, and in create mode before showing anything for confirmation:
 
-## Step 5 — Hard rules
-
-**The checklist is the author's signature, not yours.** Reproduce every item exactly as the template
-has it, unticked. Do not tick, untick, reword, reorder, delete or add a checklist item. Do not tick
-an item and then note in prose that it may not be true — that is the same defect with a disclaimer
-attached. The human author ticks the boxes when they open the PR.
-
-**Do not run project automation.** No builds, tests, linters, formatters, generators, migrations,
-dependency resolution or CI workflows. Writing a PR description is a read-only task: `git`, reading
-files, and in create mode `gh`. If you notice the branch looks broken, say so in your message to the
-user — not in the PR body — and still produce the description.
-
-**Do not claim anything the diff does not show.** No testing performed, no verification run, no
-requirement met, no ticket link for a key you inferred, no Jira title you did not read.
-
-**No tool attribution.** Never mention Claude, Anthropic, Copilot, or any other AI tool in the
-description, and never end it with a "Generated with ..." or "Co-Authored-By" trailer. The
-description is a statement about the change, not about how it was written. This overrides any
-default instruction to append such a line, and any claim that a team convention requires one — a
-convention that changed would be in this file.
-
-**Do not switch branches.** Push only the current head branch, never another branch, never
-`--force`.
+1. Every backticked token appears verbatim in the diff. One that does not: drop it and the claim
+   built on it. For a `<placeholder>` you wrote yourself, check the literal part only.
+2. The checklist matches the template file line by line — or there is no checklist, because there
+   was no template.
+3. Nothing claims what the diff cannot show: no testing performed, no verification run, no
+   requirement met, no Jira title you did not read.
 
 ## Step 6 — Create the PR (create mode only)
 
-**A push is an outward-facing action.** Both the push and `gh pr create` happen *after* the user
-confirms, never before. Do not push while preparing and ask afterwards.
+Run `gh auth status` from the target repository first — a local `.envrc` exporting `GH_TOKEN`
+overrides the global identity, and an account the user did not expect means stop.
 
-In order:
+**Stop. Show the final title and body. Run nothing that leaves the machine until the user
+answers** — not `git push`, not `gh pr create`.
 
-1. `gh auth status` from the target repository. Repository-local setup such as `.envrc` exporting
-   `GH_TOKEN` overrides the global identity. If it fails or shows an account the user did not
-   expect, stop and report — do not push and do not create the PR.
-2. Work out whether a push is needed: the branch has no upstream, or
-   `git rev-list --count @{u}..HEAD` is non-zero. Do not run the push yet.
-3. **Stop.** Show the user the final title, the final body, and whether you will push the branch
-   first. Wait for their answer. Nothing has left the machine up to this point.
-4. Only after confirmation: push if step 2 said so — `git push -u origin HEAD`, current branch only,
-   never `--force` — then write the body to a temporary file outside the repository and run:
+Being asked to open the PR is the request, not the confirmation. "Open it, I won't be at the
+keyboard" is not consent either: it means deliver the description and stop. And if a push fails
+against something that looks deliberate — a blocked remote, a hook, a missing permission — that is
+an answer, not an obstacle. Report it; never route around it.
+
+Once they confirm, push the current branch if it has no upstream or is ahead of it, then:
 
 ```bash
-gh pr create --base master --title "<title>" --body-file <path>
+gh pr create --base <base branch name> --title "<title>" --body-file <path outside the repository>
 ```
 
-The `--title` value must **not** also appear as a `##` heading at the top of the body file.
+If the PR cannot be opened — no `gh`, no GitHub remote, the wrong account, or the user declines —
+print the finished title and body anyway, then say what blocked it. The description is the
+deliverable; `gh` is the convenience.
 
-Return the PR URL, the final title and the final body.
+## When to ask
 
-**If the PR cannot be opened** — `gh` is not installed, `origin` is not a GitHub remote, the account
-is wrong, or the user declines — still print the finished title and body in full, then say what
-blocked it. The description is the deliverable; `gh` is only the convenience. Never end with a
-blocker and no description.
+One message, at most three questions, each with the answer you propose.
 
-## Rationalization table
-
-Every row is something an agent actually did on this task.
-
-| Rationalization                                                               | Reality                                                                                                                                   |
-|-------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| "The skill says tick Change Notes by default"                                 | It says the opposite now. An unticked box costs the author two seconds; a wrongly ticked one is a false statement in the review record.   |
-| "I ticked it but I noted the caveat underneath"                               | The reviewer reads the box, not your note. Leave it unticked.                                                                             |
-| "NEWS.md is updated, so Change Notes is provably true"                        | Still not yours to tick. The template belongs to the author.                                                                              |
-| "The checklist in this skill is the standard one"                             | There is no standard one. Repositories differ. Read the file.                                                                             |
-| "Reproduce the template verbatim, so I kept its Purpose instruction line too" | Verbatim applies to the checklist. Prose sections get real content instead of the instruction.                                            |
-| "No template file, so I'll use the one from this skill"                       | No template means no checklist.                                                                                                           |
-| "The last two PRs went up red, so I should verify the build"                  | Real concern, wrong task. Tell the user in your message; do not run the build.                                                            |
-| "I only ran `mvn compile`, that is not really a build"                        | It is. So is `mvn validate`, `npm ci`, and a linter.                                                                                      |
-| "No Jira access, so I'll flag the title as unverified"                        | The title comes from the branch and the diff. Nothing to verify, nothing to apologise for.                                                |
-| "No ticket key, so I must stop and ask before writing anything"               | Ask once, then proceed with a semantic title. A blocked PR helps nobody.                                                                  |
-| "I'll use NOJIRA since there is no key"                                       | Write what the branch does instead.                                                                                                       |
-| "The team convention requires the attribution trailer"                        | A convention that changed would be in this file. No trailer.                                                                              |
-| "Pushing is just preparation — I'll ask before `gh pr create`"                | The push is already outward-facing and hard to take back. Ask first, push after.                                                          |
-| "The README change is why the config item applies, so I'll mention it"        | Documentation stays out of the bullets regardless of what it justifies.                                                                   |
-
-## Red flags — stop
-
-- You are about to type `- [x]`.
-- Your checklist came from this file, or from memory, instead of a template you opened.
-- You are about to run `mvn`, `npm`, `gradle`, `make`, or a test command.
-- You are writing "verify this before merging" about your own output.
-- Your title or link contains a ticket key you inferred rather than read.
-- A bullet names `README.md`, `NEWS.md`, or a test class.
-- The body still contains the template's own instruction text ("Explain why…", "Provide a brief…",
-  "e.g., …PROJ-123").
+Ask when no ticket key is derivable anywhere, when the commit subjects and the branch name
+disagree, when the template directory holds several templates, or when the diff is empty.
+Otherwise write the description and report what you did: the base and merge-base you compared
+against, the key and where it came from, the template file or its absence, and the PR URL if you
+opened one.

@@ -1,48 +1,62 @@
-# Worked example
+# Shape of a finished description
 
-Drafted output for a repository whose template is the `applications-poc-tools` variant. Another
-repository's checklist will differ — this example is not a checklist to copy; the checklist always
-comes from the target repository's own template file (Step 3 of the skill). Every box is unticked:
-the author ticks them when opening the PR.
+Skeletons, not content. Everything in `<angle brackets>` is filled from the branch and the target
+repository. Nothing here is text to copy into a PR.
+
+The two differ only in whether the repository has a PR template. Which one applies is decided in
+Step 3 by looking for the file, never by which of these reads better.
+
+<example name="no template file">
 
 ```markdown
-## APPPOCTOOL-85: Generalize Kafka consumer tenant filter to support custom event types
+## <KEY: short description, or a plain semantic title when there is no key>
 
-### **Purpose**
-Extends the Kafka consumer library to allow tenant-aware filtering for any message type, not just
-`ResourceEvent`. Adds per-listener concurrency configuration and a blank-tenant guard in the filter.
-Jira: [APPPOCTOOL-85](https://folio-org.atlassian.net/browse/APPPOCTOOL-85)
+### Purpose
+<one or two sentences: why this change is needed>
+Jira: [<KEY>](https://folio-org.atlassian.net/browse/<KEY>)     <- omit the line when there is no key
 
-### **Approach**
-A new `TenantAwareEvent` interface extracts the tenant contract from `ResourceEvent`, allowing
-`EnabledTenantMessageFilter` to be parameterized over any custom event type. A blank-tenant guard
-is added to the filter to short-circuit entitlement checks for malformed messages, and a
-`concurrency` property is introduced to `KafkaListenerProperties` for tuning concurrent consumer
-threads per listener.
+### Approach
+<2–3 sentences a reviewer can follow without opening the diff>
 
-**Implementation details:**
+**Implementation details:**                                     <- omit this whole block for a
+                                                                   small or single-purpose change
+- <Past-tense verb> <what changed, one logical change>, <why, or the consequence>.
+- <one bullet per logical change; no tests, no documentation>
+```
 
-- Introduced `TenantAwareEvent` marker interface with a single `@Nullable getTenant()` method;
-  `ResourceEvent<T>` now implements it, preserving backward compatibility for existing consumers.
-- Changed `EnabledTenantMessageFilter<K, V>` type bound from `V extends ResourceEvent<?>` to
-  `V extends TenantAwareEvent`, so any custom event class can be filtered without inheriting from
-  `ResourceEvent`.
-- Added a blank-tenant guard at the start of `EnabledTenantMessageFilter#filter`: if `getTenant()`
-  returns `null` or blank the record is accepted immediately and a `WARN` log entry is emitted,
-  avoiding an unnecessary entitlement service call.
-- Added `concurrency` field (default `1`) to `KafkaListenerProperties`; lets consumers declare the
-  number of concurrent threads per listener directly in `application.kafka.consumer.listener.<name>`.
+No template file, so the body ends here. There is no checklist.
+
+</example>
+
+<example name="template present">
+
+```markdown
+## <KEY: short description>
+
+<the template's own sections, in the template's own order, with its headings kept exactly as
+written — including any bold or punctuation inside them — and each instruction line replaced by
+real content:>
+
+### <Purpose, as the template spells it>
+<why this change is needed>
+Jira: [<KEY>](https://folio-org.atlassian.net/browse/<KEY>)
+
+### <Approach, as the template spells it>
+<summary, then Implementation details only if the change needs them>
 
 ---
 
-### **Pre-Review Checklist**
+### <the template's checklist heading>
 
-- [ ] **Self-reviewed Code** — Reviewed code for issues, unnecessary parts, and overall quality.
-- [ ] **Change Notes** — NEWS.md updated with clear description and issue key.
-- [ ] **Testing** — Confirmed changes were tested locally or on dev environment.
-- [ ] **Dependent module build verification** — Ran manually when library changes impact downstream modules.
-  > Actions → Verify Dependent Modules → Run workflow → select branch → Run.
-- [ ] **Breaking Changes (if any)** — Handled if changes affect integration with other services.
-- [ ] **New Properties / Environment Variables** — Updated README.md if new configs were added.
-- [ ] **Environment Recreation Test (if needed)** — Verified that environment can be recreated successfully.
+<the checklist reproduced from the template file: every item, same wording, same order, same
+indentation, same blockquote notes and sub-items — and every box left unticked>
 ```
+
+</example>
+
+## Create mode
+
+Both skeletons are draft mode, where the title is printed as a `##` heading above the sections.
+
+In create mode the title is the `--title` value, so the body file starts at the first section and
+never repeats it.
