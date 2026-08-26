@@ -21,10 +21,9 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 - `skill-feedback` - Captures user-validated feedback after a skill session and prepares a GitHub-ready report.
 - `testrail-bug-report` - Generates Jira-ready bug reports from failed FOLIO TestRail cases.
 - `unit-testing` - Applies Java unit testing guidance for JUnit 5, Mockito, strict stubbing, and clear test structure.
-- `write-testrail-cases` - Generates structured manual test cases from a Jira story and posts them directly to TestRail. Uses app-specific context files and automatically enriches from Jira, GitHub, and TestRail when context is insufficient.
 - `write-bug` - Drafts reproducible FOLIO bug reports with steps, expected and actual results, and supporting evidence.
-- `write-pr-description` - Drafts PR descriptions following team conventions for purpose, approach, and checklist.
-- `write-testrail-cases` - Writes structured manual TestRail cases from user stories and application context.
+- `write-pr-description` - Writes a PR description from the branch diff, reproducing the target repository's own PR template, and can open the PR with `gh` after confirmation.
+- `write-testrail-cases` - Generates structured manual test cases from a Jira story and posts them directly to TestRail. Uses app-specific context files and automatically enriches from Jira, GitHub, and TestRail when context is insufficient.
 - `write-user-story` - Drafts user stories with scope, requirements, acceptance criteria, and manual testing guidance.
 
 ### Installing skills by role
@@ -129,7 +128,6 @@ The feedback loop should stay lightweight: you can create feedback through the `
 
 - Document Feature skill: `docs/reference-document-feature-skill.md`
 - Unit testing guidelines: `docs/testing/unit-testing.md`
-- PR description guide: `docs/pr/pr-description.md`
 
 ### Feature documentation
 
@@ -152,5 +150,5 @@ Fetch and follow instructions from https://raw.githubusercontent.com/folio-org/f
 To write a consistent, reviewable pull request description following our conventions, use the snippet.
 
 ```text
-Fetch and follow instructions from https://raw.githubusercontent.com/folio-org/folio-eureka-ai-dev/refs/heads/master/docs/pr/pr-description.md
+Fetch and follow instructions from https://raw.githubusercontent.com/folio-org/folio-eureka-ai-dev/refs/heads/master/skills/write-pr-description/SKILL.md
 ```
