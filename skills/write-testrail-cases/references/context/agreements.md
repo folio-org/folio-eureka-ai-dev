@@ -140,6 +140,7 @@ Agreement
 ## Exact UI Texts
 
 > Use these verbatim in expected results. Never paraphrase.
+> ✅ Re-verified against `folio-org/ui-agreements/translations/ui-agreements/en_US.json` (2026-07-21): all toast/message rows below match, including every previously `[from source]` "Agreement was not deleted because…" blocking message and the validation strings (`End date must be after the start date.`, `An agreement cannot be linked to itself.`, `A Usage Data Provider must be selected.`). Treat them as confirmed.
 
 ### Toast Messages
 
@@ -226,6 +227,15 @@ Agreement
 
 ### License link status (this agreement)
 `Current`, `Future`, `Historical`, `Supplemental`
+
+### Supplementary Property Types (Settings > Agreements > Supplementary properties)
+`Text`, `Integer`, `Decimal`, `Date`, `Pick list` (single), `Pick list (multi-select)`. Same field set as Licenses terms: Label, Name, Description, Category (optional), Order weight, Deprecated, Default visibility, Primary property. (cases — C358544)
+
+### Supplementary Property "Name" field validation (confirmed, C1385635)
+- Same underlying character rule as Licenses terms — must start with a letter, then only letters/digits/underscores — **but the UI error message differs from Licenses**: for a non-blank invalid value (leading digit/underscore, embedded space, hyphen, `@`, `.`, etc.) Agreements shows the **specific** message `The name must start with a letter, and can only contain letters, numbers, and underscores.` (Licenses instead shows the generic `Please fill this in to continue` for the same class of invalid input.) Don't copy Licenses' expected-result wording into an Agreements supplementary-property test or vice versa — verify which app you're documenting.
+- A truly **blank** Name field still shows the generic `Please fill this in to continue` in both apps.
+- Unicode letters are valid as the leading character too (e.g. `ДарьяProperty`), matching the Licenses term-name rule.
+- The (i) tooltip text is the agreement-specific wording: `An supplementary property 'name' is used when outputting the supplementary property data in a machine readable format intended to be used by external systems or programs that access the agreement supplementary property data...` (note: starts with "An supplementary property" — a grammatical quirk in the actual product string, don't "fix" it when copying into a test case).
 
 ---
 
@@ -328,6 +338,62 @@ Expected: Toast: "Agreement was not deleted because it has one or more agreement
 
 ---
 
+## Document Filter Builder (Search & filter — "Core documents" / "Supplementary documents" facets)
+
+> Same builder pattern as Licenses (see licenses.md) — confirmed for Agreements via C415270 (filter by Supplementary documents) and mirrored for Agreement Lines' Core documents filter.
+
+- Trigger: expand the "Supplementary documents" filter accordion → `Edit document filters` button → popover titled `Document filter builder` with a `Document filter 1` card.
+- **Attribute** options for Agreements' Supplementary documents include one more field than Licenses: `Name`, `Note`, `Category`, `Physical location`, `URL`, `Content type`, `File name` (Licenses' equivalent filter has no `Category` attribute, since Licenses documents don't carry a Category field the same way). **Operator**: `Is`, `Contains`, `Does not contain`.
+- `Save & close` disabled until a complete rule is entered; multiple rules within one card = AND, multiple cards = OR (same semantics as Licenses — see licenses.md Document Filter Builder section for the full worked example).
+
+## Performance / Pagination Notes
+
+- **Agreement Lines accordion badge count uses a lightweight `perPage=1` request, not a full fetch** — when editing (or viewing) an agreement with >200 agreement lines, the Network tab shows exactly ONE request to `/entitlements` with `perPage=1`; the accordion header shows the correct total count from that single request's metadata rather than paging through all records just to display a number. Only expanding the accordion (or clicking through to the full agreement-lines search) triggers the paginated fetch of actual line data. (cases — C413361)
+- **Agreement Lines accordion loads 5 at a time via "Load More"** — first expand shows exactly 5 agreement lines with a `Load More` button below; each click appends the next batch and re-displays `Load More` until all lines are loaded, at which point the button disappears. Same "Load More" pattern applies to the sibling accordions on E-resource records (`E-resources in package`, `Options for acquiring e-resource`, `Agreements for this e-resource` — each independently configurable via "Adjust number... shown at a time", per C196794–C196797). (cases — C350626)
+- **Linked Agreements / related-entitlements lists over 200 records batch at 100 per request** — same pattern as documented for Licenses' linked-agreements accordion (see licenses.md); applies analogously to Agreements' >200-line and >200-related-entitlement scenarios (C389581/C413361, C389584, C389586). Always verify via Network tab request count in a >200-record test, not just final rendered content.
+
+## Pick Lists (confirmed C464310, C464317; full mechanic documented in licenses.md)
+
+Same underlying feature as Licenses' Pick Lists (see licenses.md for the full add/rename/remove mechanic) — managed at `Settings > Agreements > Pick lists` instead of `Settings > Licenses > Pick lists`, with Agreements-side field naming, e.g. `SubscriptionAgreementOrg.Role` (Agreements' equivalent of Licenses' `LicenseOrg.Role`). A newly-added pick list value is immediately selectable in its corresponding dropdown on the Agreement/Agreement Organization form. Rule 20 (Status values) and Rule 24 (pick list value in use cannot be deleted) already reference this feature by name — this section is the structural description of what a pick list actually is.
+
+## Usage Data Provider Linking (confirmed C345311)
+
+Before an agreement line can show Cost-per-Use figures (see below), a **usage data provider** record must be explicitly linked to the agreement — this is a separate, prerequisite step, not automatic:
+
+1. Open the Agreement, click Edit, and expand the `Usage data` accordion (independently hideable via `Settings > Agreements > Display settings > Hide accordions in agreement edit view`, like any other optional accordion).
+2. Click `Add usage data provider` — a new card appears with a `Link usage data provider` option.
+3. Click `Link usage data provider` to open a usage-data-provider search/sort modal; selecting a provider closes the modal and populates the card with that provider's details.
+4. An optional free-text `Note` field is available on the card.
+5. `Save & Close` persists the link; requires the `eUsage: Can view usage data providers and usage reports` permission to even see the accordion.
+
+## eUsage Cost-Per-Use Calculation (confirmed formula, C1307930 and sibling cases in section 94077)
+
+For an agreement line with a linked usage-data-provider and one or more linked invoice lines covering the same subscription period:
+
+```
+Cost per request (total)  = (sum of linked invoice-line amounts − linked credit-note amounts) / Total item requests
+Cost per request (unique) = (sum of linked invoice-line amounts − linked credit-note amounts) / Unique item requests
+```
+
+Example from C1307930: two invoices (250 + 350 = 600) minus one credit note (150) = 450; 450 / 76 total item requests = 5.92 (total); 450 / 52 unique item requests = 8.65 (unique). This nets multiple invoices/credit notes for the **same** subscription period into a single combined cost figure — don't treat each invoice as producing its own separate cost-per-use row. The downloaded CSV (via "Download CSV" on the Cost per use view) includes: paid amount, total item requests, unique item requests, cost per request (total), cost per request (unique), and usage broken down by year of publication (`0001` = COUNTER report did not specify a publication year).
+
+## Local KB Admin — Import Error Handling (confirmed, C343295)
+
+- An invalid KBART import (e.g. missing mandatory columns) still completes as a **job** rather than failing the upload outright: job's "Import outcome" = `Failure`, Error log shows the specific missing-fields message `The import file is missing the mandatory fields: [{field1}, {field2}]`, and the Info log shows `Job execution failed`. Always let the job run to completion and check the Error/Info log accordions rather than expecting an immediate upload-time rejection.
+
+## External eHoldings Resource-Name Sync (resourceName backfill)
+
+> Extends Rule 14 (eHoldings resourceName auto-populates on line creation) with the backfill/edge-case behavior — confirmed C1347207, C1348606.
+
+- If the resourceName on an external (eHoldings) agreement line is null (e.g. via direct API edit, or historically before this feature existed) AND the underlying eHoldings resource still exists, it gets backfilled by either: (a) the scheduled `ExternalEntitlementEholdingsSyncJob` (interval set via environment variable) or (b) a manual trigger — authorized user sends `GET /erm/admin/triggerEntitlementEholdings` (add `?force=true` if the job already ran today).
+- **If the underlying eHoldings resource has been deleted/removed by the time of sync**, the agreement line permanently shows only the bare `EKB-{type}: {reference}` (no resource name in parentheses) and is **not a hyperlink**; opening that line's detail view shows an `Error 404: Not Found` error card in the Agreement line information section. This is a stable, expected end state — don't treat it as a bug in a test case, and don't expect the name to ever populate for a line whose resource no longer exists.
+- Job results appear in **Local KB Admin** app (filter Job type = "External eHoldings entitlements"): `Import outcome` = `Success` (0 errors) or `Partial success` (partial errors, e.g. one resource not found via eHoldings bulk fetch); Info log entries follow the format `ResourceName for {type} entitlement {agreementLineUUID} with EKB ID: {reference} updated to {resourceName}`; the log's `Export` button downloads a JSON file (`EHoldingsEntitlementSyncJob__{timestamp}_info`) with a toast `Creating log export file... this may take a few minutes for large logs.`
+- If a subsequent sync run finds zero agreement lines with a null resourceName, **no job log entry is generated at all** — this is expected, not a failure to trigger.
+
+## Acquisition Units — Removal Behavior (confirmed, C1029007 — mirrors Licenses exactly)
+
+Same UX as Licenses (see licenses.md Acquisition Units section): trashcan icon per assigned unit on the Edit form with tooltip `Remove {acquisition unit name}`; removing the last acquisition unit makes the entire "Acquisition units" accordion disappear from the agreement's **view** pane after save (not shown as an empty accordion).
+
 ## ECS / Multi-Tenant Notes
 
 No ECS-specific test cases found in this TestRail section (all 191 cases have `custom_ecs_enabled = False` or unset). Bug ERM-4062 (Trillium bugfest) reported 401 Unauthorized errors for admin users in ECS/PTF environments — confirm auth/permission setup before writing ECS cases for Agreements.
@@ -337,6 +403,8 @@ No ECS-specific test cases found in this TestRail section (all 191 cases have `c
 ## Key Business Rules for Test Cases
 
 1. **Name and Status are the only required agreement fields** — plus at least one period with a Start date. (cases + github)
+1a. **`Record created` / `Record last updated` metadata** — on creation both are equal; after an edit `Record last updated` advances while `Record created` stays fixed (shared ERM pattern; commonly asserted in create/edit cases like C757). (cases)
+1b. **Empty accordions are hidden in the view pane** — a freshly created agreement shows only `Agreement lines`, `Supplementary properties`, `Notes`; accordions like `All periods`, `Internal contacts`, `External licenses`, `Organizations`, `Supplementary documents`, `Usage data`, `Related agreements`, `Controlling license`, `Future licenses`, `Historical licenses`, `License and business terms` appear only once they have content. (cases — C163926)
 2. **At least one period required** — agreement cannot be saved without an agreement period. (cases + github)
 3. **Period dates must not overlap** — error: `"The following periods have overlapping dates: {fields}"`. (cases + github)
 4. **Only one open-ended period allowed** — error: `"Cannot have multiple open-ended agreement periods."` (cases + github)
@@ -368,6 +436,14 @@ No ECS-specific test cases found in this TestRail section (all 191 cases have `c
 30. **"Hide internal KB" setting hides basket and E-resources tab** — controlled per-institution in Settings → Agreements → General. (github + cases)
 31. **Keyboard shortcut Ctrl+Alt+E (open edit)** — previously caused Euro € to be typed; fixed in Trillium (ERM-4070). Use Cmd+S to save on macOS. (jira + github)
 32. **GOKb search integration (Trillium+)** — adds GOKb as a third source for agreement lines in addition to Local KB and eHoldings. (github 12.1.0 changelog)
+33. **Deprecating a supplementary property does not remove it from existing agreements — it hides it from NEW selection only** — after marking Deprecated = Yes in Settings, any agreement that already had that property set continues to display its value, now labeled `DEPRECATED` in the Supplementary properties accordion; but the property no longer appears in the "Name" dropdown when adding an *optional* property to a new (or any other) agreement. (cases — C358988)
+34. **A usage data provider must be explicitly linked via the `Usage data` accordion's `Add usage data provider` > `Link usage data provider` flow before Cost-per-Use figures are available** — this is a separate prerequisite step from the Cost-per-Use calculation itself, gated by the `eUsage: Can view usage data providers and usage reports` permission. (cases — C345311)
+
+---
+
+## Authoring style (measured 2026-07-23)
+
+Agreements is **`Other`-heavy (~89%)** with only ~9% `Functional`, median ~8 steps, `User Journey` ~9%. Most cases are record-CRUD and accordion-management on the Agreement record (add/edit/remove agreement lines, periods, related agreements, supplementary properties/documents, organizations, internal contacts, tags, notes) plus Settings for pick lists / supplementary-property types — the team labels these `Other`. Reserve `Functional` for computed behavior (eUsage Cost-Per-Use calculation, resourceName sync). Preconditions carry the ERM setup (an existing Agreement with the relevant accordion populated, a linked eHoldings resource or POL, a configured supplementary-property/pick list). Multi-accordion or cost-per-use cases run a bit longer; single-accordion edits stay compact.
 
 ---
 
@@ -376,7 +452,11 @@ No ECS-specific test cases found in this TestRail section (all 191 cases have `c
 - [ ] Exact Eureka Capability Set names for PicklistValues and CustomProperties (supplementary properties settings) — found with slight capitalization variations in TestRail; verify in Eureka admin panel.
 - [ ] `line.update.callout` toast text — `"Agreement line updated: {name}"` exists in en_US.json but no high-weight TestRail case confirmed the rendered format; verify in env.
 - [ ] Acquisition units toast: `"agreements.claimPolicies.update.callout"` — appears as separate toast alongside "Agreement updated" or replaces it; not confirmed from two sources.
+
+> Self-assessment enrichment round (2026-07-22, per report priority #4): read C345311, C464310, C464317 to address the two misses the self-assessment flagged (eUsage/COUNTER "capability" gap and Picklists). The existing Cost-Per-Use *calculation* was already documented — the actual gap was the prerequisite provider-linking step feeding it, now covered above (Rule 34). Picklists' structural mechanic is documented once in licenses.md and cross-referenced here rather than duplicated, since it's the identical feature under a different Settings path.
 - [ ] `In Negotiation` and `Requested` status values — listed in docs but not confirmed in TestRail cases; verify they are present in target environment.
 - [ ] ECS behavior for Agreements — no ECS test cases exist in section 128.
 - [ ] GOKb search integration edge cases — test cases for 12.1.0 GOKb features not yet in TestRail; verify GOKb data source availability in target env.
 - [ ] `Procedural - Erm Admin Action TriggerEntitlementEholdingsJob - Execute` — exact Eureka name; verify in Eureka admin.
+
+> N≥10 audit round (2026-07-21): 11 additional cases read — C1385635, C358544, C358988, C1347207, C1348606, C413361, C343295, C1307930, C1029007, C350626, C415270. Added: supplementary-property Name validation (and its wording difference from Licenses), property Deprecation behavior, resourceName backfill/404 edge case, >200-lines perPage=1 optimization, Load-More pagination defaults, KBART import-error log format, Cost-per-Use calculation formula, acquisition-unit removal behavior, document filter builder Category attribute.

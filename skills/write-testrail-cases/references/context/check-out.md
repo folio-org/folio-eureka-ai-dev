@@ -15,6 +15,8 @@
 
 The Check out app allows library staff to lend items to patrons by scanning (or manually entering) patron cards and item barcodes. Staff select a service point, find the patron using a barcode, username, external system ID, or custom field, then scan item barcodes to create loans. The app applies circulation rules, enforces loan policies, patron blocks, and item limits, and handles proxy borrowing, multipiece items, check out notes, due date overrides, and patron-facing note pop-ups.
 
+> **Identifier convention for this area:** write circulation cases with **symbolic placeholders the executor fills at run time** — `service point S`, `<patron barcode>`, `<item barcode>`, `<title>` — not invented concrete values. Do NOT fabricate a specific barcode or a named service point; concrete values only when the exact value is itself under test.
+
 ---
 
 ## Key Terms
@@ -216,32 +218,43 @@ A **proxy** is a patron who checks out items on behalf of another patron (the **
 
 ### Confirmation Modal Messages
 
+> ✅ Confirmed verbatim against `folio-org/ui-checkout/translations/ui-checkout/en_US.json` (2026-07-21).
+
 | Modal | Message pattern | Source |
 |---|---|---|
 | Multipiece confirm | `{title} ({materialType}) (Barcode: {barcode}) will be checked out.` | [confirmed] |
-| Check out note confirm | `{title} ({materialType}) (Barcode: {barcode}) has {count} note(s) and will be checked out` | [from source] |
-| Status confirm (not suppressed) | `{title} ({materialType}) (Barcode: {barcode}) has the item status {status}.` | [from source] |
-| Status confirm (suppressed) | `{title} ({materialType}) (Barcode: {barcode}) has the item status {status} and is suppressed from discovery.` | [from source] |
-| Items awaiting pickup | `Borrower has {count} item(s) awaiting pickup at this service point.` | [from source] |
-| Items held for use at location | `Borrower has {count} item(s) held for use at location at this service point.` | [from source] |
+| Check out note confirm | `{title} ({materialType}) (Barcode: {barcode}) has {count} note(s) and will be checked out` | [confirmed — `checkoutNoteModal.message`] |
+| Status confirm (not suppressed) | `{title} ({materialType}) (Barcode: {barcode}) has the item status {status}.` | [confirmed — C10932 + source] |
+| Status confirm (suppressed) | `{title} ({materialType}) (Barcode: {barcode}) has the item status {status} and is suppressed from discovery.` | [confirmed — C10932 + source] |
+| Items awaiting pickup | `Borrower has {count} item(s) awaiting pickup at this service point.` | [confirmed — `awaitingPickupMessage`] |
+| Items held for use at location | `Borrower has {count} item(s) held for use at location at this service point.` | [confirmed — `awaitingPickupMessageHeld`] |
+
+> **Correction (2026-07-21):** the block on an already-loaned item renders the modal heading `Item not checked out` with body `Cannot check out item that already has an open loan.` (key `messages.itemHasOpenLoan`). Earlier notes calling this "Item is already checked out" were a test-author paraphrase — use the source string. The Declared-lost/Claimed-returned hard-block wording ("...and cannot be checked out") is **not** in the ui-checkout translation file — it comes from mod-circulation (backend) and is surfaced via the case (C9196); verify in env rather than treating it as a fixed UI string.
 
 ### Error / Failure Messages
 
+> ✅ All rows confirmed verbatim against `ui-checkout/en_US.json` (2026-07-21). Item-limit messages use ICU plural in source (`{itemLimit, plural, one {1 item} other {{itemLimit} items}}`); the simplified form below is fine for assertions.
+
 | Condition | Exact message text | Source |
 |---|---|---|
-| Item already has open loan | `Cannot check out item that already has an open loan.` | [from source] |
+| Item already has open loan | `Cannot check out item that already has an open loan.` | [confirmed] |
 | Item not loanable per loan policy | `{title} ({materialType}) (Barcode: {barcode}) is not loanable according to the {loanPolicy} loan policy` | [confirmed] |
-| Item not found by barcode | `Item with this barcode does not exist` | [from source] |
-| User not found | `User with this {identifier} does not exist` | [from source] |
+| Item not found by barcode | `Item with this barcode does not exist` | [confirmed] |
+| User not found | `User with this {identifier} does not exist` | [confirmed] |
+| User has no identifier | `User {username} does not have a {identifier}` | [confirmed] |
 | User has no barcode | `User does not have a barcode. A user barcode is required to check out an item.` | [confirmed] |
-| Item limit — loan type | `Patron has reached maximum limit of {itemLimit} items for loan type.` | [from source] |
-| Item limit — material type | `Patron has reached maximum limit of {itemLimit} items for material type.` | [from source] |
-| Item limit — material type + loan type | `Patron has reached maximum limit of {itemLimit} items for combination of material type and loan type.` | [from source] |
-| Item limit — patron group + loan type | `Patron has reached maximum limit of {itemLimit} items for combination of patron group and loan type.` | [from source] |
-| Item limit — patron group + material type | `Patron has reached maximum limit of {itemLimit} items for combination of patron group and material type.` | [from source] |
-| Item limit — patron group + material type + loan type | `Patron has reached maximum limit of {itemLimit} items for combination of patron group, material type and loan type.` | [from source] |
-| Loan date outside policy date ranges | `Item can't be checked out as the loan date falls outside of the date ranges in the loan policy. Please review {name} before retrying checking out.` | [from source] |
-| Item not available | `Item is not available for checkout` | [from source] |
+| Required field empty | `Please fill this out to continue` | [confirmed] |
+| Sponsor record expired | `Sponsor user record expired` | [confirmed] |
+| Proxy relationship expired | `Proxy relationship expired` | [confirmed] |
+| Item limit — loan type | `Patron has reached maximum limit of {itemLimit} items for loan type.` | [confirmed] |
+| Item limit — material type | `Patron has reached maximum limit of {itemLimit} items for material type.` | [confirmed] |
+| Item limit — material type + loan type | `Patron has reached maximum limit of {itemLimit} items for combination of material type and loan type.` | [confirmed] |
+| Item limit — patron group + loan type | `Patron has reached maximum limit of {itemLimit} items for combination of patron group and loan type.` | [confirmed] |
+| Item limit — patron group + material type | `Patron has reached maximum limit of {itemLimit} items for combination of patron group and material type.` | [confirmed] |
+| Item limit — patron group + material type + loan type | `Patron has reached maximum limit of {itemLimit} items for combination of patron group, material type and loan type.` | [confirmed] |
+| Loan date outside policy date ranges | `Item can't be checked out as the loan date falls outside of the date ranges in the loan policy. Please review {name} before retrying checking out.` | [confirmed] |
+| Item not available | `Item is not available for checkout` | [confirmed] |
+| Patron block modal | heading `Patron blocked from borrowing`; `Reason for block`; `View block details` | [confirmed] |
 
 ### Due Date Tooltip
 
@@ -274,6 +287,7 @@ Triggered when "Perform wildcard lookup of items by barcode" is enabled in Setti
 
 - X button on top-left closes modal (keyboard focus NOT on X). [confirmed — Trillium]
 - Default keyboard focus is on the **Check out** button (text underlined). [confirmed — Trillium]
+- **The X button is NOT present on status-confirmation modals** (`Check out missing item?`, `Check out withdrawn item?`, etc.) — only `Cancel`/`Confirm` are offered there, with default focus on `Confirm`. Don't assume every check-out modal has the same X + Cancel + primary-action layout; the multipiece/regular "Confirm check out" modals have the X, the item-status confirmation modals don't. (confirmed, C934249)
 - Multiple modals ordering when item has check out note + multipiece + non-loanable policy:
   1. `Confirm check out` (check out note) → click Confirm
   2. `Confirm multipiece check out` → click Check out
@@ -288,6 +302,16 @@ Triggered when "Perform wildcard lookup of items by barcode" is enabled in Setti
 - Each note shows: date/time added, note text, user who added it (Lastname, Firstname).
 - Clicking **Confirm** proceeds with checkout; clicking **Cancel** does not check out.
 - After checkout, notes accessible via item action menu → `Check out notes`.
+
+## Patron Notes Popup at Check Out [confirmed — C356781]
+
+Distinct mechanic from the item-level "Check out Notes" above — this is for notes assigned to the **user record**, not an item.
+
+- Source: `Users app > <user record> > Notes accordion > New` — a note has a **`Check out app`** checkbox (alongside a `Users app` checkbox) controlling where it surfaces; only notes with `Check out app` checked pop up here.
+- Trigger: scanning/entering the patron's barcode + Enter in the **Scan patron card** pane (i.e. on patron lookup itself, before any item is scanned).
+- Display: a **`Note for patron`** modal appears, one at a time, showing the single most-recently-created qualifying note. Buttons: `Close`, `Delete note`.
+- Multiple qualifying notes are shown **sequentially**, one modal per note — clicking `Delete note` deletes that note and closes its modal, then immediately opens the next note's `Note for patron` modal (does not require re-scanning the patron). `Close` just dismisses the current modal without deleting; it is not confirmed here whether `Close` re-shows the same note on next scan (not tested in this case) or whether it also lets other note(s) surface.
+- After all qualifying notes are dismissed via `Delete note`, the patron's `Scan patron card` + `Scan items` panes are shown normally, and re-opening the user's own record shows the `Notes` accordion as `No notes found`.
 
 ---
 
@@ -376,6 +400,8 @@ Expected: "Due date" in Scan items list = patron's expiration date.
           Flag icon displayed next to due date with tooltip "System calculated due date adjustment".
 ```
 
+**Interaction with Closed Library Due Date Management (confirmed, C343265):** when the patron's expiration date itself falls on a day the check-out service point is **closed**, the truncated due date is further shifted by the loan policy's `Closed library due date management` setting — same as any other due date: `Keep the current due date` leaves it on the (closed) expiration day, `Move to the end of the previous open day` / `Move to the end of the next open day` shifts it accordingly. A due-date-truncation case should therefore test the 2×2 matrix (expiration falls on an open day / a closed day) × (each `Closed library due date management` option), not just the simple "loan period exceeds expiration" case — the flag/tooltip appears in every variant.
+
 ### Pattern 3: Override non-circulating item
 
 ```
@@ -453,9 +479,9 @@ No ECS-specific test cases found in TestRail section 116. All 33 cases have `cus
 8. When an item has check out note + is multipiece + is non-loanable, the modals appear in order: check out note → multipiece → item not loanable. (cases)
 9. Non-loanable items with override capability show Override + Close in the error modal; without override capability, only Close is shown. (cases + jira: UICHKOUT-784466 DRAFT)
 10. Override loan policy modal requires Comment (mandatory) and date/time selector (default 11:59 PM); Save & close inactive until comment filled. (cases)
-11. Due date is cut off at patron's expiration date (time = 11:59 PM) when loan period extends past expiration; flag icon + tooltip "System calculated due date adjustment" appears. (cases + jira: CIRC-886)
+11. Due date is cut off at patron's expiration date (time = 11:59 PM) when loan period extends past expiration; flag icon + tooltip "System calculated due date adjustment" appears — and if the expiration date itself lands on a closed day, the loan policy's Closed Library Due Date Management setting shifts it again on top of the truncation. (cases — C343265 + jira: CIRC-886)
 12. Patron blocks display "Patron blocked from borrowing" modal with reason, Override, Close, View block details; if > 3 blocks only 3 shown. (cases)
-13. Patron blocks re-display when another item barcode is entered without first overriding; blocks cannot be bypassed. (cases)
+13. Patron blocks re-display when another item barcode is entered without first overriding; blocks cannot be bypassed. **Once overridden (comment entered, Save & close clicked), the override persists for the rest of that patron's check-out session** — subsequent item barcodes check out directly without re-showing the block modal or requiring a second override. A patron-block-override case should include a second item scan after the override and assert it succeeds without re-prompting, not stop at the first override. (cases — C170384)
 14. Proxy workflow: scanning proxy barcode shows "Who are you acting as?" modal; item is checked out to the sponsor; loan details reflect sponsor. (cases + jira: UICHKOUT-433)
 15. When proxy's or sponsor's expiration date is in the past, a warning displays and the proxy-for radio button is not clickable. (cases: 1263905 — DRAFT/partial)
 16. When patron look-up returns multiple users with same field value, selecting a user fires query by `id ==` to ensure correct user loads. (cases + jira: UICHKOUT-991)
@@ -468,6 +494,13 @@ No ECS-specific test cases found in TestRail section 116. All 33 cases have `cus
 23. Print screen (Ctrl+P) generates print-friendly layout with borrower details (plus proxy if applicable) and one section per checked-out item; downloadable as PDF. (cases: 1030828)
 24. Logging out while End session button is active does not produce errors; no errors on login page after 20-minute idle. (cases: 418580)
 25. At 200% browser zoom with a long instance title, columns in Scan items pane do not overlap. (cases: 476742)
+26. **Custom fields only display at Check out if `Settings > Circulation > Other settings` has been explicitly configured to show them** — if that settings record has never been saved (0 records for `circulation/settings?query=(name==other_settings)`), no custom fields appear on the Scan patron card pane, even if custom fields exist and are populated in Users. Don't assume a custom field configured in `Settings > Users > Custom fields` will automatically surface at checkout; the Other Settings toggle is a separate, required step. Status as of this writing is "In QA" (`UICHKOUT-1012`, 2026) — verify current behavior in the target environment before asserting either way. (cases — C1415949)
+
+---
+
+## Authoring style (measured 2026-07-23)
+
+Check-out is small (~34 cases), **mixed Type (~51% `Functional` / 43% `Other`)**, median ~6 steps, `User Journey` ~6% (used for a few multi-branch cases like `Cancel check out multipiece items` C934249). Cases are scenario-focused and fairly compact: the loan-policy / patron-block / proxy / custom-field / service-point setup lives in Preconditions (symbolic identifiers `S`, `<barcode>`, `<patron>` per circulation convention — do NOT invent concrete barcodes), and steps scan patron + item and assert the one behavior under test (block modal, override, multipiece confirm, note popup, due date). Lean `Functional` for real check-out behavior, `Other` for pure UI/display checks (zoom/overlap, empty fields, pagination). Several DRAFT/NOT-IMPLEMENTED cases exist (proxy expiry, non-requester override) — don't model new cases on those.
 
 ---
 
@@ -481,4 +514,7 @@ No ECS-specific test cases found in TestRail section 116. All 33 cases have `cus
 - [ ] `"Use at location"` hold shelf checkout (UICHKOUT-965) — BREAKING change in Trillium; verify both awaiting pickup and held-for-use-at-location counts appear in modal.
 - [ ] ECS / consortia behaviour — no ECS cases exist; verify capability set behaviour at Central and Member tenant levels if ECS scenarios needed.
 - [ ] `data - UI-Checkout ViewLoans - view` capability set exact name — appears in cases but not confirmed against current Eureka capability catalogue.
+- [ ] `Close` button behavior on the patron-notes `Note for patron` popup (see new section above) — C356781 only exercises the `Delete note` path; unclear whether `Close` re-shows the same note on the next scan or whether it lets a next queued note surface without deleting the current one.
+
+> Random spot-check (2026-07-23): picked one fresh uncited case at random from section 116 (C356781) — found an entirely separate "Patron Notes Popup at Check Out" mechanic (user-record notes with a `Check out app` checkbox, surfaced via a sequential `Note for patron` modal on patron-barcode scan) that was not documented; the existing "Check out Notes" section only covered item-level notes. Added as a new subsection.
 

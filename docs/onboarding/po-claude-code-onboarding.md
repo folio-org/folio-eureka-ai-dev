@@ -214,7 +214,10 @@ for third-party marketplaces.)
 
 > The developer-oriented `write-pr-description` skill also lives in the
 > same repo but is **not** bundled in the `folio-po` plugin. If you want
-> it, install it separately with `npx skills add folio-org/folio-eureka-ai-dev --skill write-pr-description`.
+> it, install it separately with
+> `npx skills add folio-org/folio-eureka-ai-dev --skill write-pr-description`.
+> It drafts the PR text for you; opening the PR itself additionally needs the
+> GitHub CLI (`gh`) installed and logged in.
 
 ---
 

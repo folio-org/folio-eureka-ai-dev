@@ -239,6 +239,10 @@ You should see `folio-ecosystem`, `write-user-story`, and `write-bug` listed.
 If not, re-run the install command above. You should also see
 `skill-feedback`, because it is part of every role preset.
 
+`write-pr-description` drafts the PR text from a branch. It can also open the
+PR for you, which additionally needs the GitHub CLI (`gh`) installed and
+logged in — not required for drafting.
+
 ---
 
 ### 4.1 Launch OpenCode in that folder *(both options)*

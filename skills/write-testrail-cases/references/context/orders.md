@@ -69,9 +69,11 @@ POL level: Receiving note, Receipt status, Payment status, Fund distribution, Un
 **NOT editable while Open** (require Unopen): Order type, Title, Acquisition method, Order format, Product ID
 
 ### Approval
-Orders can require approval before opening (configurable in Settings → Orders). If approval is required:
+Orders can require approval before opening (configurable in Settings → Orders → General → Approvals → "Approval required to open orders"). If approval is required:
 - Order must be approved first (Actions → Approve) before it can be opened
 - "Approved" flag visible on PO
+- **`Open` is absent from the Actions menu entirely until Approve has been clicked** — not just disabled/greyed; verify the menu's option list, not a disabled-state attribute (confirmed, C6533)
+- Approving does not change Workflow status (order stays `Pending`); it only checks `Approved` and unlocks `Open`. Toast: `The Purchase order - {orderNumber} was successfully approved` (confirmed, C6533)
 
 ---
 
@@ -206,19 +208,36 @@ Receipt status, Payment status, Acquisition unit, Acquisition method, Location, 
 | Add PO line | Pending only |
 | View/Create invoice | Open or Closed |
 | Update encumbrances | Open |
+| Cancel | Open (requires `Orders: Cancel purchase orders` permission / `procedural - UI-Orders Order Cancel - execute`) |
+
+**Cancel vs. Close (confirmed, C353546):** `Actions > Cancel` opens the same `Close - purchase order` overlay as a regular Close, but with `Reason` **pre-selected to `Cancelled`**. The resulting toast is identical to a normal close (`Order was closed`) and the order moves Open → Closed — but a **`Canceled` icon appears in the search results row** for that order, which a normal (non-Cancelled-reason) close does not show. Don't write "Cancel" and "Close" as the same scenario; the distinguishing assertion is the icon, not the toast.
 
 ---
 
 ## Exact UI Texts (from team test cases — use these verbatim)
 
+> Toasts below confirmed verbatim against `folio-org/ui-orders/translations/ui-orders/en_US.json` (2026-07-21). `{orderNumber}`/`{lineNumber}` render as the record number; `<b>…</b>` = bold segment.
+
 ### Toast messages — PO
 | Event | Toast text |
 |---|---|
-| PO opened | `The Purchase order - <PO number> has been successfully opened` |
-| PO unopened | `The Purchase order - <PO number> has been successfully unopened` |
-| PO saved | `The Purchase order - <PO number> has been successfully saved` |
-| PO reopened | `The Purchase order - <PO number> has been successfully reopened` |
+| PO opened | `The Purchase order - {orderNumber} has been successfully opened` |
+| PO **closed** | `Order was closed` |
+| PO unopened | `The Purchase order - {orderNumber} has been successfully unopened` |
+| PO saved | `The Purchase order - {orderNumber} has been successfully saved` |
+| PO reopened | `The Purchase order - {orderNumber} has been successfully reopened` |
 | PO duplicated | `The purchase order was successfully duplicated` |
+| PO duplicate failed | `The purchase order was not cloned` |
+| PO deleted | `The purchase order {orderNumber} was successfully deleted` |
+
+### Open-failure messages (validation on Open)
+| Condition | Message |
+|---|---|
+| Open failed (generic) | `The Purchase order - {orderNumber} has not been opened` |
+| Missing order status ref data | `Order can not be opened as the status of {value} is undefined` |
+| Missing order type ref data | `Order can not be opened as the type of {value} is undefined` |
+| Loan type not configured | `Order can not be opened as a loan type was not configured in ...` |
+| Vendor not a vendor | `Order cannot be opened as the associated vendorId belongs to ...` |
 
 ### Toast messages — POL
 | Event | Toast text |
@@ -298,6 +317,18 @@ Expected: - Payment status is changed to "Awaiting Payment"
 ```
 After cancelling a POL (Payment status / Receipt status → "Cancelled"), the related encumbrance is Released and "Current encumbrance" shows 0.00.
 
+### Location-restricted Funds (confirmed, C434140)
+A Fund can have "Restrict use by location" checked with specific Locations added to it (Finance app, Fund's Locations accordion). Once such a Fund is selected in a POL's Fund distribution, the POL's own `Location` accordion "Name (code)" dropdown **narrows to only that fund's allowed locations** — don't test location selection on a restricted fund assuming the full location list is still offered; assert the dropdown is filtered.
+
+### Vendor-currency default for new POL (confirmed, C440108)
+When adding a POL, the `Currency` field in Cost details defaults to whatever the vendor Organization has in its own "Vendor currencies" (most recently used) — but if the vendor has **no** Vendor currencies configured, the field falls back to the **tenant's system default currency** (`Settings > Tenant > Language and localization`). A currency-default case must specify which of the two preconditions applies; they produce different expected values.
+
+### Claiming interval inherited from Organization (confirmed, C423436)
+`Claiming interval` on a new/edited POL is **read-only and pre-populated from the vendor Organization's own Claiming interval** as long as `Claiming active` is unchecked. Checking `Claiming active` makes the field editable and lets the user override the value; unchecking it again **clears the field** (does not revert to the Organization's value). Don't write a claiming-interval case that edits the field without first checking `Claiming active` — the field is inert until then.
+
+### Unopen with "Synchronized order and receipt quantity" workflow (confirmed, C377037)
+Unopening a POL on this receiving workflow presents a choice modal, not a plain confirmation: `Delete Holdings and items` vs `Delete items` (plus `Cancel`), warning that unreceived pieces with no current requests pending — and their "On order" items — will be deleted, and that Holdings with no other item references may also be deleted. The exact warning wording changed at Trillium to add the "with no current requests pending" qualifier — don't assert the pre-Trillium wording in current-release cases.
+
 ### Cost change while Open
 Editing POL cost while the PO is Open immediately updates the encumbrance:
 ```
@@ -305,8 +336,23 @@ Expected: - Toast message "The purchase order line <POL number> was successfully
           - "Current encumbrance" field in "Fund distribution" accordion contains <new value>
 ```
 
-### Version history
-PO and POL keep version history (Version history pane); cases for edit flows may assert that a new version entry appears after save.
+### Version history (confirmed C369046, C369047, C375995, C410833, C916261, C927735, C476746, C423660)
+
+Entry point: a clock-icon `Version history` icon at the top-right of both the `Purchase order` details pane and the `PO Line details` pane (independent version histories for PO vs. each POL). Clicking it opens a 4th pane.
+
+- **Pane header**: a version-count label (`1 version`, `2 versions`, etc.) below the pane title.
+- **Cards are sorted most-recent-first.** Each card's title link shows the change date/time in `MM/DD/YYYY, HH:MM AM` format plus a small clock/"View this version" icon.
+- **Three-way card labeling** (mirrors the same pattern documented in marc-bib-quickmarc.md's Version history):
+  - **Newest card**: labeled `Current version`, shows `Source` (the user who made the change) and a `Changed` list of the fields that changed in that edit.
+  - **Oldest card**: labeled `Original version`, shows NO `Changed` list — instead the underlying detail pane displays `Created by` / `Created on` (creator + creation timestamp).
+  - **Middle cards**: show `Source` + a `Changed` list only — no `Current version`/`Original version` label at all.
+  - **A record with only ONE version ever (never edited)** collapses newest and oldest into a single card that shows BOTH `Current version` AND `Original version` labels together, with no values/Source/Changed list under either (confirmed C410833) — don't assume these two labels are mutually exclusive.
+- **Clicking a card highlights it grey** and highlights that version's changed fields in **yellow** on the underlying detail pane; while any historical card is selected, the `PO lines` and `Related invoices` accordions are hidden from the PO pane (they reappear once the Version history pane is closed via its `X` button).
+- **A "no-op" save produces NO card at all** — if an edit is saved without actually changing any field value, no version-history entry appears (confirmed C375995); don't expect every Save & close click to add a card.
+- **Lifecycle actions (Open, Close order, Reopen, checkbox toggles like `Manual`) each produce their own version card**, exactly like a field edit — a status/workflow transition is not exempt from version tracking.
+- **`Show all` / `Show less` toggle appears only once a single version's `Changed` list exceeds 12 fields** — exactly 12 changed fields does NOT show the toggle; 13+ does. Clicking `Show all` reveals every changed field and flips the button to `Show less`.
+- **Internal/backend-only field names are always filtered out of the `Changed` list**, even when they technically changed — confirmed for `nextPolNumber` (PO-level) and `searchLocationIds[]` (POL-level, appears when a cross-tenant Location edit is made — see ECS section below). Don't expect these raw field names to leak into the UI diff.
+- **ECS**: editing a POL's Location to point at a different tenant shows `Affiliation` as a changed field in the `Changed` list and highlights it yellow on the detail pane, same as any other field (confirmed C476746).
 
 ---
 
@@ -324,6 +370,42 @@ PO and POL keep version history (Version history pane); cases for edit flows may
 | Create/Edit order lines | `Data - UI-Orders Order Lines - Create`, `Edit` |
 
 ---
+
+## ECS / Consortia — Cross-Tenant Location Lookup via "Affiliation" Dropdown (confirmed C468189, C471514, C471515, C471516, C471517, C473256, C473257, C473258, C473259)
+
+**This is a canonical, cross-app mechanic** — the identical UI and rules also apply in Receiving (see receiving.md's ECS section) and Invoices' "Add line from POL" modal (see invoices.md's ECS section); this file is the reference copy.
+
+**Prerequisite:** `Settings > Consortium manager > Central ordering > "Allow user to select locations from other affiliations for central orders"` must be checked in the Central tenant. Without it, none of the below is available.
+
+- On the Orders app's `Order lines` search (or the equivalent Location facet anywhere this pattern is reused), expanding the `Location` facet and clicking its `Location look-up` link opens a `Select locations` modal. When the prerequisite setting is on, this modal shows an **`Affiliation` dropdown** (defaulting to the current/Central tenant name) above the location list.
+- Selecting a different tenant in the `Affiliation` dropdown re-scopes the location list in that modal to **that tenant's own locations only**. Checking a location and clicking `Save` adds it to the active `Location` filter, and PO lines using that location (created in whichever tenant it belongs to) are returned in the results — this is how a Central-tenant user finds order lines that reference a Member tenant's location (or a Member tenant's holding — same mechanic, confirmed C471515).
+- **The `Affiliation` dropdown is Central-tenant-only** (confirmed C471516, and mirrored in Receiving): logging into a Member tenant and opening the same `Location look-up` modal shows NO `Affiliation` dropdown at all — only that Member tenant's own locations are available, with no cross-tenant lookup option.
+- **The dropdown lists every tenant in the consortium, not just the tenants the logged-in user has an affiliation to** (confirmed C471517) — a user with affiliations only in Central + Member 1 still sees Member 2 (and any other member tenant) listed and selectable in the `Affiliation` dropdown. Don't write a test assuming the dropdown is scoped to the user's own assigned affiliations; it isn't.
+- Clicking the `x` icon next to the active `Location` filter chip clears the filter and the results pane, independent of which affiliation/tenant was used to build that filter.
+
+### A user cannot Open/Save a POL referencing a tenant they lack affiliation to (confirmed C468203)
+
+If a PO line's Location was set (by another user, or before the current user's affiliations changed) to a tenant the current user does NOT have an affiliation to, both `Actions > Open` on the order and `Save & close` on an edit of that POL are blocked with the exact toast: `POL could not be saved. This record has location affiliations that your user does not have. These affiliations must be removed or the operation must be performed by a user that has the same affiliations as the record.`
+
+- On `Open`, the order simply stays `Pending` and the error is shown — no partial state change.
+- On `Edit`, `Save & close` is initially disabled (the mismatched Location field renders with its `Affiliation` and `Name (code)` sub-fields visible but read-only-effective); changing an unrelated field (e.g. Physical unit price) DOES enable the button, but clicking it still fails with the same toast and the Edit page stays open — the only fix is to remove the offending location line entirely (trash-can icon) and add a replacement the user does have affiliation to. Once that's done, both Save and the subsequent Open succeed normally.
+- This is a genuinely different gate from the `Affiliation` dropdown/Location-lookup mechanic above — that one is about *finding* cross-tenant records; this one is about *acting* on a POL that already references a tenant outside the current user's own affiliations.
+
+## Multi-Year Prepayment / "Payment terms" accordion (UIOR-1528 + UIOR-1530 + MODORDERS-1428)
+
+A POL-level feature for tracking known future payments across multiple fiscal years (e.g. splitting a subscription across 2 FYs). Gated by a **`Multi-year payment`** checkbox in the **Ongoing order information** accordion (UIOR-1528); the **`Payment terms`** accordion (UIOR-1530) sits **below Fund distribution** and is inactive/collapsed until the checkbox is on.
+
+**Payment terms accordion contents (when active):** `Total price` (numeric); `Remaining amount to be distributed` (= Total price − funds distributed in the FY cards); `Prepayment term` (integer, **default 2, not directly editable** — grows/shrinks via Add fiscal year / trash can); `Starting fiscal year` (dropdown, tooltip "Fiscal years must have been created for each year of prepayment"); **2 fund-distribution cards** initially (header `Fiscal year N (FY20xx)`); an `Add fiscal year` button under the bottom card; `Add fund distribution` inside each card (fields Fund ID / Value / Type currency|% with **Currency default** / Amount / trash-can Action). Info icon next to the accordion reads: `To enable the fields in the Payment terms accordion, select Multi-year payment in the Ongoing order information accordion`.
+
+**Exact validation messages:** prepayment term 0/negative/non-integer → `Value must be a positive integer`; fund-distribution totals ≠ total → `The percentage or amount(s) should equal 100% of the total` (shown under Remaining amount, blocks Save); missing FY for the term duration → `Please ensure all fiscal years have been created for the duration of the prepayment term` (older wording seen live: `Please ensure all fiscal years have been created for the duration of the prepayment term`). `Add fiscal year` is ACTIVE only while the next sequential FY exists; only the LAST card gets a trash can (none when just 2 cards). **No encumbrance** is created for the POL when Payment terms is filled but the regular Fund distribution accordion is empty.
+
+> **How the team tests this feature (real cases C1385639 / C1395029 / C1404901 / C1404902, Type = Functional, Test Group = Critical Path, refs = `UIOR-1528, UIOR-1530, MODORDERS-1428`):** NOT one atomic case per acceptance criterion — **4 large journey cases** that each weave many ACs into one realistic flow. Reproduce this shape for any multi-year-prepayment story:
+> - **Create + edit an order with a 2-year prepayment spanning a fiscal-year rollover** (36 steps): build previous+current FY (no future FY), Ledger, Funds with budgets, an Ongoing Pending order; add a POL, hit the red-highlighted Payment-terms validation, see `Starting fiscal year` exclude the previous FY, get the "all fiscal years must be created" error at term=1, uncheck Multi-year → accordion collapses → save; then edit and run the FY rollover and re-verify.
+> - **Create an order from a template that has a 3-year prepayment preconfigured** (28 steps) — verify the template carries the Multi-year settings into the new order.
+> - **Multi-year prepayment NOT available for one-time orders** (11 steps) — the UIOR-1528 gating: the checkbox/feature is absent for one-time orders.
+> - **Behavior when a new fiscal year begins** (19 steps) — over-time dynamic behavior.
+>
+> These "rollover", "from template", "one-time gating", and "new FY begins" journeys are **inferred from domain knowledge, not spelled out in the UIOR-1530 acceptance criteria** — propose them proactively in Scenario Analysis (see SKILL.md "Journey vs atomic cases"). Atomic per-AC cases give clean traceability but are not what the team ships for this kind of feature.
 
 ## Key Business Rules for Test Cases
 
@@ -346,6 +428,13 @@ PO and POL keep version history (Version history pane); cases for edit flows may
 17. **Reopen restores Awaiting Payment / Awaiting Receipt** on POLs and re-establishes the encumbrance link
 18. **Moving a POL between POs uses the "Confirm move" modal** — encumbrance follows the POL
 19. **PO/POL keep Version history** — edits produce new version entries viewable in the Version history pane
+20. **Cancelling one POL in a multi-line order does NOT affect the other POLs** — only the cancelled line's linked item flips to `Order closed` (others linked to un-cancelled lines stay `On order`), only the cancelled line's Payment/Receipt status become `Cancelled` (others are untouched), and only the cancelled line's encumbrance is Released to 0.00 (others remain Unreleased at full amount). A case for POL cancellation on a multi-line order must assert the *other* lines are unaffected, not just that the cancelled one changed. (cases — C367963)
+21. **Renewal date and Renewal interval are never required** to Open, Unopen, Close, or Reopen an Ongoing order — don't write a case that blocks any of those four transitions on missing renewal fields; that validation does not exist. (cases — C353627)
+22. **Fund distribution totals must equal exactly 100%** (or exactly the total cost, if using Amount instead of Percent) before a POL can be saved — the UI shows a running `Remaining amount to be distributed: ${x}` figure above the Fund ID field and a blocking message `The percentage or amount(s) should be equal 100% of the total` below the accordion; `Save & close` is rejected (with the PO line left unsaved) until the distributed total matches exactly, even by a cent. (cases — C359009)
+23. **The cross-tenant `Affiliation` dropdown (Location look-up modal) only appears in the Central tenant and lists ALL consortium tenants regardless of the user's own assigned affiliations** — see the dedicated ECS section above for the full mechanic; this same rule is reused verbatim in Receiving and Invoices. (cases — C468189, C471516, C471517)
+24. **Version-history cards use three distinct labels, not a simple newest/oldest split** — newest = `Current version` + Changed list, oldest = `Original version` + no Changed list (Created by/on instead), middle cards = Changed list only, and a never-edited record's single card shows BOTH labels together with no values. (cases — C369046, C410833)
+25. **A save that changes nothing produces no version-history card at all**, but every lifecycle transition (Open/Close/Reopen, even a checkbox toggle like `Manual`) DOES produce its own card, same as a field edit. (cases — C375995, C369046)
+26. **A user without affiliation to a POL's referenced tenant cannot Open the order or Save an edit to that POL** — exact toast: `POL could not be saved. This record has location affiliations that your user does not have...`; the only fix is removing/replacing the offending Location line. (cases — C468203)
 
 ---
 
@@ -356,3 +445,7 @@ PO and POL keep version history (Version history pane); cases for edit flows may
 - [ ] Requested TestRail `group_id=1389` maps to OAI-PMH in this tenant, not Orders; Orders context here was built from the Orders subtree rooted at section 105.
 - [ ] Jira story/bug distillation for Orders could not be completed because project/component queries returned 0 with current API token visibility.
 - [ ] Capability set strings extracted from raw TestRail HTML include noisy legacy/formatting variants; use the curated `Required Capability Sets (Eureka)` table above as the canonical source for new cases.
+
+> ECS/Consortia enrichment round (2026-07-22, per self-assessment report priority #2): this file previously had zero ECS/Consortia content — the systemic gap flagged in the self-assessment. Added the "Cross-Tenant Location Lookup" section and Key Business Rule 23 from 9 real cases (C468189, C471514, C471515, C471516, C471517, C473256, C473257, C473258, C473259). This is the canonical write-up; receiving.md and invoices.md cross-reference it rather than duplicating the full mechanic.
+>
+> Version history + further Consortia round (2026-07-22, per self-assessment report priority #5): the old Version history entry was a single unsourced sentence. Read 8 cases from the same section-105 subtree — C369046, C369047, C375995, C410833, C916261, C927735, C476746, C423660 — and rewrote it as a full section with the three-way card-labeling scheme (matching the pattern already documented in marc-bib-quickmarc.md), the no-op-save/lifecycle-transition rules, the >12-fields Show all/less threshold, and the BE-only-field filtering rule. Also read 2 more cases from the 107-case "Consortium (Orders)" subtree (C468203 plus a supporting read of C422252) and added the "user without matching affiliation can't Open/Save a POL" gate with its exact error toast — a different mechanic from the Location-lookup dropdown already documented, easy to conflate. Added Key Business Rules 24-26. ~85 of the 107 Consortium (Orders) cases remain unread (mostly template-creation and item-status-propagation variants); lower priority since the core mechanics are now covered.

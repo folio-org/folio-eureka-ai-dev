@@ -14,6 +14,7 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 - `code-review` - Reviews branch diffs and produces a structured code quality report.
 - `document-feature` - Documents implemented behavior by analyzing code changes and writing feature docs.
 - `ecs-user-setup` - Guides ECS and multi-tenant user setup for FOLIO automated tests.
+- `fat-creator` - Creates FAT Jira review tasks for TestRail manual test cases, one per case or one combined ticket.
 - `folio-ecosystem` - Bootstraps FOLIO/Eureka platform context, resource lookup, and skill routing for all roles.
 - `implement-automated-test` - Generates or updates Cypress E2E tests for FOLIO Stripes.
 - `liquibase-migration` - Guides FOLIO Liquibase migration authoring, structure, naming, and database conventions.
@@ -22,8 +23,8 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 - `testrail-bug-report` - Generates Jira-ready bug reports from failed FOLIO TestRail cases.
 - `unit-testing` - Applies Java unit testing guidance for JUnit 5, Mockito, strict stubbing, and clear test structure.
 - `write-bug` - Drafts reproducible FOLIO bug reports with steps, expected and actual results, and supporting evidence.
-- `write-pr-description` - Drafts PR descriptions following team conventions for purpose, approach, and checklist.
-- `write-testrail-cases` - Writes structured manual TestRail cases from user stories and application context.
+- `write-pr-description` - Writes a PR description from the branch diff, reproducing the target repository's own PR template, and can open the PR with `gh` after confirmation.
+- `write-testrail-cases` - Generates structured manual test cases from a Jira story and posts them directly to TestRail. Uses app-specific context files and automatically enriches from Jira, GitHub, and TestRail when context is insufficient.
 - `write-user-story` - Drafts user stories with scope, requirements, acceptance criteria, and manual testing guidance.
 
 ### Installing skills by role
@@ -74,6 +75,7 @@ npx skills add folio-org/folio-eureka-ai-dev \
   --skill write-testrail-cases \
   --skill build-app-context \
   --skill testrail-bug-report \
+  --skill fat-creator \
   --skill write-bug \
   --skill skill-feedback
 ```
@@ -109,6 +111,15 @@ To update to the latest version of our team's AI guidelines, run:
 ```bash
 npx skills update folio-org/folio-eureka-ai-dev
 ```
+## Writing Test Cases
+
+The `write-testrail-cases` skill generates structured manual test cases from a Jira story and posts them to TestRail automatically. It understands FOLIO's domain — module ownership, capability sets, and Eureka architecture.
+
+The skill always presents a **Scenario Analysis** for your review before writing anything, and waits for your confirmation before posting.
+
+### Refreshing context files
+
+If context for your app area is missing or outdated, run `build-app-context`:
 
 ### GitHub issue reporter
 
@@ -122,7 +133,6 @@ The feedback loop should stay lightweight: you can create feedback through the `
 
 - Document Feature skill: `docs/reference-document-feature-skill.md`
 - Unit testing guidelines: `docs/testing/unit-testing.md`
-- PR description guide: `docs/pr/pr-description.md`
 - Eureka developer flow (platform bring-up, endpoint sequences, tests, per-module watch-outs): `docs/eureka-dev-flow.md`
 - Skill engineering guide: `docs/skill-engineering.md`
 - Skill test scenarios: `docs/skill-test-scenarios.md`
@@ -148,5 +158,5 @@ Fetch and follow instructions from https://raw.githubusercontent.com/folio-org/f
 To write a consistent, reviewable pull request description following our conventions, use the snippet.
 
 ```text
-Fetch and follow instructions from https://raw.githubusercontent.com/folio-org/folio-eureka-ai-dev/refs/heads/master/docs/pr/pr-description.md
+Fetch and follow instructions from https://raw.githubusercontent.com/folio-org/folio-eureka-ai-dev/refs/heads/master/skills/write-pr-description/SKILL.md
 ```

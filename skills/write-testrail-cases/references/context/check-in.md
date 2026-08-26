@@ -14,6 +14,8 @@
 
 The Check in app (route `/checkin`) processes items returned to the library at a service point. It closes open loans, updates item statuses, triggers request fulfillment (hold shelf or delivery), routes items in transit to other service points, records in-house use, and handles associated fees/fines. Staff interact primarily by scanning or typing item barcodes; all follow-up decisions are surfaced through mandatory pop-up modals.
 
+> **Identifier convention for this area:** the team writes circulation cases with **symbolic placeholders the executor fills at run time** — `service point S` / `S1`, `<barcode>`, `<title>`, `<material type>`, "item with at least one open request" — not invented concrete values. Do NOT fabricate a specific barcode (e.g. `12345`) or a named service point (e.g. `SP-A`); use `S`/`<barcode>` as the real cases do (see C7148). Concrete values only when the exact value is itself under test (a barcode with a trailing space, a specific fee amount).
+
 ---
 
 ## Core Check in Flow
@@ -56,7 +58,10 @@ Pop-ups are **mandatory** — there is no way to disable them. Each must be ackn
 
 ---
 
-## UI Strings
+## Exact UI Texts
+
+> Use these verbatim in expected results. Never paraphrase.
+> No toast messages are used in the Check in flow — state changes are surfaced through the modals below and the Scanned Items table, not toasts.
 
 ### Primary Input Field
 - **"Scan or enter barcode to check-in item"** [confirmed] — barcode scan/entry field label
@@ -546,39 +551,6 @@ Cancelling at any modal stops the entire check in; no subsequent modals appear.
 
 ---
 
-## Required Capability Sets (Eureka)
-
-From TestRail case preconditions and package.json `permissionSets`:
-
-| Action | Legacy Permission | Eureka Capability Set |
-|---|---|---|
-| Check in items (all operations) | `ui-checkin.all` / `Check in: All permissions` | `data - UI-Checkin - manage` [confirmed] |
-| View item records in Inventory | `inventory.items.collection.get` + related | `Inventory: View instances, holdings, and items` [confirmed] |
-| View loan details | `circulation.loans.collection.get` | Included in Check in: All (verify separately) |
-| View circulation log | separate permission | `Circulation log: View` [from cases] |
-| Check out items | `ui-checkoutall` | `Check out: All permissions` [from cases] |
-
-**Important:** `data - UI-Checkin - manage` does **not** include:
-- Viewing item or patron details (requires separate Inventory + Users capabilities)
-- Circulation log viewing
-- Check out operations
-
----
-
-## Navigation Paths (from TestRail cases)
-
-| Path | Purpose |
-|---|---|
-| `Settings → Circulation → Other settings` | Enable "Perform wildcard lookup of items by barcode in circulation apps (Check in, Check out)" [confirmed] |
-| `Settings → Circulation → Title level requests (TLR)` | Enable "Allow title level requests" option |
-| `Settings → Circulation → Consortium title level requests (TLR)` | Enable "Enable consortium title level requests (TLR)" [ECS only] |
-| `Settings → Users → Fee/fine → Owners` | Create fee/fine owner assigned to service point [confirmed] |
-| `Settings → Users → Fee/fine → Manual charges` | Create manual charge types [confirmed] |
-| `Settings → Circulation → Staff slips` | Configure transit slip, hold slip, delivery slip |
-| `Settings → Circulation → Loan anonymization` | Configure anonymization timing |
-
----
-
 ## Recent Feature History (from CHANGELOG, for date-stamping rules)
 
 | Version / Release | Feature | JIRA |
@@ -590,6 +562,34 @@ From TestRail case preconditions and package.json `permissionSets`:
 | 9.1.0 (Quesnelia R1 2024) | Hide fee/fine items for virtual/DCB users; hide Item details for virtual items | UICHKIN-398, UICHKIN-403 |
 | 9.0.0 (Poppy R2 2023) | SessionId added to check-in request body; token support (requester.departments, currentDateTime, requestDate) | UICHKIN-385, UICHKIN-350 |
 | 8.0.0 (Poppy R2 2023) | Fee/fine account closed when Claimed Returned item checked in | UICHKIN-372 |
+
+---
+
+## Authoring style (measured 2026-07-23)
+
+Check-in cases split ~50/50 `Functional` / `Other` (pick per scenario), median ~6 steps. **Check-in is the one area where the team regularly sets `User Journey = Yes` (~18% of cases)** — and it does so for a specific shape: a single case that **walks every branch/outcome a condition can produce** instead of one case per branch. Reproduce this when a check-in scenario has multiple end states:
+- **Special item statuses through the confirm modal** (C9194, Journey): one case enters an item of each status (`Declared lost`, `Withdrawn`, `Lost and paid`, ± suppressed-from-discovery) and clicks **both** Cancel (item NOT checked in) and Confirm (item checked in, status transitions) for each — all statuses × both branches in one case, using the exact `Check in {status} item?` modals.
+- **Item with an open request** (C7148, Journey): check in at a non-pickup service point (→ In transit + transit slip + reprint), then switch to the pickup service point and check in again (→ Awaiting pickup + hold slip + reprint) — both fulfillment outcomes in one case.
+- **Multipiece / multiple stacked modals** (C590, C7149, Journey): walk the full fixed modal order (item status → multipiece → check-in notes → routing) in one case rather than splitting per modal.
+
+So for check-in, prefer a `User Journey = Yes` case bundling all branches when a condition is multi-outcome; keep single-outcome checks (backdate, "Time returned" display, session stability) as compact atomic `Other`/`Functional` cases.
+
+---
+
+## Known Gaps / Items to Verify
+
+> ✅ **Resolved 2026-07-21.** Every string previously listed here as "[from source] only" was confirmed verbatim against `folio-org/ui-checkin/translations/ui-checkin/en_US.json` — they are the exact rendered strings and are safe to assert. Exact keys for reference:
+> - `confirmModal.heading` = `Check in {status} item?`; `actionChoiceModal.title` = `For use at location`
+> - `statusModal.delivery.message` = `There is a delivery request for <strong>{itemTitle} ({itemType})</strong> (Barcode: {itemBarcode}). Please check the item out and route for delivery.`
+> - `errorModal.noItemFound` = `The barcode <strong>{barcode}</strong> could not be found.`
+> - `statusModal.back` = `Back`; `action.printHoldSlip` = `Print hold slip`; `forUseAtLocation` column = `For use at location`
+> - `selectItemModal.itemListHeader` = `List of items: choose one` + `selectItemModal.resultCount` = `{count} Records found`
+> - Error/info: `itemNoExist` = `Item with this barcode does not exist`; `loanNoExist` = `Loan does not exist`; `unknownError` = `Unknown error occurred`; `itemNotFound` = `Item not found`; `fillOut` = `Please fill this out to continue`
+> - Precision note: the Missing/withdrawn/status confirm messages carry a `{discoverySuppressMessage}` = `and is suppressed from discovery` suffix only when the item is suppressed.
+
+Remaining (genuine) gap:
+- [ ] `"Awaiting delivery"` item status is not in the ui-checkin translation file (it's an item-status value owned elsewhere) — still verify in env.
+- [ ] Only 1 ECS case found in section 115 (case 692117) — cross-tenant coverage in this file is thin; verify additional ECS scenarios before treating this section as complete.
 
 ---
 
@@ -613,5 +613,6 @@ From TestRail case preconditions and package.json `permissionSets`:
 16. **Anonymization runs after session ends** — not immediately at check in
 17. **Multiple pieces pop-up always appears** — when pieces count > 1 OR missing pieces note present
 18. **SessionId is stable within a session** — navigating away and back does not reset the session ID (since Poppy)
+19. **X button is absent on item-status-confirmation modals** (`Check in missing item?`, and equivalents for Withdrawn/Declared lost/Lost and paid) — only `Cancel`/`Confirm` are offered there, with default keyboard focus on `Confirm`. Regular confirmation modals (`Confirm multipiece check in`, `Confirm check in` with notes) DO have the X button (focus not on it, on the primary action instead). Don't assume every check-in modal has the same button layout — assert per modal type. (cases — C1405049, mirrors the equivalent Check-out pattern, jira: UICHKIN-510)
 19. **Barcode spaces preserved** — leading/trailing spaces in barcodes are intentional; not trimmed (since Ramsons)
 20. **Virtual/DCB items hide fee/fine and item details actions** — since Quesnelia
