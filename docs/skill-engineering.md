@@ -41,7 +41,8 @@ examples of the same pattern.
 
 - **Structured feedback:** the `skill-feedback` skill produces one
   machine-prepared, user-validated report per skill per session, filed to
-  this repo. The bootstrap skill offers it once at session end.
+  this repo. Invoke it when a skill produced friction or a wrong result,
+  while the session context is still fresh.
 - **Scenario suite as regression tests:** keep the RED/GREEN scenarios
   (clean-environment subagent prompts) with the registry; re-run them after
   every skill edit and after major model upgrades.
@@ -83,5 +84,8 @@ description: Use when starting any task in this repository, before reading
    propose (don't run) environment-changing commands.
 ```
 
-The FOLIO instance of this pattern is `skills/folio-ecosystem` (three phases:
-initialize context → route to skills → offer feedback).
+The FOLIO instance of this pattern is `skills/folio-ecosystem`: platform
+orientation only — what the platform is, the invariants newcomers get wrong,
+and a pointer map to deeper context. It names the registry's task skills as
+available but does not orchestrate them (see the v3.0.0 amendment in
+docs/superpowers/specs/2026-07-04-folio-ecosystem-skill-design.md).

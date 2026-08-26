@@ -164,3 +164,50 @@ reached 5/5 co-trigger with correct substance; the primacy wording won as it
 generalizes to interception by any specific skill, not just write-bug.
 Regression on the platform-triage scenario: 3/3 (baseline 2/3). Skill body
 untouched.
+
+## Re-scope to orientation-only (amendment, 2026-08-26, v3.0.0)
+
+Operator decision. Reference point: superpowers' `using-superpowers` skill,
+which bootstraps context but *mandates* invoking the framework's own skills
+("if there is even a 1% chance a skill might apply, you MUST invoke it").
+We deliberately do not want that pressure in this registry.
+
+Removed from the skill:
+
+- Phase 2 skill routing — the stage→skill table with "invoke the matching
+  skill at the right stage **without the user asking**".
+- `references/dev-flow.md` in full (orchestration table, "Reaching a stage IS
+  the trigger", proactivity rules). Its only non-orchestration content, the
+  wrap-up sequence, now lives inline in `roles/dev-backend.md`.
+- Phase 3 — the end-of-session `skill-feedback` offer. `skill-feedback` is
+  still documented in docs/skill-engineering.md as a maintainer practice.
+
+Added instead — the skill now answers "what is FOLIO, where am I, what are
+the principles, where do I get more context":
+
+- what FOLIO is (one paragraph) and the repo prefix taxonomy;
+- Kafka added to the component table;
+- a **"Digging into a specific module" ladder** in `references/resources.md`:
+  README → module descriptor → API spec → NEWS.md → targeted `src/` search →
+  dependency sources by `pom.xml` version → responsibility matrix → `ui-*`
+  `okapiInterfaces`/`permissionSets`; plus where cross-repo detail lives
+  (sidecar wiki page, docs/eureka-dev-flow.md, owning team's Jira/space);
+- a "Going deeper" section in SKILL.md pointing at the three deeper sources;
+- a non-imperative "Related skills" paragraph: the registry ships task
+  skills, enumerate them from disk, use one if it fits.
+
+Evidence note: the 2026-07-04 RED cut generic architecture/conventions
+content because baselines derived it unaided. The added context is therefore
+biased toward what later tested load-bearing — verified links and non-obvious
+invariants — plus navigation guidance, which is by construction non-derivable
+(it names files and pages, not concepts).
+
+**Description deliberately untouched** except for dropping the routing
+parenthetical. Its primacy wording ("Load this first… before or alongside any
+other FOLIO skill") is the outcome of the 2026-07-06 N=5 A/B (co-trigger
+0/3 → 5/5, platform-triage 2/3 → 3/3) and must not be softened to match the
+gentler body; loading early and forcing other skills are different mechanisms.
+
+Regression suite unchanged (docs/skill-test-scenarios.md): scenarios A and B
+test triggering and platform-fact value, neither of which this re-scope
+touches. Re-run both before releasing v3.0.0.

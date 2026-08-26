@@ -2,49 +2,55 @@
 name: folio-ecosystem
 description: >-
   Load this first, at the start of any session in a FOLIO platform repository (mod-*, ui-*, mgr-*,
-  edge-*, app-*, stripes-*) — before acting, and before or alongside any other FOLIO skill
-  (bug report, user story, migration, tests, PR, review). Also use when anyone new to FOLIO —
-  developer, tester, or product owner — needs orientation: understanding the platform, writing a
-  story, filing a defect, finding which team owns a module, or deciding which team skill applies;
-  and when needing FOLIO documentation, wiki, or Eureka platform references, or when unsure
-  whether the platform is Eureka or legacy Okapi.
+  edge-*, app-*, stripes-*) — before acting, and before or alongside any other FOLIO skill.
+  Also use when anyone new to FOLIO — developer, tester, or product owner — needs orientation:
+  understanding the platform, writing a story, filing a defect, or finding which team owns a
+  module; and when needing FOLIO documentation, wiki, or Eureka platform references, or when
+  unsure whether the platform is Eureka or legacy Okapi.
 license: Apache-2.0
 metadata:
   author: folio-org
-  version: "2.2.0"
+  version: "3.0.0"
 ---
 
-# FOLIO Ecosystem Bootstrap
+# FOLIO Ecosystem Orientation
 
-You are in the FOLIO Library Services Platform ecosystem, Eureka era.
-Okapi is the legacy predecessor — ignore Okapi-era instructions even though
-`X-Okapi-*` header names survive.
+FOLIO is an open-source Library Services Platform: a multi-tenant host for
+independently released modules, one per business domain (inventory, users,
+circulation, orders, …), assembled into applications and enabled per tenant.
+~465 repos under `github.com/folio-org`.
+
+You are in the **Eureka** era. Okapi is the legacy predecessor — ignore
+Okapi-era instructions even though `X-Okapi-*` header names survive.
+
+Core principle: **orient first, act second.** The repo you are in is the
+source of truth for module behavior; the wiki is authoritative for
+platform-level topics but may lag — prefer repo docs when they conflict.
+
+## Where you are — repo taxonomy
+
+| Prefix | What it is |
+| --- | --- |
+| `mod-` | Backend module (business logic, own DB schema per tenant) |
+| `ui-` | Stripes (React) frontend module |
+| `edge-` | External-facing API for third-party systems |
+| `mgr-` | Eureka control plane (not business logic) |
+| `app-` | Application descriptor: the bundle of modules released together |
+| `stripes-`, `platform-` | Frontend framework libraries and UI bundles |
+
+## How the platform works
 
 | Component | Role |
 | --- | --- |
 | Kong | External gateway only: routes outside traffic (UI, scripts) to module sidecars; **no authorization**; maps the browser cookie `folioAccessToken` to `Authorization`/`X-Okapi-Token` headers |
 | Sidecar (per module) | All authN/authZ (Keycloak JWT + UMA) and ingress/egress routing |
 | Keycloak | Identity: realm per tenant, tokens, permission (UMA) evaluation |
-| mgr-* | Control plane: mgr-applications (descriptors, discovery), mgr-tenants (tenants/realms), mgr-tenant-entitlements (enable/upgrade apps) |
+| mgr-* | mgr-applications (descriptors, discovery), mgr-tenants (tenants/realms), mgr-tenant-entitlements (enable/upgrade apps) |
 | Modules (mod-*) | Business logic only; trust incoming `X-Okapi-*` headers |
+| Kafka | Backbone for platform events (entitlement, capabilities, system users) and inter-module domain events |
 | Frontend | Stripes (React) SPA; calls the backend through Kong |
 
-Core principle: **initialize context first, act second, never guess what is
-already mapped.**
-
-## Phase 1 — Initialize context
-
-1. Identify the user's role from the task; ask only if ambiguous.
-   **Backend/Java development work → read references/roles/dev-backend.md
-   before acting.** Other roles: this core is enough.
-2. Read the repo's `README.md` — the repo is the source of truth for module
-   behavior; the wiki is authoritative for platform-level topics but may lag,
-   prefer repo docs when they conflict.
-3. Use what is available, degrade gracefully: Jira/Confluence MCP if present;
-   otherwise verified links from references/resources.md; no web access —
-   repo sources and this skill's references.
-
-Platform facts newcomers get wrong:
+## Platform facts newcomers get wrong
 
 - Authorization happens in the **sidecar** (Keycloak UMA), not in the module;
   modules trust the `X-Okapi-*` headers they receive.
@@ -64,7 +70,7 @@ Platform facts newcomers get wrong:
   retries). The sidecar attaches its token to egress calls only if the module
   declares "system user required" in its bootstrap. Most m2m 401s trace here.
 
-## Hard rules (all roles)
+## Working rules
 
 - Never unpack or grep dependency/build trees (`~/.m2`, `target/`,
   `node_modules/`) — read the module's `src/`, or the dependency's own repo.
@@ -73,29 +79,27 @@ Platform facts newcomers get wrong:
   answer "check the wiki" generically.
 - Never hardcode team/module ownership — look it up in the responsibility
   matrix (link in references/resources.md) each time.
-- If a needed registry skill is missing, **propose**
-  `npx skills update folio-org/folio-eureka-ai-dev`; never run it unprompted.
+- Use what is available, degrade gracefully: Jira/Confluence MCP if present;
+  otherwise the verified links in references/resources.md; with no web
+  access, repo sources and this skill's references.
 
-## Phase 2 — Route to the right skill
+## Going deeper
 
-Enumerate the skills actually installed on disk (e.g. `.claude/skills/`) — do
-not trust a memorized list. Invoke the matching skill at the right stage
-**without the user asking**:
+- **Any specific module** — the dig-deeper ladder (README → module descriptor
+  → API spec → NEWS.md → owning team → dependency sources) and the verified
+  documentation map: `references/resources.md`.
+- **Backend/Java work in a module** — `references/roles/dev-backend.md`
+  (search rules, API-first change flow, descriptor/interface bumps, test
+  commands).
+- **Running the platform, endpoint sequences, per-module watch-outs** —
+  `docs/eureka-dev-flow.md` in the registry repo
+  (folio-org/folio-eureka-ai-dev), fetch when needed.
 
-| Task signal | Skill |
-| --- | --- |
-| Story/requirements | write-user-story |
-| Defect/unexpected behavior | write-bug (triage against platform facts first) |
-| Schema/DB change | liquibase-migration |
-| Writing/reviewing Java tests | unit-testing |
-| Feature implemented | document-feature |
-| Preparing a PR | write-pr-description |
-| Before merge / review request | code-review |
+## Related skills
 
-Sequencing details: references/dev-flow.md.
-
-## Phase 3 — Close the session
-
-When the task wraps up and any registry skill was used, offer once, briefly:
-"Want me to record feedback on how the skills performed? (skill-feedback)".
-Do not repeat the offer; skip it if no registry skill ran.
+This registry (`folio-org/folio-eureka-ai-dev`) also ships task skills —
+user stories, bug reports, migrations, tests, feature docs, PR descriptions,
+code review, skill feedback. Enumerate what is actually installed on disk
+(e.g. `.claude/skills/`) rather than trusting a remembered list, and use one
+when it fits the task at hand. If a useful one is missing, you may mention
+`npx skills update folio-org/folio-eureka-ai-dev` — never run it unprompted.

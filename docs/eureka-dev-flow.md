@@ -71,9 +71,8 @@ Key background facts:
    `descriptors/ModuleDescriptor-template.json`; **bump the provided
    interface version** (minor for additive).
 5. Tests: unit + integration (section 4). `NEWS.md` entry with the ticket key.
-6. Wrap-up: feature docs → PR description → self code review (see the
-   `folio-ecosystem` skill flow: document-feature → write-pr-description →
-   code-review).
+6. Wrap-up: feature docs → PR description → self code review (registry
+   skills: `document-feature`, `write-pr-description`, `code-review`).
 7. After merge/release: application descriptor update + entitlement upgrade
    make the change reachable for tenants (day-2 loop above).
 

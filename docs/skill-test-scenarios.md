@@ -66,6 +66,10 @@ co-trigger 0/3; all baseline reports gave a generic token-timing hypothesis
 addressed to the wrong team. With the skill force-loaded: 3/3 correct
 cause and ownership — the skill adds value whenever it loads.
 
+Note: the suite tests triggering and platform-fact value only. As of
+`folio-ecosystem` v3.0.0 the skill no longer routes to other skills, so there
+is deliberately no compliance/orchestration scenario.
+
 ## When to re-run
 
 - After any edit to `folio-ecosystem` description or platform facts.

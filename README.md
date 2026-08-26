@@ -15,7 +15,7 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 - `document-feature` - Documents implemented behavior by analyzing code changes and writing feature docs.
 - `ecs-user-setup` - Guides ECS and multi-tenant user setup for FOLIO automated tests.
 - `fat-creator` - Creates FAT Jira review tasks for TestRail manual test cases, one per case or one combined ticket.
-- `folio-ecosystem` - Bootstraps FOLIO/Eureka platform context, resource lookup, and skill routing for all roles.
+- `folio-ecosystem` - Orients any role in the FOLIO/Eureka platform: what it is, how it works, the facts newcomers get wrong, and where to find deeper context and documentation.
 - `implement-automated-test` - Generates or updates Cypress E2E tests for FOLIO Stripes.
 - `liquibase-migration` - Guides FOLIO Liquibase migration authoring, structure, naming, and database conventions.
 - `review-generated-automated-test` - Reviews Cypress E2E test changes against FOLIO Stripes testing conventions.

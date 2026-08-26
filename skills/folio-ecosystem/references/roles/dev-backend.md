@@ -20,14 +20,14 @@ endpoint/platform reference: `docs/eureka-dev-flow.md` in the registry repo
 - New/changed routes: update `descriptors/ModuleDescriptor-template.json`
   (handler + permissions) and **bump the provided interface version**
   (minor for additive changes).
-- DB changes: invoke the liquibase-migration skill; mod-scheduler note — its
-  Quartz changelog is separate, do not mix.
+- DB changes: the `liquibase-migration` skill covers the conventions if it is
+  installed; mod-scheduler note — its Quartz changelog is separate, do not mix.
 - Add a `NEWS.md` entry with the Jira key.
 
 ## Tests
 
-- Unit: `@Tag("unit")`, Mockito strict stubbing — follow the unit-testing
-  skill. Run: `mvn test -Dgroups=unit`.
+- Unit: `@Tag("unit")`, Mockito strict stubbing (details in the
+  `unit-testing` skill). Run: `mvn test -Dgroups=unit`.
 - Integration: `*IT.java` extending the module's `BaseIntegrationTest`
   (shared extensions: `@EnablePostgres`, `@EnableKafka`, `@EnableWireMock`,
   `@KeycloakRealms`, `@WireMockStub` from folio-backend-testing).
@@ -38,5 +38,7 @@ endpoint/platform reference: `docs/eureka-dev-flow.md` in the registry repo
 
 ## Wrap-up
 
-Verify build/tests → document-feature → write-pr-description → code-review
-(sequence details: ../dev-flow.md). Do not commit or push unless asked.
+Verify the build and tests before calling the work done. The usual next steps
+— feature docs, PR description, review — have registry skills
+(`document-feature`, `write-pr-description`, `code-review`); use them if they
+are installed and the stage applies. Do not commit or push unless asked.
