@@ -1,6 +1,6 @@
 ---
 name: write-bug
-description: Use when creating, writing, or refining a bug report for a FOLIO project. Produces structured bug tickets with a clear summary, preconditions, numbered steps to reproduce, expected vs. actual results, and supporting evidence (logs, stack traces, screenshots). Also use when asked to file a defect, triage an issue, or prepare a bug for Jira. Optionally interacts with the user to gather missing context and can create the ticket via the Jira MCP integration.
+description: Use when creating, refining, or triaging a FOLIO bug report, checking whether a defect was reported or fixed before, or preparing a bug for Jira.
 license: Apache-2.0
 metadata:
   author: folio-org
@@ -11,6 +11,33 @@ metadata:
 
 A FOLIO bug report must be **reproducible, specific, and evidence-backed**. The reader
 should be able to recreate the defect without guessing.
+
+## Early Context Search
+
+Before the first complete bug draft, search relevant existing Jira issues and read the strongest matches once the affected area and observable symptom are sufficiently clear. This applies to draft-only requests as well as requests to file a ticket. Include open and resolved/closed issues; do not restrict the search to unresolved bugs.
+
+Use the configured Jira search/read capabilities and their actual schemas. Tool names shown in this skill are examples, not prerequisites. If search is unavailable, incomplete, or explicitly excluded by the user, continue with the available evidence and state that limitation. Never report "no duplicates" when no adequate search was performed.
+
+Order of work:
+
+1. Extract from the request: area/component, symptom, trigger, environment/version, and any tickets the user already named.
+2. Ask only for what you genuinely need to start searching. Do not wait for every intake field once the area and the symptom are known.
+3. Run the search and read the relevant context.
+4. Fold in what you found, then ask about the gaps that actually remain.
+5. Draft the bug, or draft the additions to a likely existing issue.
+6. Get approval for the artifact and for the user's intent before any write.
+
+For query construction, candidate inspection, and how to classify what you find, read [references/context-search.md](references/context-search.md).
+
+### Using what the search returns
+
+- Show only relevant matches: key or link, status, and a short note on how it relates to the current defect.
+- Put significant context where it belongs: Overview, the source for Expected result, or Additional information.
+- Do not add a long `Search Report` section to every bug body.
+- Coverage or availability limits can be stated in a short note next to the draft.
+- When a match is a likely duplicate, recommend using the existing ticket. Draft-only help continues: you can prepare the missing reproduction or evidence for it.
+- Never create, comment on, update, link, reopen, or close an existing issue on your own initiative.
+- Creating a new ticket despite a likely duplicate requires a deliberate user decision, after you show the relationship and they approve the current draft.
 
 ## Bug Structure
 
@@ -81,7 +108,8 @@ Recommended for anything non-trivial — FOLIO bugs conventionally open with thi
 **Reproducibility:** [Always / Intermittent (X of Y) / Once]
 **Environment:** [folio-etesting-snapshot / folio-etesting-sprint / local]
 **Module versions:** [mod-orders 13.0.5, ui-orders 9.1.2]
-**Affected tickets / regression source:** [PROJECT-123]
+**Related tickets / prior fixes:** [PROJECT-123 — state how it relates]
+**Regression status / evidence:** [Only when relevant; say whether it is possible or confirmed]
 **Workaround:** [Describe any workaround found, or "None" / omit if not applicable]
 **Test Cases:** [TestRail IDs, e.g. C15189, C15190 — omit if not used by your team]
 
@@ -166,8 +194,10 @@ Use this matrix as a starting point; the triage team may re-assign.
 ## User Interaction Flow
 
 Before producing the final bug, check whether the user supplied the essentials.
-If any of the following are missing or ambiguous, **ask the user using the
-question tool** (batch related questions in one call):
+If any of the following are missing or ambiguous, **ask the user** (batch related
+questions together). Use a question tool if one is available; a plain question in
+chat is fine when it is not. Do not re-ask for anything the request or the
+context search already told you:
 
 1. **Target Jira project** (e.g., MODORDERS, UIOR, FOLIO). Required to draft
    summary prefix and determine Jira creation path.
@@ -194,8 +224,11 @@ After the user approves the draft, offer to create the ticket via
   `additional_fields` only when the user confirmed them.
 - After creation, return the issue key and URL.
 
-Before creating, **search for duplicates** with `mcp-atlassian_jira_search`
-using keywords from the summary and show the top matches to the user.
+Reuse the context-search results already reviewed in this session. Refresh them
+when the symptom, scope, project, or relevant evidence changes materially, when
+there is a concrete reason to consider the results stale, or when the user asks
+for a refresh. Do not repeat an unchanged search merely because the draft was
+approved.
 
 ## Best Practices
 
@@ -204,8 +237,11 @@ using keywords from the summary and show the top matches to the user.
 2. Write preconditions so someone else can reach the starting state.
 3. Quote errors verbatim, including codes and IDs.
 4. State reproducibility rate for intermittent bugs.
-5. Link regression source (the ticket that introduced it) when known.
-6. Search for duplicates before filing.
+5. Link related tickets and prior fixes, saying how each one relates.
+6. Search open and closed issues before the first complete draft, or state that
+   the check was not possible.
+7. Match regression wording to the evidence: possible vs. confirmed, and never
+   name an introducing ticket or commit without data that supports it.
 
 ### Don't ✗
 1. Don't hypothesize a root cause in the summary or steps. Put hypotheses in
@@ -229,10 +265,15 @@ using keywords from the summary and show the top matches to the user.
 - [ ] Stack traces / logs / screenshots attached or inlined
 - [ ] Workaround documented if one exists
 - [ ] No PII, secrets, or real credentials
-- [ ] Duplicate search performed before filing
+- [ ] Open and closed issues searched before the first complete draft, or the
+      limitation stated
+- [ ] Matches that were actually examined are identified, with their relationship
+- [ ] Duplicate and regression wording matches the evidence
+- [ ] Decision to open a new ticket accounts for what the search found
 - [ ] One defect per ticket
 
 For section-by-section guidance, see [references/section-details.md](references/section-details.md).
 For a complete example bug, see [references/example.md](references/example.md).
 For Markdown → Jira markup conversion, see [references/jira.md](references/jira.md).
 For common pitfalls with before/after rewrites, see [references/pitfalls.md](references/pitfalls.md).
+For context-search scope, inspection, and classification, see [references/context-search.md](references/context-search.md).

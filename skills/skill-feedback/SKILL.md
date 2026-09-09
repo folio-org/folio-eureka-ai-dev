@@ -1,6 +1,6 @@
 ---
 name: skill-feedback
-description: Use when a user has finished using one installed skill and wants to preserve actionable feedback about that skill while the session context is still fresh
+description: Use when a user wants to record feedback about one completed skill session while the session context is still available.
 license: Apache-2.0
 metadata:
   author: folio-org
@@ -13,7 +13,7 @@ metadata:
 
 Use this after a completed skill session.
 
-**Core principle:** produce one `machine-prepared, user-validated` report about one skill, show the full draft, then submit or hand it off without surprises.
+**Core principle:** record what the user actually reported about one skill, show the exact artifact that will be published, and submit only that.
 
 Feedback created by this skill always targets `folio-org/folio-eureka-ai-dev`.
 
@@ -34,11 +34,11 @@ Do not use when:
 ## Hard Rules
 
 - One report covers one skill and one completed session.
-- No hidden fields in `v1`.
-- Never auto-submit.
-- Show the user the destination repo, issue title, and full body before submission.
-- Infer conservatively. If context is unclear, use `unknown` or leave the field empty.
+- Never auto-submit. Publish only after explicit approval of the displayed version.
+- A positive or no-major-issues report is a complete, valid report.
+- Infer conservatively. Omit optional fields you cannot support from the session.
 - Describe observed friction, not the user's emotions.
+- No secrets, tokens, or private internal URLs.
 - Do not require FOLIO module classification.
 
 ## Quick Reference
@@ -47,91 +47,98 @@ Do not use when:
 |------|-------------|
 | Target | One skill, one completed session |
 | Contract | Use [references/report-template.md](references/report-template.md) for fields, enums, title, and body shape |
-| Intake | One required question, one optional question when useful |
-| Draft | Show all fields, inferred values, destination repo, title, and full body |
+| Intake | Use the feedback the user already gave; at most one neutral question |
+| Review | One preview of the exact publishable artifact |
 | Decision | `approve`, `edit`, or `cancel` |
-| Submit | GitHub tool, then `gh`, then manual copy/paste |
+| Submit | Available GitHub issue tool, then configured `gh`, then manual |
 
 If this repository includes a manual GitHub issue template, keep it aligned with [references/report-template.md](references/report-template.md). The skill must still work without that template.
 
 ## Workflow
 
-1. Identify the target skill from the session.
-2. If more than one candidate skill appears plausible, ask the user to confirm which skill the report is about.
-3. Read the session and extract only low-risk, useful signals:
-   - what the user was trying to do;
-   - what artifact the session produced;
-   - repeated corrections or reframing;
-   - format problems, scope drift, or missing context;
-   - likely `work_context` and optional `project_hint`.
-4. Ask the user the minimum intake needed:
-   - Required: `What should this skill improve first?`
-   - Optional when useful: `What worked well?`
+1. Identify the target skill. A skill the user named explicitly wins over inference.
+2. Ask which skill the report is about only when more than one candidate is genuinely plausible. Keep one skill per report.
+3. Read the session and extract only low-risk, useful signals: what the user was trying to do, what the session produced, repeated corrections, format or scope problems.
+4. Settle intake (see below).
 5. Draft the report using [references/report-template.md](references/report-template.md). Use [references/example-report.md](references/example-report.md) only as a style example.
-6. Show the entire draft to the user, including:
-   - all fields;
-   - all inferred values;
-   - the destination repo `folio-org/folio-eureka-ai-dev`;
-   - the full issue title;
-   - the full Markdown body.
-7. Ask the user to choose one of:
-   - `approve`
-   - `edit`
-   - `cancel`
-8. If the user chooses `edit`, update the draft and show the full revised version again.
-9. If the user chooses `cancel`, stop without creating an issue.
-10. Only if the user chooses `approve`, submit using the first available path:
-   - a GitHub issue creation tool for repo `folio-org/folio-eureka-ai-dev`;
-   - write the approved body to `/tmp/skill-feedback.md`, then run `gh issue create --repo folio-org/folio-eureka-ai-dev --label skill-feedback --title "<title>" --body-file /tmp/skill-feedback.md`;
-   - manual submission by handing the user the repo URL, final title, and final Markdown body.
+6. Show one publication preview and ask for a decision (see below).
+7. On `edit`, revise and show the full updated preview again, then ask again.
+8. On `cancel`, stop without creating an issue.
+9. On approval, submit (see below).
+10. After confirmed success, return the issue URL and a short confirmation. Do not repeat the approve/edit/cancel menu or re-print the whole report.
+
+### Intake
+
+Use feedback already supplied by the user. If their feedback is not yet clear, ask one neutral question: "What feedback would you like to record—what worked well, anything to improve, or no major issues?" A positive report does not require an improvement suggestion. Do not infer dissatisfaction from ordinary iteration or infer satisfaction from silence.
+
+- `Nothing to improve` is valid positive or no-major-issues feedback, not a cancel.
+- Explicit `cancel`, `do not record this`, or a withdrawal ends the workflow with no submission.
+- Do not ask questions only to populate optional metadata.
+- Do not offer the user a list of suspected problems without supporting context.
+
+### One review artifact
+
+Present one publication preview: destination repository, label, exact issue title, and complete Markdown body. All agent-added content and inferred metadata must be visible in that preview. Do not add a separate "Draft fields" review. Ask once whether to approve, edit, or cancel the displayed version.
+
+The preview shows:
+
+- Repository: `folio-org/folio-eureka-ai-dev`
+- Label: `skill-feedback`
+- The exact issue title
+- The complete Markdown body
+
+Clear natural-language agreement counts as approval; the user does not have to type the word `approve`. If the title, body, or any added field changes afterwards, show the full updated preview and get approval again. Moving an unchanged approved artifact between transport paths does not by itself need a second conversational approval; runtime permission prompts still apply.
+
+### Submission
+
+After approval, use an available GitHub issue-creation tool; if that path is unavailable or explicitly denied, try an already configured local `gh` CLI. Otherwise provide the approved artifact for manual submission. A timeout or missing response is not proof that creation failed: verify the outcome before attempting another write. Read [Submission](references/submission.md) before publishing.
 
 ## Drafting Rules
 
 - Prefer explicit skill usage from the conversation.
-- If the user named the skill directly, trust that.
 - If the session suggests multiple skills, do not guess.
 - Never merge feedback for multiple skills into one report.
 - Summarize instead of copying large transcript chunks.
 - Do not include secrets, tokens, private URLs, or unnecessary identifiers.
-- Avoid long verbatim excerpts.
-- Omit optional sections that add no value.
+- Omit optional sections that add no value. Do not emit empty headings or `None` filler.
 
 Good:
 
 - `Work context: product-requirement`
-- `Project hint: unknown`
+- `Primary feedback type: no-major-issues`
 - `Observed friction signals: repeated scope corrections`
 
 Bad:
 
 - `The user was frustrated`
 - `The project was definitely mod-orders`
-- `The prompt design is weak`
+- An improvement paragraph invented so the section is not empty
 
 ## FOLIO Handling
 
-- `project_hint` may contain a FOLIO module, initiative, or area, or remain empty.
+- `project_hint` may contain a FOLIO module, initiative, or area, or be omitted.
 - Use FOLIO terminology only when it is visible in the session and useful for the report.
 - Keep the report about the skill itself, even when the work happened in a FOLIO context.
 
 ## Common Mistakes
 
+- Pressing for a problem when the user reported that the skill worked.
 - Turning the intake into a survey instead of a short follow-up.
-- Treating `project_hint` as required.
-- Hiding inferred fields from the user.
-- Submitting without re-showing the full draft after edits.
+- Reviewing draft fields separately from the artifact that will be published.
+- Submitting without re-showing the full preview after edits.
+- Writing a small approved body to a temporary file as a routine step.
+- Retrying a write after an unclear outcome without verifying it first.
 - Inferring emotions or intent from sparse evidence.
-- Turning the report into a tuning plan.
 - Copying raw transcript chunks into the issue body.
 
-## Completion Check
+## Completion Checklist
 
 Before creating the issue, verify all of these are true:
 
-- the report is about one skill only;
-- the user answered the required improvement question;
-- the destination repo `folio-org/folio-eureka-ai-dev` was shown to the user;
-- the full issue title and body were shown to the user;
-- the user had a clear `approve`, `edit`, or `cancel` choice;
-- the final version reflects any user edits;
-- nothing hidden will be submitted.
+- the target skill and the user's feedback intent are clear, and the report covers one skill only;
+- no complaint and no positive outcome was invented;
+- optional and removed metadata were not added automatically;
+- the exact artifact to be published was shown: repository, label, title, and full body;
+- the version the user approved is the current version;
+- the submitted payload matches that approved version, or the manual/uncertain outcome was stated honestly;
+- nothing hidden and nothing sensitive is included.

@@ -273,10 +273,13 @@ You will use these two skills the most:
 
 Produces a **structured user story** with:
 
-- Purpose / Overview (business context, persona, links)
-- Functional requirements
-- **Acceptance criteria in Given-When-Then format**
-- Manual testing guidance
+- Purpose / Overview (business context, value, links; a persona where one applies)
+- Requirements and scope, including any binding constraints
+- **Acceptance criteria** — Given-When-Then for behaviour, or a concise checklist
+  for a technical contract or a decision deliverable
+- Verification guidance that fits the task (manual steps for a UI workflow,
+  controlled local checks for backend or library work, and none for a pure
+  decision ticket)
 
 Full reference: [`skills/write-user-story/SKILL.md`](../../skills/write-user-story/SKILL.md)
 
@@ -438,6 +441,13 @@ Both skills are designed to ask you what they need:
 Answer in natural language — bullet points, fragments, or full sentences all
 work.
 
+`write-bug` also searches Jira for existing context **before** it writes the
+first complete draft — open and closed issues, so a defect that was reported or
+fixed once before shows up while the draft can still use it. This happens even
+when you only asked for a draft. If Jira search is not available, or you asked
+it to work offline, it will say the duplicate check was not done rather than
+implying the bug is new.
+
 ### Step 5 — Iterate on the draft
 
 The agent posts a draft in Markdown. Read it against the skill's checklist
@@ -495,12 +505,16 @@ in Jira" inside [`skills/write-bug/SKILL.md`](../../skills/write-bug/SKILL.md)).
 After approving the draft, just say:
 
 ```
-Looks good. Search Jira for duplicates first, show me the top matches,
-then create the issue in MODORDERS as a Bug with priority P2.
+Use the context-search results we reviewed. If they do not indicate a likely
+duplicate, create the approved issue in MODORDERS as a Bug with priority P2.
+If a likely duplicate remains, ask me whether to use the existing issue or
+create a distinct new one before making any changes.
 ```
 
 The agent will:
-1. Run a duplicate search via Jira MCP and show you matches.
+1. Reuse the context-search results from drafting, refreshing them only if the
+   symptom or scope changed materially — it will not repeat an unchanged search
+   just because you approved the draft.
 2. Create the issue once you confirm.
 3. Return the issue key and URL.
 
@@ -557,13 +571,17 @@ A shareable URL is copied to your clipboard.
   files until you ask.
 - Let the skill ask you questions instead of front-loading every detail.
 - Iterate. The first draft is rarely the final draft.
-- Run a duplicate search before filing a bug.
+- Let the search happen before the first complete bug draft, not just before
+  filing — that is when a prior fix or an existing ticket can still change the
+  draft.
 
 **Don't**
 - Don't paste secrets, real patron data, or production credentials into
   prompts.
-- Don't skip the persona / business value in a user story — that's what
-  separates a story from a task.
+- Don't skip the business value in a user story — that's what separates a story
+  from a task. Use a persona where a real user role applies; for a technical
+  enabler or a decision ticket, state the outcome and its value directly instead
+  of inventing one.
 - Don't propose a fix inside a bug ticket. That belongs in the PR or a
   follow-up story.
 - Don't worry about Markdown vs Jira markup until the final step — the agent

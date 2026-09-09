@@ -24,7 +24,7 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 - `write-bug` - Drafts reproducible FOLIO bug reports with steps, expected and actual results, and supporting evidence.
 - `write-pr-description` - Writes a PR description from the branch diff, reproducing the target repository's own PR template, and can open the PR with `gh` after confirmation.
 - `write-testrail-cases` - Generates structured manual test cases from a Jira story and posts them directly to TestRail. Uses app-specific context files and automatically enriches from Jira, GitHub, and TestRail when context is insufficient.
-- `write-user-story` - Drafts user stories with scope, requirements, acceptance criteria, and manual testing guidance.
+- `write-user-story` - Drafts user stories with scope, requirements, acceptance criteria, and task-appropriate verification guidance.
 
 ### Installing skills by role
 
@@ -120,7 +120,9 @@ If context for your app area is missing or outdated, run `build-app-context`:
 
 Use the `skill-feedback` skill when you finish working with another skill and want to report what worked well, what was confusing, or what should be improved. It is useful for skill-related bugs, missing guidance, unclear instructions, improvement ideas, requests for additional examples, and proposals for new skills.
 
-Ask your AI agent to run the skill feedback workflow after a skill session. The agent should review the session context, prepare a GitHub-ready issue draft, show the full draft for your approval, and then create an issue in this repository if GitHub access is available. If the agent cannot create the issue directly, copy the approved draft and create the GitHub issue manually.
+Ask your AI agent to run the skill feedback workflow after a skill session. The agent uses the feedback you already gave, so a positive or "no major issues" report is fine — you are not expected to invent something to improve. It then shows you one preview of exactly what would be published (repository, label, issue title, and the full issue body) and asks you to approve, edit, or cancel that version.
+
+After you approve, the agent creates the issue with whichever GitHub issue tool it has; if that path is unavailable or denied, it falls back to an already configured `gh` CLI. If neither works, it hands you the approved draft to submit manually and tells you the issue was not created. When a submission result is unclear, the agent checks whether the issue already exists instead of sending it again.
 
 The feedback loop should stay lightweight: you can create feedback through the `skill-feedback` skill, or simply open a GitHub issue directly in this repository for bugs, ideas, improvements, and new skill proposals. We will continue improving these skills together with the community based on real usage and feedback.
 
