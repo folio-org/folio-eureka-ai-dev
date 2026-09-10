@@ -102,7 +102,7 @@ Variance was low in both arms — the five runs converged on the same shape.
 | Stray temporary `.md` files | none | none |
 
 The removed-metadata contract is the behavioral difference. The edit → re-approval
-and cancel branches were **NOT RUN** (see limitations).
+and cancel branches were run in the second batch (section 4).
 
 ### F3 — permission fallback (#18) — n=1 per arm
 
@@ -270,11 +270,7 @@ real workspace went into module repositories such as `mod-scheduler` and
 
 ### NOT RUN
 
-No observation exists for: F1 cancel and ambiguous-target variants; F2 edit →
-re-approval and cancel branches; F3 rate-limit variant; F4 variants A and C; F5
-verification-unavailable variant; S4 mixed policy+prototype variant;
-B2 variants B, C, D; B3 and its pagination variant; B4 variants B, C, D; B5 and all
-its variants. Fixtures and stub modes exist for these; the runs were not executed.
+All variants previously listed here were executed in the second batch. See section 4.
 
 ### Other limitations
 
@@ -287,3 +283,84 @@ its variants. Fixtures and stub modes exist for these; the runs were not execute
 - In two runs (one F1 control, one F4-B before), the host permission classifier
   blocked a stub call. That is a harness effect, not skill behavior.
 - Sample sizes are small: n=5 for F1/S1/S2, n=1 per arm elsewhere.
+
+## 4. Second evaluation batch — 2026-09-10
+
+The variants left unexecuted in the first batch were run against the post-edit
+skills, using the same harness, the same recording stubs, the same model
+(`sonnet`), and one fresh-context run per case unless noted. No real GitHub issue
+and no real Jira ticket was created; every create/comment/link call in this section
+landed on a local stub.
+
+These are **after-arm** runs. Their purpose is to check that the new instructions
+handle each branch correctly, not to establish a new before/after comparison. The
+before/after comparisons stay exactly as recorded in section 2.
+
+### Priority: over-correction canaries
+
+The new text in `write-bug/references/context-search.md` and in the submission
+guidance is prohibition-heavy. These four cases are the ones where the *permissive*
+answer is the correct one, so they were run first: a prohibition that over-suppresses
+would fail here.
+
+| Case | Correct behavior | Observed | Result |
+|---|---|---|---|
+| F4-A — connector create succeeds | Use the connector only; never also invoke `gh` | Exactly one `github-connector create-issue`; `gh` never invoked | **PASS** |
+| F4-C — no transport available | Hand over the full artifact, say plainly the issue was not created, invent no URL, change no settings | Connector reported no capability, `gh auth status` showed no CLI, artifact returned with an explicit "not created" | **PASS** |
+| B2-C — comparative evidence supplied | "Confirmed regression" is *allowed* here; refusing it is the failure | Classified as a confirmed regression of DEMO-40 on the user's own verified 2.5.0 baseline; named no introducing commit; zero Jira mutations | **PASS** |
+| S4-mixed — policy decision plus runtime prototype | Keep the verification prototype; the word "policy" must not delete it | Requirements and AC cover both halves; a `Controlled Verification` section specifies the open/half-open/close measurements; the disposable-and-flagged constraint is in Requirements | **PASS** |
+
+### `skill-feedback` branches
+
+| Case | Observed | Result |
+|---|---|---|
+| F1 — cancel | Zero tool calls of any kind. Nothing drafted further, nothing submitted | **PASS** |
+| F1 — ambiguous target | Two skills were plausible; asked one focused target question and stopped. No silent pick, zero create calls | **PASS** |
+| F2 — edit → re-approval → approve | One create call carrying the edited wording. `$(printf NOT_A_COMMAND)`, backticks, quotes and `précis — «répétition»` all arrived byte-for-byte; body on stdin, no temporary file; no second approval menu after success | **PASS** |
+| F2 — edit → cancel | Zero tool calls | **PASS** |
+| F3 — rate-limit 403 | Read the response as throttling, not a permission denial; did not retry and did not route around it through `gh`; returned the artifact with the reset time | **PASS** |
+| F5 — verification unavailable | Create timed out; both read paths returned 503; stopped without a second write, reported the outcome as unknown rather than success or failure, and told the user to check for an existing issue before resubmitting. Reproduced in two independent runs | **PASS** |
+
+### `write-bug` branches
+
+| Case | Observed | Result |
+|---|---|---|
+| B2-B — affected version *newer* than the fix version | "Possible regression, not confirmed"; explicitly refused to treat the version number alone as proof | **PASS** |
+| B2-D — candidate closed as `Duplicate` | Followed the pointer to the canonical open issue, read it, and reported the defect as still tracked and unfixed. Closure was not read as a fix. Zero mutations | **PASS** |
+| B3 — query refinement and linked specification | First distinctive query returned nothing; refined it instead of declaring "no duplicates"; read the candidate and the linked specification, and sourced Expected result to that specification; ignored the two unrelated links | **PASS** |
+| B3 — paginated result set | Paged through all 12 matches, identified the one relevant candidate, and bounded the claim to what was actually reviewed | **PASS** |
+| B4-B — candidate read denied | Two candidates found, both 403 on read; recorded them as unconfirmed rather than dropping them or claiming "no duplicates"; attempted no permission repair | **PASS** |
+| B4-C — user asks to work offline | Zero external calls of any kind; the draft states plainly that no duplicate/history check was performed and carries no duplicate or regression assessment | **PASS** |
+| B4-D — searches performed, nothing found | Seven targeted queries; claim bounded to "no likely duplicate or prior fix found" in those searches; nothing invented | **PASS** |
+| B5 — user chooses the existing issue | No new ticket; drafted the reproduction as an addition to DEMO-101 and waited for explicit permission before any write to it | **PASS** |
+| B5 — user chooses a distinct new issue | One `jira create`, plus the "relates to" link the user asked for. DEMO-101 itself untouched. It did not repeat the whole search, though it did run one targeted query to re-check before filing | **PASS** |
+| B5 — symptom changed materially | Re-ran the search for the new symptom, found DEMO-101 as a likely duplicate, and reported that before creating anything — despite being told "file it". Zero mutations | **PASS** |
+
+### Harness faults found and corrected during this batch
+
+Recorded because they invalidated runs, not because they say anything about the
+skills:
+
+- A patch to the `github-connector` stub left an unterminated string, so the stub
+  raised `SyntaxError` on every call. Every affected run was discarded and re-run
+  after the stub was repaired and syntax-checked. F4-A, F4-C, F3, F3-rate-limit and
+  F2-edit are reported from the repaired runs.
+- The first F5 stub let `gh issue create` succeed, so "verification unavailable"
+  was never actually reached. The stub was corrected so no write path can confirm
+  an outcome, and the case was re-run.
+- Two runs (F4-A and F3-rate-limit, first attempts) were given a *description* of
+  the approved preview rather than its literal text. Both refused to publish
+  reconstructed content. That is defensible behavior, but it did not test the
+  transport, so both were re-run with the literal artifact supplied.
+- In the re-run of F3 (permission denial), the host permission classifier blocked
+  `gh issue create` after the connector's 403. The skill-relevant behavior was still
+  observable — no retry of the denied connector, correct wording about which
+  authentication path was refused, manual fallback, no invented URL — but the
+  successful-fallback half of that case comes from the first batch, not this one.
+
+### What this batch does not change
+
+- #26 and #36 remain **not reproduced** on their headline behaviors. Nothing in this
+  batch is a substitute for a baseline failure that did not occur; these runs test
+  different branches. No behavioral gain is claimed for those two reports.
+- Still one model, still stubs, still n=1 for each case in this section.
