@@ -248,6 +248,26 @@ and drafted a positive report, then attempted to publish it without an approval
 step. No valid no-guidance control was obtained for F1, S1, or S2. This does not
 affect the before/after comparison, which is the comparison these changes rest on.
 
+The same registry leak means the F-case **after** arms also had the older installed
+`skill-feedback` within reach and followed the post-edit fixture anyway. That makes
+their PASS results more conservative, not less.
+
+### Contamination check on the before arms
+
+Several before-arm runs (B1, B2, B4, S3, S4) were launched after the working-tree
+skills had already been edited, at a path a subagent could in principle read. Because
+the "#36 did not reproduce" finding depends on those runs genuinely using the old
+guidance, their stored transcripts were searched for strings that exist **only** in
+the post-edit skills — `Early Context Search`, `context-search.md`,
+`Task-Appropriate Verification`, `Controlled Verification`, `no-major-issues` — and for
+reads of the repository's own `skills/` directory.
+
+Result: **zero occurrences in every before-arm transcript**, and no before-arm run
+read the repository `skills/` directory. The before arms used the intended pre-edit
+fixtures, so the not-reproduced findings stand. (The story runs that wandered into the
+real workspace went into module repositories such as `mod-scheduler` and
+`applications-poc-tools`, not into the skills under change.)
+
 ### NOT RUN
 
 No observation exists for: F1 cancel and ambiguous-target variants; F2 edit →
