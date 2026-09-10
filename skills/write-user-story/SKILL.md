@@ -36,32 +36,33 @@ Use Given-When-Then for behavior or a concise checklist for contracts/deliverabl
 
 ## Acceptance Criteria
 
-Use Given-When-Then for observable behavior. Use a concise verifiable checklist when it expresses a technical contract or decision deliverable more clearly. Each criterion covers a distinct completion condition grounded in the agreed scope. Cover material error and boundary behavior without expanding every configuration field or implementation step into a separate scenario.
-
-There is no fixed maximum or minimum number of criteria. Do not drop important conditions for the sake of brevity, and do not turn acceptance criteria into a detailed test plan.
+Use Given-When-Then for observable behavior, or a concise verifiable checklist when that expresses a technical contract or decision deliverable more clearly. Each criterion covers a distinct completion condition from the agreed scope. Cover material error and boundary behavior without expanding every configuration field into its own scenario. There is no target number of criteria: do not drop important conditions for brevity, and do not turn acceptance criteria into a test plan.
 
 ## Task-Appropriate Verification
 
-| Work/result | Required behavior |
+| Work | Required behavior |
 |---|---|
-| User-facing/runtime change | Add `Testing Guidance` when it gives a useful way to verify beyond the acceptance criteria. For a real UI workflow, `Manual Testing` with short steps and expected results is appropriate. |
-| Backend/API/library change | Add `Testing Guidance` with `Controlled Verification` when useful: API/contract checks, a local harness, stubs, or controlled failure conditions. Naming the level of automated verification is fine without writing the tests. Do not require breaking a shared or production deployment, or waiting for a real outage of an external service. |
-| Pure discovery/policy/decision work | Do not add runtime `Testing Guidance`. Verify the concrete decision artifacts, comparison/trade-offs, recommendation, constraints, and the agreed review through Requirements and acceptance criteria. Do not write `Testing Guidance: N/A`. |
-| Mixed work | Verify each part that was actually requested in the way that fits it. The word "policy" alone does not remove testing for a runtime change that was genuinely requested. |
+| User-facing/runtime change | Add `Testing Guidance` when it helps beyond the acceptance criteria. For a real UI workflow, `Manual Testing` with short steps and expected results is appropriate. |
+| Backend/API/library change | Add `Controlled Verification` when useful: contract checks, a local harness, stubs, or controlled failure conditions. Naming the level of automated verification is fine without writing the tests. Never require breaking a shared or production deployment, or waiting for a real outage. |
+| Pure discovery/policy/decision work | No runtime `Testing Guidance`. Verify the decision artifacts, trade-offs, recommendation, constraints, and the agreed review through Requirements and acceptance criteria. Do not write `Testing Guidance: N/A`. |
 
-Keep test code, mock configuration, fixture scripts, detailed harness setup, and implementation-plan-level test cases out of the story. This limits detail; it does not forbid naming automated or contract verification.
+Mixed work verifies each part that was actually requested in the way that fits it: the
+word "policy" alone does not remove testing for a runtime change that was genuinely
+requested.
+
+Keep test code, mock configuration, fixture scripts, and implementation-plan-level test
+cases out of the story. This limits detail; it does not forbid naming automated or
+contract verification.
 
 ## Conditional Sections
 
 Add a section only when its condition holds.
 
-- **Out of Scope** — only for a plausible alternative reading of *this* request that must be excluded, or a useful boundary the user stated explicitly. Neighbouring investigation topics, obvious future enhancements, and unrelated features are not reasons to add exclusions.
-- **Non-Functional Requirements** — keep specific, significant security, compatibility, concurrency, integrity, or performance constraints. Do not add generic wishes for template completeness.
-- **Additional Notes** — relevant non-binding context only, not a duplicate of the main sections. A commitment that affects correctness or acceptance belongs in Requirements, and in acceptance criteria when it is verifiable — not only in Notes.
-- **Technical Approach** — optional high-level context. Do not invent an implementation. Do not delete an agreed technical constraint merely because it is technical.
-- **Related Links** — an inline reference or a compact section. Every link kept has a clear role: dependency, prior behavior, parent scope, specification, or evidence. Do not list every neighbouring Jira key, and do not invent relationships.
-
-Example: if a story must account for a retry duration that can exceed the timer interval, that belongs in Requirements and in the verifiable result — not hidden in Additional Notes. Keep the conditions of the request at hand; do not introduce a general timer or retry policy.
+- **Out of Scope** — only for a plausible alternative reading of *this* request that must be excluded, or a boundary the user stated explicitly. Neighbouring topics, future enhancements, and unrelated features are not reasons to add exclusions.
+- **Non-Functional Requirements** — specific, significant security, compatibility, concurrency, integrity, or performance constraints. Not generic wishes for template completeness.
+- **Additional Notes** — relevant non-binding context only. A commitment that affects correctness or acceptance belongs in Requirements, and in acceptance criteria when it is verifiable — never only in Notes.
+- **Technical Approach** — optional high-level context. Do not invent an implementation, and do not delete an agreed technical constraint merely because it is technical.
+- **Related Links** — every link kept has a clear role: dependency, prior behavior, parent scope, specification, or evidence. Do not list every neighbouring Jira key, and do not invent relationships.
 
 ## Writing Guidelines
 

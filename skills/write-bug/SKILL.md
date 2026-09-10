@@ -14,30 +14,33 @@ should be able to recreate the defect without guessing.
 
 ## Early Context Search
 
-Before the first complete bug draft, search relevant existing Jira issues and read the strongest matches once the affected area and observable symptom are sufficiently clear. This applies to draft-only requests as well as requests to file a ticket. Include open and resolved/closed issues; do not restrict the search to unresolved bugs.
+Before the first complete bug draft, search relevant existing Jira issues and read the
+strongest matches, as soon as the affected area and observable symptom are clear enough
+to query. This applies to draft-only requests as well as requests to file a ticket.
+Cover open and resolved/closed issues; do not restrict the search to unresolved bugs.
 
-Use the configured Jira search/read capabilities and their actual schemas. Tool names shown in this skill are examples, not prerequisites. If search is unavailable, incomplete, or explicitly excluded by the user, continue with the available evidence and state that limitation. Never report "no duplicates" when no adequate search was performed.
+Ask only for what you genuinely need to start searching — do not wait for every intake
+field once the area and the symptom are known. Then fold in what you found and ask about
+the gaps that actually remain.
 
-Order of work:
+Use the configured Jira search/read capabilities and their real schemas; tool names in
+this skill are examples, not prerequisites. If search is unavailable, incomplete, or
+excluded by the user, continue with the available evidence and state that limitation.
+Never report "no duplicates" when no adequate search was performed.
 
-1. Extract from the request: area/component, symptom, trigger, environment/version, and any tickets the user already named.
-2. Ask only for what you genuinely need to start searching. Do not wait for every intake field once the area and the symptom are known.
-3. Run the search and read the relevant context.
-4. Fold in what you found, then ask about the gaps that actually remain.
-5. Draft the bug, or draft the additions to a likely existing issue.
-6. Get approval for the artifact and for the user's intent before any write.
-
-For query construction, candidate inspection, and how to classify what you find, read [references/context-search.md](references/context-search.md).
+For query construction, candidate inspection, and how to classify what you find, read
+[references/context-search.md](references/context-search.md).
 
 ### Using what the search returns
 
-- Show only relevant matches: key or link, status, and a short note on how it relates to the current defect.
-- Put significant context where it belongs: Overview, the source for Expected result, or Additional information.
-- Do not add a long `Search Report` section to every bug body.
-- Coverage or availability limits can be stated in a short note next to the draft.
-- When a match is a likely duplicate, recommend using the existing ticket. Draft-only help continues: you can prepare the missing reproduction or evidence for it.
-- Never create, comment on, update, link, reopen, or close an existing issue on your own initiative.
-- Creating a new ticket despite a likely duplicate requires a deliberate user decision, after you show the relationship and they approve the current draft.
+- Show only relevant matches: key or link, status, and a short note on how each relates.
+- Put significant context where it belongs — Overview, the source for Expected result,
+  or Additional information — not in a long `Search Report` section.
+- When a match is a likely duplicate, recommend the existing ticket; draft-only help
+  continues, preparing the missing reproduction or evidence for it.
+- Never create, comment on, update, link, reopen, or close an existing issue on your own
+  initiative. Opening a new ticket despite a likely duplicate needs a deliberate user
+  decision after you show the relationship.
 
 ## Bug Structure
 

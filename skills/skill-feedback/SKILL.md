@@ -78,14 +78,7 @@ Use feedback already supplied by the user. If their feedback is not yet clear, a
 
 ### One review artifact
 
-Present one publication preview: destination repository, label, exact issue title, and complete Markdown body. All agent-added content and inferred metadata must be visible in that preview. Do not add a separate "Draft fields" review. Ask once whether to approve, edit, or cancel the displayed version.
-
-The preview shows:
-
-- Repository: `folio-org/folio-eureka-ai-dev`
-- Label: `skill-feedback`
-- The exact issue title
-- The complete Markdown body
+Present one publication preview: repository (`folio-org/folio-eureka-ai-dev`), label (`skill-feedback`), the exact issue title, and the complete Markdown body. All agent-added content and inferred metadata must be visible in that preview. Do not add a separate "Draft fields" review. Ask once whether to approve, edit, or cancel the displayed version.
 
 Clear natural-language agreement counts as approval; the user does not have to type the word `approve`. If the title, body, or any added field changes afterwards, show the full updated preview and get approval again. Moving an unchanged approved artifact between transport paths does not by itself need a second conversational approval; runtime permission prompts still apply.
 
