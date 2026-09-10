@@ -1,5 +1,7 @@
 # Complete Example User Story
 
+Ticket references and configuration values below are illustrative.
+
 ```markdown
 ## Purpose/Overview
 
@@ -11,7 +13,8 @@ This feature will add a scheduled job that removes timer descriptors that have
 been disabled for more than 90 days, keeping the database lean and performant.
 
 Target users: System administrators and database operations
-Related: MODSCHED-45 (Database Optimization Epic)
+Parent scope: MODSCHED-45 (Database Optimization Epic) sets the storage-reduction
+goal this cleanup contributes to.
 
 ### Technical Approach
 
@@ -27,20 +30,18 @@ Related: MODSCHED-45 (Database Optimization Epic)
 ### Functional Requirements
 1. System shall identify timer descriptors disabled for >90 days
 2. System shall soft-delete identified timers (set deletion_date timestamp)
-3. System shall permanently delete timers after 30-day grace period
+3. System shall permanently delete timers after a 30-day grace period, and
+   unschedule the Quartz jobs associated with each deleted timer
 4. Grace period allows recovery if timer was disabled accidentally
 5. Cleanup job shall run daily at 2:00 AM (configurable)
 6. System shall log all cleanup operations with timer IDs and counts
+7. System shall log completion status of each run and emit the
+   `timers_deleted` and `execution_time` metrics
 
 ### Non-Functional Requirements
 1. Cleanup operation shall not lock database tables for >5 seconds
 2. Cleanup shall process max 1000 timers per batch to prevent memory issues
 3. Configuration shall be externalized (cron schedule, retention period)
-
-### Out of Scope
-- Manual cleanup UI for administrators (future story)
-- Cleanup of Quartz job history tables
-- Archival of deleted timers to separate storage
 
 ---
 
@@ -77,7 +78,6 @@ Related: MODSCHED-45 (Database Optimization Epic)
 - Given 5000 timers eligible for cleanup
   When cleanup job executes
   Then timers are processed in batches of 1000
-  And each batch is committed separately
   And process completes without out-of-memory errors
 
 ---
@@ -86,38 +86,38 @@ Related: MODSCHED-45 (Database Optimization Epic)
 
 ### Manual Testing
 
+Run against a disposable local or test environment, with the configured
+retention period at 90 days and the grace period at 30 days. Seed each scenario
+with fresh data and note the reference date used for "today".
+
 **Scenario 1: Verify soft deletion**
-1. Create test timers with disabled_date set to 95 days ago
-2. Set cleanup retention period to 1 minute (for faster testing)
-3. Manually trigger cleanup job or wait for schedule
-4. Query database to verify soft deletions (deletion_date populated)
-5. Confirm timers are still queryable during grace period
+1. Seed timers with disabled_date set to 95 days before the reference date
+2. Manually trigger the cleanup job
+3. Query the database to verify deletion_date is populated
+4. Confirm the timers are still queryable during the grace period
 
 **Scenario 2: Verify permanent deletion after grace period**
-1. Set timers with deletion_date older than grace period
-2. Trigger cleanup job
-3. Verify timers are permanently deleted
-4. Verify associated Quartz jobs are unscheduled
-5. Check logs for deletion count
+1. Seed timers with deletion_date set to 31 days before the reference date
+2. Trigger the cleanup job
+3. Verify the timers are permanently deleted
+4. Verify the associated Quartz jobs are unscheduled
+5. Check logs for the deletion count
 
 **Scenario 3: Verify recently disabled timers are unaffected**
-1. Create timers disabled 30 days ago
-2. Run cleanup job
-3. Confirm those timers have no deletion_date set
+1. Seed timers with disabled_date set to 30 days before the reference date
+2. Trigger the cleanup job
+3. Confirm those timers have no deletion_date set and still run
 
 ---
 
 ## Additional Notes
 
-**Monitoring:**
-- Add dashboard alerts if cleanup job fails
-- Track metric: timers_deleted_per_day (watch for anomalies)
-
-**Risks:**
-- If retention period too short, may delete timers still needed
-- Consider adding restoration endpoint in future story
+**Risk:** if the retention period is configured too short, timers that are still
+needed may be deleted.
 
 ## Related Links
-- Database schema: src/main/resources/changelog/changes/v1.0/
-- Quartz job configuration: JobSchedulingService.java
+- Database schema (`src/main/resources/changelog/changes/v1.0/`) — where the
+  deletion_date column is added
+- `JobSchedulingService.java` — the Quartz job configuration the cleanup job must
+  use to unschedule deleted timers
 ```

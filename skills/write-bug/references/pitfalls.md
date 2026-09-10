@@ -125,3 +125,27 @@ tenant URLs unless required and approved for the ticket.
 > at 30s; the next request succeeds in ~12s. Query plan attached.
 
 Why: reproduction rate, environment, and timing data make it triageable.
+
+---
+
+## Pitfall 10: Duplicate search left until filing time
+
+❌ **Before**
+> Draft the whole bug first. Then, only because the user asked to file it, search
+> `status != Done` for the summary keywords, find a closed ticket with a similar
+> title, and write: "Regression — this was fixed in DEMO-40 and has come back."
+
+✓ **After**
+> Once the area and symptom are clear, and before the first complete draft, search
+> open **and** closed issues. Read the strongest candidate, check its resolution
+> and what its fix actually covered, then state the relationship at the strength
+> the evidence supports:
+>
+> "DEMO-40 (Closed, Fixed in 2.5.0) describes comparable behavior. The affected
+> environment here runs 2.4.0, so this may simply predate that fix rather than be
+> a regression. Not confirmed either way."
+
+Why: the search has to happen early enough to change the draft, and the closed
+issues are exactly the ones that carry the prior-fix history. Closed is not
+Fixed, a fix version is not a deployment, and the ticket that fixed something
+before is not automatically the ticket that broke it now.

@@ -59,7 +59,7 @@ financial totals on orders with foreign invoices.
 **Reproducibility:** Always (5/5 attempts)
 **Environment:** folio-etesting-snapshot, tenant `diku`
 **Module versions:** mod-orders 13.0.5, mod-invoice 5.10.2, ui-orders 9.1.2
-**Regression source:** Not identified; present at least since Ramsons.
+**Regression status / evidence:** Not identified as a regression; behavior present at least since Ramsons.
 
 **Hypothesis (not verified):**
 `CompositeOrderTotalFieldsPopulateService#getTotalAmount` does not call the
@@ -97,3 +97,46 @@ currency conversion service before summing invoice amounts.
 - **Additional information** separates verified facts from a clearly labelled
   hypothesis, includes reproducibility rate, and lists the module versions — all
   things triagers need.
+
+---
+
+## Simulated context-search vignette
+
+**This vignette is fabricated for illustration.** `DEMO-88` and the URL below do
+not exist, and no search was performed for the bug above. The example bug is a
+writing sample only — do not present it as having been checked against Jira.
+
+Suppose that, before drafting the currency bug, an early context search had
+returned one strong candidate:
+
+```
+DEMO-88 — "Order totals ignore invoice exchange rate on multi-currency tenants"
+Status: Closed   Resolution: Fixed   Fix version: 13.0.0
+https://jira.example.invalid/browse/DEMO-88
+```
+
+Reading it shows comparable behavior: order totals not converted when the invoice
+currency differs from the tenant currency. What it does **not** show is whether
+that fix covers the "Total Expended" field specifically, or whether the build on
+`folio-etesting-snapshot` (mod-orders 13.0.5) actually carries it in a working
+state.
+
+The correct conclusion is a **possible relation to a prior fix, regression not
+confirmed** — not "regression introduced by DEMO-88". DEMO-88 fixed comparable
+behavior; that never makes it the ticket that caused this defect.
+
+In the draft, that lands as one line in **Overview**:
+
+> Comparable behavior was fixed in DEMO-88 (Closed/Fixed, 13.0.0). Whether that
+> fix covers Total Expended, and whether it is effective on this build, is not
+> confirmed.
+
+and replaces the placeholder line in **Additional information**:
+
+> **Related tickets / prior fixes:** DEMO-88 — earlier fix for unconverted order
+> totals; scope and deployment relative to this defect unverified
+> **Regression status / evidence:** Possible; not confirmed. No verified working
+> baseline for Total Expended on a comparable build.
+
+Note what is absent: no `Search Report` section, no list of every ticket the
+search returned, and no invented introducing commit.

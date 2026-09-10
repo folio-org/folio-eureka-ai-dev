@@ -14,21 +14,24 @@ Default destination repo for reports created by this skill:
 [skill-feedback] {skill_name} | {primary_feedback_type}
 ```
 
-## Required Fields
+## Fields
+
+### Required
 
 - `skill_name`
 - `primary_feedback_type`
-- `what_should_improve_first`
 - `validated_session_summary`
-- `report_type = machine-prepared, user-validated`
 
-## Optional Fields
+### Conditional
+
+- `what_should_improve_first` — include when the user reported a problem or a suggestion. It is enough to describe the needed improvement or the observed problem clearly; the user does not have to propose a technical solution.
+
+### Optional
 
 - `work_context`
 - `project_hint`
 - `what_worked_well`
 - `observed_friction_signals`
-- `skill_fit_assessment`
 
 ## Allowed Enums
 
@@ -39,7 +42,10 @@ Default destination repo for reports created by this skill:
 - `poor-structure-or-format`
 - `process-friction`
 - `unclear-guidance`
+- `no-major-issues`
 - `other`
+
+Use `no-major-issues` for explicitly positive or no-major-issues feedback with no specific corrective request. When feedback is mixed, use the matching problem category and, if useful, add `What Worked Well`.
 
 ### `work_context`
 
@@ -52,14 +58,18 @@ Default destination repo for reports created by this skill:
 - `cross-functional`
 - `unknown`
 
-### `skill_fit_assessment`
-
-- `expected`
-- `borderline`
-- `likely-misfit`
-- `unknown`
+Do not fill `work_context` with `unknown` automatically. Unknown optional fields are normally omitted.
 
 ## Markdown Body
+
+Section order:
+
+1. `# Skill Feedback Report`
+2. `## Metadata` — Skill and Primary feedback type, then only the optional Work context / Project hint values that are actually useful.
+3. `## What Should Improve First` — conditional.
+4. `## What Worked Well` — optional.
+5. `## Validated Session Summary` — required.
+6. `## Observed Friction Signals` — optional, observable relevant facts only.
 
 ```md
 # Skill Feedback Report
@@ -67,28 +77,21 @@ Default destination repo for reports created by this skill:
 ## Metadata
 - Skill: `{skill_name}`
 - Primary feedback type: `{primary_feedback_type}`
-- Work context: `{work_context}`
-- Project hint: `{project_hint}`
-- Skill fit assessment: `{skill_fit_assessment}`
-- Report type: `machine-prepared, user-validated`
 
 ## What Should Improve First
 {what_should_improve_first}
 
-## What Worked Well
-{what_worked_well}
-
 ## Validated Session Summary
 {validated_session_summary}
-
-## Observed Friction Signals
-- {observed_friction_signal_1}
-- {observed_friction_signal_2}
 ```
+
+A positive or no-major-issues report is complete with metadata and a substantive session summary. `What Worked Well` may be added, but do not invent specific strengths to fill the section.
 
 ## Omission Rules
 
-- Omit any optional section that has no useful content.
-- Use `unknown` only when it adds value over an empty field.
+- Omit any conditional or optional section that has no useful content.
+- Do not emit empty headings, placeholders, boilerplate `None`, or an invented improvement paragraph.
+- Use `unknown` only when it adds value over omitting the field.
 - Do not paste large raw transcript excerpts.
 - Do not include secrets, tokens, or private internal URLs.
+- Do not edit older issues to match this contract.

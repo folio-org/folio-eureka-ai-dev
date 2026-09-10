@@ -1,5 +1,7 @@
 # User Story Writing Guide
 
+> **Current skill contract:** For section selection, acceptance-criteria granularity, verification guidance, templates, examples, and completion checklists, follow [write-user-story](../../skills/write-user-story/SKILL.md) and its references. The corresponding material below is retained as historical reference, not as an additional set of requirements.
+
 This guide provides a structured approach to writing clear, actionable user stories that effectively communicate requirements to development teams.
 
 ## Table of Contents

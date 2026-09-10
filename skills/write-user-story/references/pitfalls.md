@@ -1,6 +1,6 @@
 # Common Pitfalls
 
-## Pitfall 1: Technical Task Disguised as User Story
+## Pitfall 1: Technical Task With No Stated Value
 
 **Bad:**
 ```
@@ -20,6 +20,8 @@ Requirements:
 
 Note: This is a technical enabler story, not user-facing.
 ```
+
+Why: the problem was never that the work is technical — technical enablers are legitimate stories. The problem is a hollow persona wrapper standing in for the actual outcome and its value. State the outcome directly; do not invent an end-user persona for work that has none.
 
 ## Pitfall 2: Vague Acceptance Criteria
 
@@ -86,6 +88,8 @@ Technical Approach:
 Consider Redis or in-memory cache. Coordinate with infrastructure team.
 ```
 
+**Important limit:** this pitfall is about inventing an implementation the user never chose. If the user or the team has agreed a technical constraint — a specific timeout value, a required protocol, a mandated library — keep it in Requirements. Do not strip an agreed constraint just because it looks like implementation detail.
+
 ## Pitfall 5: Including Unnecessary Sections or Details
 
 **Bad:**
@@ -122,9 +126,64 @@ Manual Testing Scenario 1: Create and Update Timer
 4. Verify createdBy unchanged, updatedBy shows new user
 ```
 
+The manual API walkthrough above suits an API change. It is not the required shape for a library change or for discovery work — see the verification table in the main skill.
+
 **Rules:**
 - Remove performance NFRs when impact is negligible
 - Remove Out of Scope when items don't clarify genuine ambiguity
-- Remove backward compatibility notes when feature is purely additive
-- Move unit test specs to the implementation plan
+- Remove unsupported boilerplate compatibility notes; keep a compatibility requirement that is significant or was explicitly stated, in Requirements
+- Naming the level of automated verification is fine ("covered by contract tests"); detailed unit test specifications, mock setup, and fixtures belong in the implementation plan
 - Move test data details to the implementation plan
+
+## Pitfall 6: Runtime Tests Forced Onto a Decision Ticket
+
+**Bad:**
+```
+Purpose: Decide the circuit-breaker policy for mod-scheduler.
+
+Acceptance Criteria
+- Given the circuit breaker is configured
+  When the downstream service fails repeatedly
+  Then the breaker opens
+
+Testing Guidance
+Manual Testing: deploy the change and take the downstream service offline.
+
+Additional Notes
+The chosen policy must not let a retry run longer than the timer interval.
+```
+
+**Better:**
+```
+Purpose: Decide the circuit-breaker policy for mod-scheduler so implementation
+tickets can be written against an agreed policy.
+
+Requirements/Scope
+1. Compare the candidate circuit-breaker options against the agreed criteria
+2. Record the trade-offs and the constraints that apply, including that a retry
+   must not run longer than the timer interval
+3. Record one recommendation with its reasoning
+4. Obtain Product Owner and backend lead review
+
+Acceptance Criteria
+- [ ] Options compared with trade-offs recorded
+- [ ] Recommendation stated with reasoning
+- [ ] Constraints recorded, including the retry-vs-interval limit
+- [ ] Product Owner and backend lead have signed off
+```
+
+Why: nothing runs yet, so there is nothing to test at runtime. The binding constraint also moved out of Additional Notes into Requirements and into a checkable criterion.
+
+## Pitfall 7: Dropping an Out of Scope Boundary That Does Help
+
+Out of Scope is not banned — it is conditional. Keep it when it excludes a reading of *this* request that a reader could plausibly assume.
+
+**Useful:**
+```
+Purpose: Add bulk renewal to the loans UI.
+
+Out of Scope
+- Integrating a new third-party renewal API (renewals use the existing service)
+```
+
+Why: bulk renewal could reasonably be read as including a new external integration, and the user ruled that out explicitly. Contrast this with adding "Quartz history cleanup" to a timer-deletion story — nobody would have read that into the request.

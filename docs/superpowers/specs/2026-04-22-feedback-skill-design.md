@@ -1,5 +1,7 @@
 # Feedback Skill Design
 
+> **Historical design:** The intake, report schema, review, and submission decisions below are superseded by the current [skill-feedback skill](../../../skills/skill-feedback/SKILL.md) and its [portable report contract](../../../skills/skill-feedback/references/report-template.md). This document is retained as design history.
+
 Date: 2026-04-22
 Status: Drafted after brainstorming approval
 

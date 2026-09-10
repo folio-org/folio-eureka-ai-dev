@@ -21,9 +21,30 @@ The single most-read field. Optimize it for scanning by triagers and for search.
 
 Optional. Use it to answer "why does this matter?" in 1–3 sentences.
 
+This is usually where a significant finding from the early context search lands —
+but only the one that changes how a reader understands the defect. Do not list
+every ticket the search returned.
+
 Good context:
-- "Regression introduced in UIOR-1501 that migrated custom fields to mod-settings."
 - "Libraries report blocked month-end close because totals are wrong."
+- "Related to UIOR-1501, which migrated custom fields to mod-settings; the field
+  affected here is one of the migrated ones."
+- "Comparable behavior was fixed in UIOR-1400; whether that fix is deployed on
+  this environment is not confirmed."
+
+Say what the evidence supports, and keep the four cases apart:
+
+| Wording | Requires |
+|---|---|
+| "Related to X" | X is genuinely relevant, and you say how |
+| "Comparable behavior was fixed in X" | You read X and checked what its fix covered |
+| "Possible regression of X" | Reason to suspect it, with the gap named |
+| "Introduced by X" | Evidence that identifies X as the source |
+
+"Regression introduced in UIOR-1501" is a claim about causation. Write it only
+when something actually supports it — a bisect, a linked change, a maintainer
+statement. A prior fix ticket is not automatically the ticket that introduced the
+current defect.
 
 Bad context (move to _Additional information_ or drop):
 - Speculation about root cause.
@@ -78,6 +99,9 @@ Anchor to a source of truth:
 - "Matches the behavior in Ramsons release."
 - "Per the API spec in `mod-orders/ramls/...`"
 
+A specification or ticket found during the early context search is a good anchor
+here — cite the one you actually read.
+
 When the "expected" is subjective, **ask the user** where the expectation comes
 from rather than asserting it.
 
@@ -102,7 +126,13 @@ Recommended items:
 - **Environment**: tenant, URL, release name.
 - **Module versions**: backend and UI modules involved.
 - **Correlation IDs / request IDs** for reproducing in logs.
-- **Regression source**: the ticket or commit that introduced it, if known.
+- **Related tickets / prior fixes**: what the context search turned up that a
+  triager needs, each with its relationship stated. Not a dump of every result.
+- **Regression status**: whether a regression is *possible* or *confirmed*, and
+  what the evidence is. Confirmed means a working baseline was verified and the
+  break was then reproduced under comparable conditions.
+- **Introducing source**: the ticket or commit that introduced the defect —
+  include only with evidence identifying it, and omit the line otherwise.
 - **Logs**: include timestamp, logger, level; wrap in a fenced code block.
 - **Stack traces**: wrap in a fenced code block.
 - **Screenshots / video**: attach in Jira and reference by filename.

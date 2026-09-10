@@ -7,8 +7,8 @@
 **Should include:**
 - High-level description of the feature or change
 - Business context and motivation
-- User persona or target audience (when applicable)
-- Link to related stories, epics, or documentation
+- User persona or target audience **when a real user role applies** — omit it for technical enablers and decision work rather than inventing one
+- Links to related stories, epics, or documentation **when they carry context**, each with its relationship stated
 
 **Good example:**
 ```
@@ -19,10 +19,13 @@ unavailability), the message is lost, requiring manual intervention.
 This feature will add configurable retry with exponential backoff, improving
 system resilience and reducing operational burden.
 
-Related: PROJ-123 (Kafka Infrastructure Epic)
+Parent scope: PROJ-123 (Kafka Infrastructure Epic) defines the retry budget this
+story must stay within.
 ```
 
-**Technical Details/Approach sub-section example:**
+Note how the link says what PROJ-123 contributes. A bare list of neighbouring keys adds nothing.
+
+**Technical Details/Approach sub-section example** — these are illustrative choices that were agreed in that particular story, not defaults to copy into other stories:
 ```
 Technical Approach:
 - Use Spring Retry with @Retryable annotation
@@ -33,7 +36,7 @@ Technical Approach:
 
 ## Requirements/Scope
 
-Structure requirements logically:
+This section carries **all binding constraints**. If a constraint affects correctness or acceptance, it belongs here — not in Additional Notes.
 
 **Functional Requirements:**
 1. System shall retry failed Kafka message processing up to N times (configurable)
@@ -51,12 +54,14 @@ Structure requirements logically:
 - Standard security practices are sufficient
 
 **Out of Scope:**
-- Include ONLY when there's genuine ambiguity about scope
-- Omit if there are no valuable scope clarifications
+- Include ONLY when a plausible alternative reading of this request must be excluded, or the user drew the boundary explicitly
+- Omit for neighbouring topics that were never in scope
 
 ## Acceptance Criteria
 
-**Use Given-When-Then format:**
+Each criterion covers a **distinct completion condition**. Do not expand every configuration field or implementation step into its own scenario, and do not collapse genuinely different outcomes into one.
+
+**Use Given-When-Then for observable behavior:**
 
 ```
 AC1: Successful retry after temporary failure
@@ -78,7 +83,7 @@ AC3: Configurable retry behavior
   Then the retry policy uses exactly 5 attempts
 ```
 
-**Alternative checklist format:**
+**Alternative checklist format** — clearer for a technical contract or a decision deliverable:
 ```
 - [ ] System retries failed messages automatically
 - [ ] Retry count is configurable via environment variable
@@ -88,24 +93,52 @@ AC3: Configurable retry behavior
 
 ## Testing Guidance
 
-**Focus on manual testing scenarios that verify the feature works as expected.**
+Match verification to the work type. See the table in the main skill.
 
-**Include:**
-- Manual testing scenarios with clear steps
-- Key user workflows to verify
-- Edge cases and error scenarios to test manually
-- Expected outcomes for each scenario
+### User-facing / runtime change → Manual Testing
 
-**Exclude:**
+Short steps with expected results, for a workflow a tester can actually run.
+
+**Manual Testing Scenario Example** (run against a disposable local or test environment — never by disrupting a shared or production deployment):
+1. Start application with retry enabled
+2. Temporarily stop the local database container
+3. Send test message to Kafka topic
+4. Verify retry attempts in logs
+5. Restart the local database container
+6. Verify successful processing after retry
+
+### Backend / API / library change → Controlled Verification
+
+Verify the contract under conditions you can create locally. Name the level of automated verification if useful; do not write the tests here.
+
+**Example — library timeout behavior:**
+```
+Controlled Verification:
+- Point the client at a local endpoint that accepts the TCP connection but never
+  responds, and confirm the read timeout fires at the configured value.
+- Point the client at an unroutable address and confirm the connect timeout fires
+  at its own configured value.
+- Confirm each case surfaces its own externally observable timeout exception, and
+  that the existing retry logic still sees it.
+```
+
+No shared Keycloak outage is required, and no test code belongs in the story.
+
+### Pure discovery / policy / decision work → no runtime Testing Guidance
+
+Do not add a runtime section, and do not write `Testing Guidance: N/A`. Completion is verified through the Requirements and acceptance criteria instead.
+
+**Example — policy/discovery completion:**
+```
+Acceptance Criteria
+- [ ] Candidate options are compared against the agreed criteria, with trade-offs recorded
+- [ ] One recommendation is stated with its reasoning
+- [ ] Constraints and rejected options are recorded with the reason for rejection
+- [ ] Product Owner and backend lead have reviewed and signed off on the recommendation
+```
+
+**Exclude from every variant:**
 - Unit test specifications
 - Integration test code examples or detailed setup
 - Test data fixtures and setup scripts
 - Verification of auto-generated documentation
-
-**Manual Testing Scenario Example:**
-1. Start application with retry enabled
-2. Temporarily stop database container
-3. Send test message to Kafka topic
-4. Verify retry attempts in logs
-5. Restart database
-6. Verify successful processing after retry
