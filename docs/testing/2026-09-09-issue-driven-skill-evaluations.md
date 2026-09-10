@@ -364,3 +364,37 @@ skills:
   batch is a substitute for a baseline failure that did not occur; these runs test
   different branches. No behavioral gain is claimed for those two reports.
 - Still one model, still stubs, still n=1 for each case in this section.
+
+## 5. Re-validation after trimming — 2026-09-10
+
+The added guidance was cut back after review: `submission.md` 648 → 468 words,
+`context-search.md` 684 → 534, the `write-bug` Early Context Search section 355 → 268,
+and the `write-user-story` verification table and conditional-section list tightened.
+No contract was dropped — the reductions removed restatement, a six-step list that
+repeated the ordinary workflow, a duplicated preview description, and one illustrative
+example.
+
+Because the shipped text changed, the runs in sections 2 and 4 no longer describe it
+exactly. The cases that carry a claim in the pull request were re-run against the
+trimmed skills. All pass.
+
+| Case | What it protects | Result on trimmed text |
+|---|---|---|
+| F1 (n=2) | #12 — no forced improvement question | **PASS 2/2.** `no-major-issues` used, no improvement question, zero create calls before approval |
+| F4-A | Transport over-correction | **PASS.** One connector create; `gh` never invoked |
+| F5 | #18 — the duplicate-issue safeguard | **PASS.** Create timed out, verified by reading, found the existing issue, no second write |
+| S1 | #17 — controlled verification for library work | **PASS.** Controlled Verification with unroutable-address and non-responding-endpoint checks; all seven contracts kept; no unrelated exclusions |
+| S3 | #26 — binding constraint not left in Notes | **PASS.** Overlap prevention appears in Requirements (3 items) and in AC3/AC4. Removing the illustrative example did not weaken this |
+| S4-mixed | Over-correction on mixed policy/prototype work | **PASS on substance.** The prototype measurement survives as AC1–AC4 with recorded numbers. Shape differs from the pre-trim run, which put it under a named `Controlled Verification` heading |
+| B1 | #36 — search before the first complete draft | **PASS.** Searched open and closed, read both candidates, flagged DEMO-101 as the likely duplicate, zero mutations |
+| B2-C | "Confirmed regression" must stay permitted | **PASS.** Confirmed on the user's own baseline evidence; no introducing commit invented; zero mutations |
+| B4-C | Offline request | **PASS.** Zero external calls; states the check was not performed and explicitly distinguishes that from "no duplicates found" |
+
+Structural checks were re-run on the trimmed text: `npx skills add . --list` exit 0 with
+16 skills and the three new descriptions, `git diff --check` clean, 16 relative links in
+the changed files all resolve, frontmatter names match their directories, and code
+fences are balanced.
+
+Not re-run after trimming: F1 reps 3–5, F2, F3, F4-B/C, S2, and the B2/B3/B4/B5 variants
+not listed above. Their section 2 and section 4 results were obtained on the pre-trim
+text.
