@@ -7,6 +7,8 @@ description: Use when writing, generating, or adding manual test cases to TestRa
 
 > **Core principle:** A test case exists to verify a business rule, not to document a click path. Navigation is the means; assertions about the resulting state are the point. A case whose expected results could be true even if the feature were broken is a failed case.
 
+> **IMPORTANT — evidence only, never assumption.** Every functional claim you put in a case — what a business rule does, what a config parameter changes, what a modal/toast says, whether feature X depends on Y — must trace to a real source you actually read this session: an existing TestRail case, a Jira ticket, GitHub source/README, the FOLIO wiki, or FOLIO API docs. Never invent or infer behavior from general software knowledge, "it's probably similar to feature Z", or pattern-matching against other areas. If you have not verified a fact from a real source, either fetch the source or **ask the user** before writing it into a case — do not guess and move on.
+
 ## Mandatory Workflow (follow in this exact order)
 
 1. **Detect the application area** from the story (see Area Detection below) and **read the matching context file** in `references/context/`. Never skip this. If the area cannot be determined, ask the user.
@@ -104,8 +106,10 @@ Context files live in `references/context/`. Determine the area from (in priorit
 | Lists | `references/context/lists.md` | UILISTS, MODLISTS, MODFQM; "list", "FQM", "query" |
 | OAI-PMH | `references/context/oai-pmh.md` | MODOAIPMH; "harvest", "OAI" |
 | Consortium Manager | `references/context/consortium-manager.md` | UICONSET (ui-consortia-settings), MODCON; "consortium", "ECS", "affiliation", "shared setting", "central tenant", "member tenant", "select members", "confirm share to all", "confirm member libraries", "authorization roles", "authorization policies", "data import logs", "data export logs" |
+| Eureka platform (login, authorization, tenants) | `references/context/eureka.md` | EUREKA, KEYCLOAK, STCOR (stripes-core), UIROLES, MODROLESKC, UISAUTHCOM, UIPSELAPP, MODUSERSKC, MODLOGINKC, MGRENTITLE, MODSCHED, UID; "login", "log in", "logout", "session timeout", "idle session", "fixed-length session", "RTR", "refresh token", "Keycloak", "realm", "auth user", "Keycloak record", "promote user", "capability", "capability set", "authorization role", "authorization policy", "default role", "tenant", "entitlement", "application", "sidecar", "Kong", "password reset link", "SSO-only theme", "tenant selection screen" |
 
 A story can span two areas (e.g. closing an order affects Finance) — read both context files.
+Login/session/authorization stories in an ECS environment span **Eureka platform** and **Consortium Manager** — read both.
 
 > **Some areas are API/protocol-tested, not UI-tested.** OAI-PMH, and API-flagged cases in MARC validation (`API | ...` sections), assert HTTP requests and XML/JSON response fields rather than toasts, modals, and panes. For these, the same rigor applies but to a different surface: the "steps" are request URLs/params (e.g. `verb=ListRecords&metadataPrefix=marc21_withholdings&from=<date>`) and the "expected results" are response contents and exact field mappings (e.g. holdings → MARC `952` subfields), not UI strings. Don't force a UI navigation/toast shape onto these; follow the protocol/field-mapping detail in the context file. Execution Type may be `Karate` or `Backend Component` rather than `Manual` for such cases.
 
@@ -715,6 +719,106 @@ Pattern observed in backlog: most cases are Critical Path or Extended. Smoke is 
 
 ---
 
+## TestRail Rich-Text Formatting Rules (HTML markup for the API)
+
+> **Verified against the real TestRail corpus** (`foliotest.testrail.io`, project 14, suite 21) by reading the *raw* `custom_preconds` / `custom_steps_separated` JSON (not the HTML-stripped preview) of real cases — C446093, C446007, C442797, C442809, C446167, C468169, C1045421, C374168.
+
+`custom_preconds`, `custom_steps_separated[].content`, and `custom_steps_separated[].expected` are **HTML fields**, not plain text. Whatever string you send is stored close to as-is — the API does **not** auto-convert `\n`, hand-typed `1.`/`-`/`;` characters, or Markdown into real paragraphs, lists, or bold. You must send actual HTML tags, or the case will render wrong in the TestRail UI.
+
+### The failure mode this section fixes
+
+Sending plain text with hand-typed structure (`"1. First\n2. Second"`, `"- item"`, `"A; B; C"`) gets wrapped in a single `<p>...</p>` tag. Browsers collapse a raw `\n` inside `<p>` (it is not `<br>`), so it renders as **one flat run-on paragraph** with no visible numbering, no bullets, and no line breaks — even though the string looked formatted when it was typed. This exact mistake happened when case C1538608 was first posted (plain-text `"1. ... 2. ..."` preconditions collapsed into one paragraph; semicolon-joined expected results rendered as one flat sentence instead of the bullets used by every sibling case in that section). Never rely on plain-text punctuation to create structure — always build the HTML tags below.
+
+### Preconditions
+
+Preconditions must always be **visually separated, one per line/block** — never concatenated into one paragraph. Three acceptable styles, in order of preference:
+
+1. **TestRail's built-in numbered list (preferred)** — wrap the whole precondition list in `<ol>`, one `<li>` per item:
+   ```html
+   <ol><li>First precondition</li><li>Second precondition</li><li>Third precondition</li></ol>
+   ```
+   Confirmed real example (C374168, raw `custom_preconds`):
+   ```html
+   <ol>
+   <li>An Acquisition unit with all restrictions (View, Edit, Create, Delete options are <strong>active</strong>) exists in Settings-&gt;Acquisition units</li>
+   <li>A user with all Finance permissions exists</li>
+   <li>A user from Precondition item #2 is assigned to Acquisition unit from Preconditions item #1</li>
+   </ol>
+   ```
+
+2. **Manual numbering in plain text** — use only when the user explicitly asks for it. Each numbered item is still its own separate `<p>` tag (do not rely on `\n` to separate them):
+   ```html
+   <p>1) First precondition</p><p>2) Second precondition</p><p>3) Third precondition</p>
+   ```
+   Confirmed real example (C1045421): `<p>1) Profile pictures are disabled on environment</p><p>2) User has experience...</p>`
+
+3. **No numbering** — use only when the user asks for it. Still one `<p>` per item:
+   ```html
+   <p>First precondition</p><p>Second precondition</p><p>Third precondition</p>
+   ```
+   Confirmed real example (C446093/C446007/C442797): `<p>Profile pictures are enabled...</p><p>User "B" is created...</p><p>User "A" is logged in...</p>`
+
+A sub-list under one precondition item (e.g. Capability Sets under "User is logged in with...") is a nested `<ul><li>` inside that item's `<li>`/`<p>` — see Nested lists below.
+
+### Steps — `content` (the Action)
+
+Complements the content-level "Steps — Granularity and Format" rules above; this is how to encode that structure as HTML for the API.
+
+- **One action → plain text, no list markup.** Wrap in a single `<p>`:
+  ```html
+  <p>Click "Actions" -&gt; "Edit" on the user details pane</p>
+  ```
+- **Several actions in sequence → an optional intro line + a real `<ul><li>` bullet list**, one `<li>` per sub-action, each ending in `;` (the last one may end in `.`):
+  ```html
+  <p>Create a new request:</p>
+  <ul>
+  <li>Go to "Requests" app;</li>
+  <li>Click "Actions" -&gt; "New request";</li>
+  <li>Populate this;</li>
+  <li>Populate that;</li>
+  <li>Click "Save &amp; close".</li>
+  </ul>
+  ```
+  Omit the intro `<p>` line when the sub-actions don't need a lead-in.
+
+### Steps — `expected` (the Expected Result)
+
+- **One assertion → plain text, one line.** Wrap in a single `<p>`:
+  ```html
+  <p>"Save" button becomes active</p>
+  ```
+- **Several assertions → a real `<ul><li>` bullet list**, one `<li>` per checkable fact:
+  ```html
+  <ul><li>"Edit" pane is closed</li><li>Profile picture is not present on 3rd pane view</li></ul>
+  ```
+- **Nested elements within one assertion (e.g. "the following options are present: A, B, C") → a nested `<ul><li>` inside the outer `<li>`.** Confirmed real example (C468169, raw `expected`):
+  ```html
+  <ul>
+  <li>Accordion is expanded</li>
+  <li><p>Following options are present:</p>
+  <ul><li>"Local file"</li><li>"External URL"</li><li>"Delete"</li></ul></li>
+  </ul>
+  ```
+
+### Bold emphasis (`<strong>`)
+
+Use `<strong>...</strong>` — never Markdown `**...**`, which renders as literal asterisks in a TestRail HTML field — to highlight:
+- **Tenant names** in ECS steps/preconditions. Confirmed real example (C446167): `<p>Switch active affiliation to the <strong>Member</strong> tenant</p>`, and preconditions naming `<strong>Central</strong>` / `<strong>Member</strong>` tenants throughout.
+- **Negation**. Confirmed real example (C442809): `Make sure user <strong>does not</strong> have permissions...`.
+- **An important note or a non-obvious, complex precondition** — sparingly, only where a reviewer skimming the case could otherwise miss the critical detail.
+
+Don't bold whole sentences or routine UI labels/button names — those already stand out via quotes; reserve `<strong>` for the tenant/negation/critical-note cases above.
+
+### HTML escaping
+
+Escape `&`, `<`, `>` in literal text: `&amp;`, `&lt;`, `&gt;` — e.g. `"Save & close"` → `"Save &amp; close"`, `Settings->Acquisition units` → `Settings-&gt;Acquisition units` (see the confirmed `<ol>` example above). This matters even inside prose, not just around tags — an unescaped `<` or `>` can be misparsed as markup.
+
+### Mandatory pre-post check
+
+**Before calling `add_case` / `update_case`, mentally render the HTML you are about to send and confirm it displays identically to how you displayed the case in your chat reply**: a numbered line in your preview → `<ol>` or manual `1)` `<p>`s in the payload; a bulleted line in your preview → `<ul><li>` in the payload; **bold** text in your preview → `<strong>` in the payload; a plain prose line in your preview → a plain `<p>` in the payload. If what you're about to POST would not visually match what you showed the user, fix the HTML before posting — never post first and check the rendering afterward.
+
+---
+
 ## TestRail API Integration
 
 ### Credentials
@@ -788,27 +892,27 @@ Authorization: Basic <base64(email:api_key)>
   "type_id": 7,
   "priority_id": 3,
   "refs": "MODFIN-273",
-  "custom_preconds": "1. User with following Capability Sets is logged in:\n  - Data - UI-Data-Export Settings - Edit\n2. Unlocked mapping profile NOT referenced in any job profile exists\n3. User is on Settings > Data export > Field mapping profiles",
+  "custom_preconds": "<ol><li>User with following Capability Sets is logged in:<ul><li>Data - UI-Data-Export Settings - Edit</li></ul></li><li>Unlocked mapping profile NOT referenced in any job profile exists</li><li>User is on Settings &gt; Data export &gt; Field mapping profiles</li></ol>",
   "custom_steps_separated": [
     {
-      "content": "Click on the row with the unlocked mapping profile from Preconditions #2",
-      "expected": "Mapping profile view form is displayed; \"Lock profile\" checkbox is disabled, unchecked; \"Actions\" menu is enabled"
+      "content": "<p>Click on the row with the unlocked mapping profile from Preconditions #2</p>",
+      "expected": "<ul><li>Mapping profile view form is displayed</li><li>\"Lock profile\" checkbox is disabled, unchecked</li><li>\"Actions\" menu is enabled</li></ul>"
     },
     {
-      "content": "Click \"Actions\" menu",
-      "expected": "Menu expands and displays the following options: Edit, Duplicate, Delete"
+      "content": "<p>Click \"Actions\" menu</p>",
+      "expected": "<p>Menu expands and displays the following options: Edit, Duplicate, Delete</p>"
     },
     {
-      "content": "Click \"Delete\" option",
-      "expected": "\"Delete mapping profile\" modal opens with: \"The mapping profile <name> will be deleted.\" text, \"Cancel\" button (enabled), \"Delete\" button (enabled, focused)"
+      "content": "<p>Click \"Delete\" option</p>",
+      "expected": "<ul><li>\"Delete mapping profile\" modal opens with \"The mapping profile &lt;name&gt; will be deleted.\" text</li><li>\"Cancel\" button is enabled</li><li>\"Delete\" button is enabled and focused</li></ul>"
     },
     {
-      "content": "Click \"Cancel\" button",
-      "expected": "\"Delete mapping profile\" modal closes; mapping profile view form is displayed"
+      "content": "<p>Click \"Cancel\" button</p>",
+      "expected": "<ul><li>\"Delete mapping profile\" modal closes</li><li>Mapping profile view form is displayed</li></ul>"
     },
     {
-      "content": "Click \"Actions\" menu > \"Delete\" > \"Delete\" in modal",
-      "expected": "Modal closes; toast message \"Mapping profile <name> has been successfully deleted\" is displayed; \"Field mapping profiles\" pane shows list without deleted profile"
+      "content": "<p>Click \"Actions\" menu &gt; \"Delete\" &gt; \"Delete\" in modal</p>",
+      "expected": "<ul><li>Modal closes</li><li>Toast message \"Mapping profile &lt;name&gt; has been successfully deleted\" is displayed</li><li>\"Field mapping profiles\" pane shows list without deleted profile</li></ul>"
     }
   ],
   "custom_release": 21,
@@ -827,7 +931,7 @@ Authorization: Basic <base64(email:api_key)>
 }
 ```
 
-> The dropdown values above are **option IDs**, not labels. Resolve via `get_case_fields` / `get_priorities` / `get_case_types`. `custom_ecs_unsupported` is **always `false`**; `custom_ecs_enabled` is `true` only for ECS stories. `"labels": [67]` is the **"AI"** label, always added to every case.
+> The dropdown values above are **option IDs**, not labels. Resolve via `get_case_fields` / `get_priorities` / `get_case_types`. `custom_ecs_unsupported` is **always `false`**; `custom_ecs_enabled` is `true` only for ECS stories. `"labels": [67]` is the **"AI"** label, always added to every case. **Every string field above is HTML** — see "TestRail Rich-Text Formatting Rules" earlier in this file; do not substitute plain-text `\n`/`-`/`;` for the `<ol>`/`<ul>`/`<p>`/`<strong>` tags shown here.
 
 ### Success output
 
