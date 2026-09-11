@@ -35,12 +35,12 @@ Why: the problem was never that the work is technical — technical enablers are
 **Better:**
 ```
 - Given 1000 concurrent users
-  When searching for records
-  Then results return in under 2 seconds (p95)
+- When searching for records
+- Then results return in under 2 seconds (p95)
 
 - Given the search results page
-  When viewport is 320px wide (mobile)
-  Then all content is readable without horizontal scroll
+- When viewport is 320px wide (mobile)
+- Then all content is readable without horizontal scroll
 ```
 
 ## Pitfall 3: Missing Error Scenarios
@@ -143,8 +143,8 @@ Purpose: Decide the circuit-breaker policy for mod-scheduler.
 
 Acceptance Criteria
 - Given the circuit breaker is configured
-  When the downstream service fails repeatedly
-  Then the breaker opens
+- When the downstream service fails repeatedly
+- Then the breaker opens
 
 Testing Guidance
 Manual Testing: deploy the change and take the downstream service offline.
