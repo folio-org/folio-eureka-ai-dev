@@ -2,12 +2,19 @@
 
 ## 1. Preflight
 
-1. Compute the diff range:
-   - Primary: `git diff master...HEAD --stat` and then the full diff.
-   - If `master` is missing: automatically fallback to `main`, else to `origin/HEAD`.
-2. Determine whether changes are documentation/tests/formatting-only with no observable behavior change.
+1. Resolve the base, first match wins:
+   - a base the user or the calling workflow named (for example `release/2.x`);
+   - the base of the branch's existing PR, or one stated in the active task context (`gh pr view --json baseRefName -q .baseRefName` is optional; skip it if `gh` is missing or finds no PR);
+   - fallback only: `git symbolic-ref --short refs/remotes/origin/HEAD`, else `origin/master`, else `origin/main`.
+   Prefer `origin/<name>` over a local branch and keep names with `/` whole. An `@{upstream}` that names another branch (not `origin/<current branch>`) is a base to confirm before the fallback. If you fell back and the branch, upstream, or task points to maintenance or release work, ask for the base. Then `MB=$(git merge-base <base> HEAD)`.
+2. Collect the change candidate without committing, staging, stashing, or resetting anything:
+   - Clean working tree (committed mode): `git diff <base>...HEAD --stat`, then the full diff.
+   - Local changes (working-tree mode): `git diff $MB --stat`, then `git diff $MB` (final tracked content: committed, staged, and unstaged), plus `git ls-files --others --exclude-standard`; read untracked source files in full.
+   - Document only changes that belong to the feature. Name files that look unrelated or pre-existing in your report instead of documenting them.
+   - No commits since `MB` and a clean tree: report that there are no changes to document against `<base>`. This does not mean the base is wrong.
+3. Determine whether changes are documentation/tests/formatting-only with no observable behavior change.
    - If yes: stop and report "No feature doc update needed".
-3. Locate OpenAPI specs (do not assume one canonical location):
+4. Locate OpenAPI specs (do not assume one canonical location):
    - Common: `src/main/resources/swagger/*.yml` / `*.yaml`
    - Also search under `src/main/resources/` for YAML containing `openapi:` or `swagger:`
 
@@ -60,7 +67,6 @@ If no external interactions are found for the feature: omit the `Dependencies an
 
 ## 7. Write docs
 
-1. Ensure `docs/features/` exists.
-2. Create/update `docs/features/<feature_id>.md` for each feature.
-3. Set `updated` to today.
-4. Update/create `docs/features.md` minimally.
+1. Use the documentation structure chosen under Outputs. Create `docs/features/` only when that is the chosen layout.
+2. In the `docs/features/` layout: create/update `docs/features/<feature_id>.md` for each feature, set `updated` to today, and update/create `docs/features.md` minimally.
+3. In another established layout: update or add the matching document and its index in that layout's existing style.

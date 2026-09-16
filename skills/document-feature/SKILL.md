@@ -1,10 +1,10 @@
 ---
 name: document-feature
-description: Use when the user asks to document an implemented feature. Analyze the diff from the base branch, infer the feature boundary and name, and generate behavioral feature documentation under docs/features/.
+description: Use when the user asks to document an implemented feature, before or after its changes are committed, in the repository's existing documentation structure or under docs/features/ when none exists.
 license: Apache-2.0
 metadata:
   author: folio-org
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # Document Feature
@@ -59,14 +59,21 @@ If you cannot prove it, omit it. Do not infer "likely" dependencies.
 
 ## Outputs
 
-For each feature affected:
+Write where the repository already documents behavior. Before writing, look for an established
+structure: `docs/features/` with `docs/features.md`, or another feature, behavior or API
+documentation layout under `docs/`, `doc/`, or the README.
 
-- `docs/features/<feature_id>.md` (create directories if missing)
-- `docs/features.md` index (create if missing; if present, update minimally in existing style)
+- **`docs/features/` already exists, or there is no established structure:** for each affected
+  feature, write `docs/features/<feature_id>.md` (create directories if missing) and the
+  `docs/features.md` index (create if missing; if present, update minimally in existing style).
+- **Another structure is established:** update or add the matching document in that structure,
+  following its file naming, headings, and index. Do not create `docs/features/` next to it. Use
+  the section content below, adapted to that structure's headings.
+- **Two structures are plausible:** ask one question, proposing the one you would use.
 
 ## Feature doc frontmatter
 
-Feature docs must include exactly these required frontmatter fields:
+In the `docs/features/` layout, feature docs must include exactly these required frontmatter fields:
 
 - `feature_id`: must equal the file name (without `.md`)
 - `title`: human-readable Title Case
@@ -78,7 +85,7 @@ If an existing doc's `feature_id` does not match the filename: update `feature_i
 
 ## Documentation structure (fixed order; omit non-applicable sections)
 
-Each feature document lives at `docs/features/<feature_id>.md` using this template.
+In the `docs/features/` layout, each feature document lives at `docs/features/<feature_id>.md` using this template.
 
 ```markdown
 ---
@@ -135,10 +142,11 @@ This module provides the following features:
 
 If it exists but uses a different format, update minimally in the existing style (do not rewrite/normalize).
 
-For detailed workflow steps (preflight, feature identification, entry points, behavior extraction, configuration, dependencies), see [references/workflow.md](references/workflow.md).
+For detailed workflow steps (preflight and change candidate, feature identification, entry points, behavior extraction, configuration, dependencies), see [references/workflow.md](references/workflow.md).
 
 ## Quick sanity checks
 
 - Feature names reflect behavior (not caching/events/implementation).
 - Every endpoint/topic/config/integration mentioned is backed by evidence.
 - Sections are in fixed order; non-applicable sections are omitted.
+- Docs were written in the repository's existing documentation structure, or in `docs/features/` only when none existed.
