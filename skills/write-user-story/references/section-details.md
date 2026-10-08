@@ -66,21 +66,21 @@ Each criterion covers a **distinct completion condition**. Do not expand every c
 ```
 AC1: Successful retry after temporary failure
 - Given a Kafka message fails to process due to database timeout
-  When the message is retried
-  And the database becomes available
-  Then the message is processed successfully
-  And no further retries occur
+- When the message is retried
+- And the database becomes available
+- Then the message is processed successfully
+- And no further retries occur
 
 AC2: Dead Letter Queue after max retries
 - Given a Kafka message that consistently fails processing
-  When max retry attempts are exceeded
-  Then the message is sent to the Dead Letter Queue
-  And an error is logged with all retry details
+- When max retry attempts are exceeded
+- Then the message is sent to the Dead Letter Queue
+- And an error is logged with all retry details
 
 AC3: Configurable retry behavior
 - Given retry configuration is set to 5 attempts
-  When the system starts
-  Then the retry policy uses exactly 5 attempts
+- When the system starts
+- Then the retry policy uses exactly 5 attempts
 ```
 
 **Alternative checklist format** — clearer for a technical contract or a decision deliverable:

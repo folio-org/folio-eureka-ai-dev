@@ -36,7 +36,7 @@ Use Given-When-Then for behavior or a concise checklist for contracts/deliverabl
 
 ## Acceptance Criteria
 
-Use Given-When-Then for observable behavior, or a concise verifiable checklist when that expresses a technical contract or decision deliverable more clearly. Each criterion covers a distinct completion condition from the agreed scope. Cover material error and boundary behavior without expanding every configuration field into its own scenario. There is no target number of criteria: do not drop important conditions for brevity, and do not turn acceptance criteria into a test plan.
+Use Given-When-Then for observable behavior, or a concise verifiable checklist when that expresses a technical contract or decision deliverable more clearly. Each criterion covers a distinct completion condition from the agreed scope. Cover material error and boundary behavior without expanding every configuration field into its own scenario. There is no target number of criteria: do not drop important conditions for brevity, and do not turn acceptance criteria into a test plan. Write each Given/When/Then/And as its own separate bullet line (`- Given ...`, `- When ...`, `- Then ...`), never as indented continuation lines under a single bullet - standard Markdown collapses soft-wrapped continuation lines into one run-on line, which renders as "Given abc When xyz Then 123" instead of the intended step-by-step format.
 
 ## Task-Appropriate Verification
 

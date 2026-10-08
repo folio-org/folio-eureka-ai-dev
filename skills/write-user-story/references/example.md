@@ -49,36 +49,36 @@ goal this cleanup contributes to.
 
 **AC1: Disabled timers soft-deleted after 90 days**
 - Given timer descriptors that have been disabled for 95 days
-  When cleanup job executes
-  Then those timers are marked with deletion_date
-  And they remain queryable for 30 more days
-  And audit log records the soft deletion
+- When cleanup job executes
+- Then those timers are marked with deletion_date
+- And they remain queryable for 30 more days
+- And audit log records the soft deletion
 
 **AC2: Soft-deleted timers permanently removed after grace period**
 - Given timers with deletion_date older than 30 days
-  When cleanup job executes
-  Then those timers are permanently deleted from database
-  And associated Quartz jobs are unscheduled
-  And deletion count is logged
+- When cleanup job executes
+- Then those timers are permanently deleted from database
+- And associated Quartz jobs are unscheduled
+- And deletion count is logged
 
 **AC3: Recently disabled timers not affected**
 - Given timer descriptors disabled less than 90 days ago
-  When cleanup job executes
-  Then those timers are not marked for deletion
-  And they continue to function normally
+- When cleanup job executes
+- Then those timers are not marked for deletion
+- And they continue to function normally
 
 **AC4: Cleanup job runs on schedule**
 - Given cleanup job is configured to run daily at 2 AM
-  When system reaches 2:00 AM
-  Then cleanup job executes automatically
-  And completion status is logged
-  And metrics are emitted (timers_deleted, execution_time)
+- When system reaches 2:00 AM
+- Then cleanup job executes automatically
+- And completion status is logged
+- And metrics are emitted (timers_deleted, execution_time)
 
 **AC5: Batch processing prevents memory issues**
 - Given 5000 timers eligible for cleanup
-  When cleanup job executes
-  Then timers are processed in batches of 1000
-  And process completes without out-of-memory errors
+- When cleanup job executes
+- Then timers are processed in batches of 1000
+- And process completes without out-of-memory errors
 
 ---
 
