@@ -1,7 +1,7 @@
 ---
 name: document-feature
 description: Use when the user asks to document an implemented feature, before or after its changes are committed, in the repository's existing documentation structure or under docs/features/ when none exists.
-version: 0.6.0
+version: 0.6.1
 license: Apache-2.0
 ---
 
@@ -52,7 +52,7 @@ If you cannot prove it, omit it. Do not infer "likely" dependencies.
 ### Questions
 
 - Write/update docs immediately.
-- Ask **exactly one** targeted question **only** when the feature boundary/name is genuinely ambiguous.
+- Ask a targeted question only when the base, documentation structure, or feature boundary/name is genuinely ambiguous; propose the choice you would use.
 - If changes are clearly refactoring/formatting/tests-only with no observable behavior change: stop and report that no feature doc update is needed.
 
 ## Outputs
@@ -167,7 +167,7 @@ Internal events (only if they are a meaningful entry point for behavior):
 
 ## The index file (`docs/features.md`)
 
-If `docs/features.md` does not exist, create a minimal index:
+Only in the chosen `docs/features/` layout: if `docs/features.md` does not exist, create a minimal index:
 
 ```markdown
 # Module Features
@@ -258,5 +258,5 @@ If no external interactions are found for the feature: omit the `Dependencies an
 
 - Feature names reflect behavior (not caching/events/implementation).
 - Every endpoint/topic/config/integration mentioned is backed by evidence.
-- Sections are in fixed order; non-applicable sections are omitted.
+- In the `docs/features/` layout, sections follow the fixed order; non-applicable sections are omitted. In other layouts, preserve the existing headings and order.
 - Docs were written in the repository's existing documentation structure, or in `docs/features/` only when none existed.

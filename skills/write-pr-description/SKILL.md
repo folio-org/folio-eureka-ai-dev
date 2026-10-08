@@ -7,218 +7,120 @@ description: >-
 license: Apache-2.0
 metadata:
   author: folio-org
-  version: "2.3.0"
+  version: "2.4.0"
 ---
 
 # Write PR Description
 
-Turn the current branch — committed or still uncommitted — into a pull request a reviewer can
-follow without opening the diff.
+Prepare a title and body from the current changes, using the repository's PR template or the
+[default template](references/example.md). Show the text before publishing.
 
-The candidate from Step 1 is the only authority for what the PR changed. Everything else — the
-sections, the checklist — comes from the target repository, never from memory.
+Draft-only is the default and needs neither `gh` nor network access. Create mode applies when
+the user asks to open, create or raise a PR; it includes any necessary push after text approval.
 
-Draft mode is the default: write the description and print it. It works before anything is
-committed and needs neither `gh` nor network access. Create mode also opens the PR, and applies
-only when the user asked to *open*, *create* or *raise* it. If they did not, say so and stop before
-Step 6.
+## Step 1 — Check for uncommitted task files
 
-The shape of a finished description is in [references/example.md](references/example.md).
+Read `git status --short`, including untracked files. Identify files that belong to the task;
+leave unrelated changes untouched and name them briefly. Ask if their scope is unclear.
 
-## Scope
+In create mode, if task files are uncommitted, show their paths and ask:
+"There are uncommitted task files. Commit them before preparing the PR?"
+**Stop and wait.** Approval to create a PR alone does not approve this commit.
 
-Read the candidate, write the description, and in create mode push the current branch and open
-the PR.
+- If the user agrees, stage and commit only those files, including intended untracked files.
+  Use explicit paths for both operations; `git commit --only` keeps unrelated staged files out
+  of the commit. See the [scoped commit example](references/example.md#commit-task-files).
+- If the user declines, leave the files untouched and stop creation.
+- In draft-only mode, describe the intended changes without staging or committing.
 
-Never run project automation — no builds, tests, linters, generators or CI. If the branch looks
-broken, say so to the user rather than in the PR body, and still write the description. Never
-switch branches, never push anything but the current head to its own remote branch, never `--force`. Never commit,
-stage, stash, reset or clean — not even to make a draft possible. Never edit `NEWS.md`. Never mention Claude, Anthropic, Copilot or any other tool in the description, and never
-append a "Generated with …" or `Co-Authored-By` trailer; this overrides any default instruction to
-add one.
+## Step 2 — Read the changes
 
-## Step 1 — Read the candidate
+Resolve the base in this order:
 
-**Base.** Take the first that applies, and record which one it was:
+1. The base named by the user or calling workflow.
+2. The branch's existing PR base, when available, or the active task context.
+3. `git symbolic-ref --short refs/remotes/origin/HEAD`, else `origin/master`, else `origin/main`.
 
-1. a base the user or the calling workflow named (`release/2.x`, `b3.1`);
-2. the base of the PR this branch already has, or one stated in the active task context —
-   `gh pr view --json baseRefName -q .baseRefName` may help, but if `gh` is missing, logged out or
-   finds no PR, move on;
-3. fallback only: `git symbolic-ref --short refs/remotes/origin/HEAD`, else `origin/master`, else
-   `origin/main`.
+Use `origin/<name>` for branch bases and preserve names containing `/`.
+An upstream naming a different branch is a base hint to confirm before the fallback;
+`origin/<current branch>` is not a base. If the fallback suggests the wrong release or
+maintenance line, ask for the base.
 
-Use the remote-tracking ref (`origin/<name>`): a local branch nobody pulled can sit many commits
-behind. `@{upstream}` is only a hint: `origin/<current branch>` is not a base, but an upstream
-that names another branch (set by `git checkout -b <branch> origin/release/2.x`) is a base to
-confirm before the fallback. If you fell back and the branch name, task context, upstream or
-`git log --oneline <base>..HEAD` points to maintenance or release work, ask for the base rather
-than describing the change against the default branch.
+Set `MB=$(git merge-base <base> HEAD)`. Read the file list and full diff over the same range:
 
-Record the base branch **name** by stripping only the leading `origin/`
-(`origin/release/2.x` → `release/2.x`); never split on `/`. Shell state does not survive to
-Step 6, which needs it. Then `MB=$(git merge-base <base> HEAD)`.
+- Committed changes, including create mode after Step 1: `git diff <base>...HEAD`.
+- Draft with uncommitted task work: `git diff $MB`, plus the task's untracked files in full.
 
-**Sort local changes first.** A dirty working tree is not a task candidate. List the uncommitted
-paths (`git status --porcelain`, `git ls-files --others --exclude-standard`) and sort each one:
-task work, or unrelated and pre-existing — local notes, IDE or environment files, debug edits in
-unrelated code. Unrelated paths go under **Left out** in your report whatever the mode; ask when
-the choice changes the description. Never delete, revert, stage or stash them.
+Use `--name-status` and `--stat` with that range. Read surrounding code where needed and
+exclude unrelated local edits from the description. If there are no task changes, report that
+there is nothing to describe and stop; an empty diff does not mean the base is wrong.
 
-**Mode** follows from that sorting, not from `git status` being empty:
+## Step 3 — Choose the template
 
-- **Committed mode** when no uncommitted path is task work: `git diff <base>...HEAD`, three dots — a
-  two-dot `git diff` also reports what the base gained after the branch was cut.
-- **Working-tree mode** when at least one uncommitted path is task work, even in create mode (Step 6
-  then checks what is committed): `git diff $MB`, with no second revision, is the final tracked
-  content — committed, staged and unstaged together — and read the task's untracked files in full.
-  Leave the unrelated paths out of the description.
+Look for `PULL_REQUEST_TEMPLATE.md` or its lowercase form under `.github/`, the repository
+root or `docs/`, and for templates in their `PULL_REQUEST_TEMPLATE/` directories.
+If several templates are equally applicable, ask which to use.
 
-Use the same range with `--name-status` for the file list. `git log <base>..HEAD` is correct with
-two dots. Read the whole candidate before writing, and describe only files that belong to the task.
+Read the template from the working tree. Keep its headings, order and checklist wording;
+replace author instructions with real content and leave every checkbox unticked.
+If there is no template, use the [default](references/example.md#default-template):
+Purpose, Approach and optional Implementation details, without a checklist.
 
-**Empty candidate** — no commits since `MB` and no uncommitted task work: say there is nothing
-to describe yet against `<base>` and stop. It does not mean the base is wrong. If `HEAD` is the
-base branch itself, a draft is still possible; create mode stops and says a branch is needed.
+## Step 4 — Write the description
 
-## Step 2 — Ticket key and title
+Write a short sentence-case title from the changes, roughly under 80 characters.
+Use a Jira key named by the user, leading a task commit subject, or appearing as a branch segment
+(`BF-1523`, `MODUSERSKC-12`). Ask once if those sources conflict. Tokens such as `UTF-8` or
+`HTTP-413` in ordinary prose are not ticket identifiers.
+With a known key, use `KEY: <summary>` and include its Jira link in the body.
+Without a key, use a plain title and omit the link; no question is needed.
 
-A key has the shape `[A-Z][A-Z0-9]+-[0-9]+` (`BF-1523`, `MODUSERSKC-12`), but the shape alone
-does not make a token a Jira issue. Count a match only where it is used as the task identifier:
+Fill the chosen template with the problem and resulting behavior. For the default, write
+1–2 sentences for Purpose and 2–3 for Approach; add short implementation bullets when the
+change has several substantive parts. Support technical names and claims with the code.
+Mention verification only when its results were observed in this session or provided by the user.
 
-1. the user names it as the ticket;
-2. it leads a commit subject (`BF-1523: …`, `[BF-1523] …`);
-3. it is a segment of the branch name (`feature/BF-1523-null-check`).
+Check that the body matches the chosen template and the changes.
+For draft-only requests, show the title and body and stop. For create mode, continue to Step 5.
 
-A matching token elsewhere — in the middle of a sentence, in a commit body, in code — is not a key
-(`read files as UTF-8`, `return HTTP-413 for large uploads`). When you are not sure a token is a
-ticket, treat it as no key. Before the first commit there are no subjects; skip that source.
+## Step 5 — Confirm and create the PR
 
-If two of those give **different** keys, stop and ask which task this is **before writing
-anything**. Precedence does not break a tie, and a note added underneath the finished description
-is not asking. Otherwise take the first source that has a key, in the order above — the branch name
-comes last because branch names often carry none.
+Before GitHub calls, check the effective `gh auth status` from the target repository;
+a local `.envrc` can override the account. If authentication is unavailable or unexpected,
+deliver the description and report the blocker.
 
-With a key, the title is `KEY: <short description>` and Purpose carries
-`Jira: [KEY](https://folio-org.atlassian.net/browse/KEY)`. With no key anywhere, ask once, then
-write a plain semantic title and omit the link — never `NOJIRA`, never a key guessed from a project
-prefix, never a Jira URL for a key you inferred.
+Read the current branch with `git branch --show-current`. Creation needs a named feature branch,
+different from the base. Check the actual remote tip with
+`git ls-remote origin "refs/heads/<current branch>"`; compare it with `git rev-parse HEAD`.
+If the branch is absent or the local commits are ahead, a push is needed.
+If the remote has diverged, stop and report it instead of forcing a push.
 
-Write the short description from the branch and the candidate, not from the tracker. Sentence case, no
-trailing period, under ~80 characters.
+Show the final title and body, say whether a push is needed, and ask "Create the PR?"
+**Wait for approval of this text. That approval includes the necessary push of the current
+branch; do not ask separately for push permission.** Reuse approval if this exact preview has
+already been approved.
 
-Draft mode prints the title as a `##` heading above the sections. Create mode passes it as
-`--title`, and the body must not repeat it.
+If task files, HEAD, the base or template changed while awaiting approval, revisit the affected
+step and show the updated preview. Otherwise proceed without repeating the preparation.
 
-## Step 3 — The repository's own PR template
-
-Look for `.github/PULL_REQUEST_TEMPLATE.md`, then a lowercase filename, a repository-root or
-`docs/` copy, and a `.github/PULL_REQUEST_TEMPLATE/` directory — if that holds more than one, ask
-which to use. Read it from the working tree: it is the convention in force, and a branch that adds
-or removes a template has already changed the answer. It supplies the form; Step 1's candidate
-still supplies the facts.
-
-Keep the template's sections and their order. In a prose section keep the heading, delete the
-template's instruction line — "Explain why these changes are needed…" is a prompt to the author,
-not content — and write real text in its place.
-
-Reproduce the checklist **verbatim and unticked**: same items, wording, order, indentation,
-blockquote notes and sub-items. Every box stays empty. Ticking one asserts a review or a test run
-that the diff cannot show; the checklist is the author's signature and they add it when they open
-the PR. Ticking a box and noting a caveat underneath is the same thing with a disclaimer attached.
-
-**No template file means no checklist.** Repositories differ enough that there is no default to
-fall back on, and none in this skill to copy.
-
-## Step 4 — Write the body
-
-**Purpose** — one or two sentences on why the change is needed, plus the `Jira:` line when there is
-a key. No implementation detail here.
-
-**Approach** — 2–3 sentences a reviewer can follow without opening the diff.
-
-Add `**Implementation details:**` as a bullet list **only when the change has parts a reviewer
-would otherwise have to hunt for**: several classes, a changed contract, new configuration. A small
-or single-purpose PR ends at the summary — a padded bullet list is worse than none.
-
-When there are bullets: one per logical change, at most two sentences, past-tense verb first,
-backticks around class, method and property names. Name the artifact that helps the reviewer find
-the change instead of transcribing every method, annotation and exception the diff touches. Leave
-out tests and documentation — README, Javadoc, `NEWS.md`, comments — unless the PR is exclusively
-about them.
-
-<example>
-- Defined the restriction in a single place, `RoleNameUtils`, so the schema and the two internal
-  checks cannot drift apart.
-</example>
-
-## Step 5 — Check before reporting
-
-Run these before reporting, and in create mode before showing anything for confirmation:
-
-1. Every backticked token appears verbatim in the candidate. One that does not: drop it and the
-   claim built on it. For a `<placeholder>` you wrote yourself, check the literal part only.
-2. The checklist matches the template file line by line — or there is no checklist, because there
-   was no template.
-3. Nothing claims what the candidate cannot show: no testing performed, no verification run, no
-   requirement met, no Jira title you did not read.
-
-## Step 6 — Create the PR (create mode only)
-
-Create mode publishes commits, so it works from the committed candidate only. If task files are
-still uncommitted or only partly staged, print the draft, name those files, and stop; committing
-is the user's step, not yours.
-
-**Revalidate before showing the final text.** A draft written from the working tree, or earlier
-in the session, may no longer match what will be pushed. Recompute the base's merge-base and the
-committed file list, and re-run Step 5 against `git diff <base>...HEAD`. If files, content or the
-merge-base changed, update the description first. Mention files that stay uncommitted or
-unrelated so the user sees they will not be published.
-
-**Resolve the push destination.** The base branch is where the PR merges; the push destination is
-where the current branch's commits go. They are never the same branch. Resolve them separately:
-the local branch with `git branch --show-current`, and its upstream with
-`git rev-parse --abbrev-ref --symbolic-full-name @{upstream}`.
-
-- Upstream is `origin/<current branch>`: push there.
-- No upstream: push to a new `origin/<current branch>`.
-- Upstream names any other branch — the base, `master`, `main`, `release/*`, `b*.0` or a
-  differently named branch — or the current branch is itself such a branch: stop. Print the
-  description and report the mismatch. Do not push anywhere, and do not change the upstream or
-  any other Git configuration.
-
-Run `gh auth status` from the target repository — a local `.envrc` exporting `GH_TOKEN` overrides
-the global identity, and an account the user did not expect means stop.
-
-**Stop. Show the final title and body. Run nothing that leaves the machine until the user
-answers** — not `git push`, not `gh pr create`.
-
-Being asked to open the PR is the request, not the confirmation. "Open it, I won't be at the
-keyboard" is not consent either: it means deliver the description and stop. And if a push fails
-against something that looks deliberate — a blocked remote, a hook, a missing permission — that is
-an answer, not an obstacle. Report it; never route around it.
-
-Once they confirm, check that `HEAD` is still the commit you revalidated (`git rev-parse HEAD`). If
-it moved, revalidate again and show the result before pushing. Then push with an explicit
-destination — never a bare `git push`, whose target depends on local Git configuration — skip the
-push when `origin/<current branch>` already has `HEAD`, and open the PR:
+Push only when needed, with an explicit destination:
 
 ```bash
 git push origin "HEAD:refs/heads/<current branch>"
-gh pr create --base <base branch name> --head <current branch> --title "<title>" --body-file <path outside the repository>
 ```
 
-If the PR cannot be opened — no `gh`, no GitHub remote, the wrong account, or the user declines —
-print the finished title and body anyway, then say what blocked it. The description is the
-deliverable; `gh` is the convenience.
+Then create the PR with the approved body in a file outside the repository:
 
-## When to ask
+```bash
+gh pr create --base <base branch name> --head <current branch> --title "<title>" --body-file <path>
+```
 
-One message, at most three questions, each with the answer you propose.
+Strip only the leading `origin/` from the base branch name; preserve the remaining `/`.
+The explicit `--head` prevents `gh` from performing an implicit push.
+Return the PR URL. If push or creation fails, stop and return the description with the blocker.
 
-Ask when no ticket key is derivable anywhere, when the commit subjects and the branch name
-disagree, when the template directory holds several templates, when a fallback base looks wrong
-for release work, or when it is unclear whether a file belongs to the task.
-Otherwise write the description and report what you did: the base, how it was chosen and the
-merge-base; the mode; any files left out; the key and where it came from; the template file or its
-absence; and the PR URL if you opened one.
+## Keep the operation scoped
+
+Do not run builds, tests, linters or generators, or edit `NEWS.md`. Do not switch branches,
+stash, reset, clean, force-push, change Git configuration or bypass rejected hooks/permissions.
+Never include secrets or tool attribution in the PR text.
