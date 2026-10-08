@@ -11,8 +11,8 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 ### Available skills
 
 - `build-app-context` - Builds or refreshes `references/context/<area>.md` from live TestRail, Jira, and GitHub sources for manual test design.
-- `code-review` - Reviews branch diffs and produces a structured code quality report.
-- `document-feature` - Documents implemented behavior by analyzing code changes and writing feature docs.
+- `code-review` - Reviews committed branch changes or the uncommitted working-tree candidate against a resolved base branch and reports findings.
+- `document-feature` - Documents implemented behavior from committed or uncommitted changes, in the repository's existing documentation structure.
 - `ecs-user-setup` - Guides ECS and multi-tenant user setup for FOLIO automated tests.
 - `fat-creator` - Creates FAT Jira review tasks for TestRail manual test cases, one per case or one combined ticket.
 - `implement-automated-test` - Generates or updates Cypress E2E tests for FOLIO Stripes.
@@ -22,7 +22,7 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 - `testrail-bug-report` - Generates Jira-ready bug reports from failed FOLIO TestRail cases.
 - `unit-testing` - Applies Java unit testing guidance for JUnit 5, Mockito, strict stubbing, and clear test structure.
 - `write-bug` - Drafts reproducible FOLIO bug reports with steps, expected and actual results, and supporting evidence.
-- `write-pr-description` - Writes a PR description from the branch diff, reproducing the target repository's own PR template, and can open the PR with `gh` after confirmation.
+- `write-pr-description` - Prepares PR text using the repository's template or a default. Asks before committing remaining task files; after text approval, can push the current branch and open the PR. Drafting does not need `gh`.
 - `write-testrail-cases` - Generates structured manual test cases from a Jira story and posts them directly to TestRail. Uses app-specific context files and automatically enriches from Jira, GitHub, and TestRail when context is insufficient.
 - `write-user-story` - Drafts user stories with scope, requirements, acceptance criteria, and task-appropriate verification guidance.
 

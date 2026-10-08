@@ -1,7 +1,7 @@
 ---
 name: document-feature
-description: Use when the user asks to document an implemented feature. Analyze the diff from the base branch, infer the feature boundary and name, and generate behavioral feature documentation under docs/features/.
-version: 0.5.0
+description: Use when the user asks to document an implemented feature, before or after its changes are committed, in the repository's existing documentation structure or under docs/features/ when none exists.
+version: 0.6.1
 license: Apache-2.0
 ---
 
@@ -52,19 +52,26 @@ If you cannot prove it, omit it. Do not infer "likely" dependencies.
 ### Questions
 
 - Write/update docs immediately.
-- Ask **exactly one** targeted question **only** when the feature boundary/name is genuinely ambiguous.
+- Ask a targeted question only when the base, documentation structure, or feature boundary/name is genuinely ambiguous; propose the choice you would use.
 - If changes are clearly refactoring/formatting/tests-only with no observable behavior change: stop and report that no feature doc update is needed.
 
 ## Outputs
 
-For each feature affected:
+Write where the repository already documents behavior. Before writing, look for an established
+structure: `docs/features/` with `docs/features.md`, or another feature, behavior or API
+documentation layout under `docs/`, `doc/`, or the README.
 
-- `docs/features/<feature_id>.md` (create directories if missing)
-- `docs/features.md` index (create if missing; if present, update minimally in existing style)
+- **`docs/features/` already exists, or there is no established structure:** for each affected
+  feature, write `docs/features/<feature_id>.md` (create directories if missing) and the
+  `docs/features.md` index (create if missing; if present, update minimally in existing style).
+- **Another structure is established:** update or add the matching document in that structure,
+  following its file naming, headings, and index. Do not create `docs/features/` next to it. Use
+  the section content below, adapted to that structure's headings.
+- **Two structures are plausible:** ask one question, proposing the one you would use.
 
 ## Feature doc frontmatter
 
-Feature docs must include exactly these required frontmatter fields:
+In the `docs/features/` layout, feature docs must include exactly these required frontmatter fields:
 
 - `feature_id`: must equal the file name (without `.md`)
 - `title`: human-readable Title Case
@@ -76,7 +83,7 @@ If an existing doc's `feature_id` does not match the filename: update `feature_i
 
 ## Documentation structure (fixed order; omit non-applicable sections)
 
-Each feature document lives at `docs/features/<feature_id>.md` using this template.
+In the `docs/features/` layout, each feature document lives at `docs/features/<feature_id>.md` using this template.
 
 ```markdown
 ---
@@ -160,7 +167,7 @@ Internal events (only if they are a meaningful entry point for behavior):
 
 ## The index file (`docs/features.md`)
 
-If `docs/features.md` does not exist, create a minimal index:
+Only in the chosen `docs/features/` layout: if `docs/features.md` does not exist, create a minimal index:
 
 ```markdown
 # Module Features
@@ -178,12 +185,19 @@ If it exists but uses a different format, update minimally in the existing style
 
 ### 1. Preflight
 
-1. Compute the diff range:
-   - Primary: `git diff master...HEAD --stat` and then the full diff.
-   - If `master` is missing: automatically fallback to `main`, else to `origin/HEAD`.
-2. Determine whether changes are documentation/tests/formatting-only with no observable behavior change.
+1. Resolve the base, first match wins:
+   - a base the user or the calling workflow named (for example `release/2.x`);
+   - the base of the branch's existing PR, or one stated in the active task context (`gh pr view --json baseRefName -q .baseRefName` is optional; skip it if `gh` is missing or finds no PR);
+   - fallback only: `git symbolic-ref --short refs/remotes/origin/HEAD`, else `origin/master`, else `origin/main`.
+   Prefer `origin/<name>` over a local branch and keep names with `/` whole. An `@{upstream}` that names another branch (not `origin/<current branch>`) is a base to confirm before the fallback. If you fell back and the branch, upstream, or task points to maintenance or release work, ask for the base. Then `MB=$(git merge-base <base> HEAD)`.
+2. Collect the change candidate without committing, staging, stashing, or resetting anything:
+   - Clean working tree (committed mode): `git diff <base>...HEAD --stat`, then the full diff.
+   - Local changes (working-tree mode): `git diff $MB --stat`, then `git diff $MB` (final tracked content: committed, staged, and unstaged), plus `git ls-files --others --exclude-standard`; read untracked source files in full.
+   - Document only changes that belong to the feature. Name files that look unrelated or pre-existing in your report instead of documenting them.
+   - No commits since `MB` and a clean tree: report that there are no changes to document against `<base>`. This does not mean the base is wrong.
+3. Determine whether changes are documentation/tests/formatting-only with no observable behavior change.
    - If yes: stop and report "No feature doc update needed".
-3. Locate OpenAPI specs (do not assume one canonical location):
+4. Locate OpenAPI specs (do not assume one canonical location):
    - Common: `src/main/resources/swagger/*.yml` / `*.yaml`
    - Also search under `src/main/resources/` for YAML containing `openapi:` or `swagger:`
 
@@ -236,13 +250,13 @@ If no external interactions are found for the feature: omit the `Dependencies an
 
 ### 7. Write docs
 
-1. Ensure `docs/features/` exists.
-2. Create/update `docs/features/<feature_id>.md` for each feature.
-3. Set `updated` to today.
-4. Update/create `docs/features.md` minimally.
+1. Use the documentation structure chosen under Outputs. Create `docs/features/` only when that is the chosen layout.
+2. In the `docs/features/` layout: create/update `docs/features/<feature_id>.md` for each feature, set `updated` to today, and update/create `docs/features.md` minimally.
+3. In another established layout: update or add the matching document and its index in that layout's existing style.
 
 ## Quick sanity checks
 
 - Feature names reflect behavior (not caching/events/implementation).
 - Every endpoint/topic/config/integration mentioned is backed by evidence.
-- Sections are in fixed order; non-applicable sections are omitted.
+- In the `docs/features/` layout, sections follow the fixed order; non-applicable sections are omitted. In other layouts, preserve the existing headings and order.
+- Docs were written in the repository's existing documentation structure, or in `docs/features/` only when none existed.

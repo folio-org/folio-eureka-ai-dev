@@ -1,62 +1,49 @@
-# Shape of a finished description
+# PR templates and confirmation
 
-Skeletons, not content. Everything in `<angle brackets>` is filled from the branch and the target
-repository. Nothing here is text to copy into a PR.
+## Default template
 
-The two differ only in whether the repository has a PR template. Which one applies is decided in
-Step 3 by looking for the file, never by which of these reads better.
-
-<example name="no template file">
+Use this body when the repository has no PR template. Fill the placeholders from the changes;
+omit the Jira line without a known key and the implementation block for a small change.
 
 ```markdown
-## <KEY: short description, or a plain semantic title when there is no key>
-
 ### Purpose
-<one or two sentences: why this change is needed>
-Jira: [<KEY>](https://folio-org.atlassian.net/browse/<KEY>)     <- omit the line when there is no key
-
-### Approach
-<2–3 sentences a reviewer can follow without opening the diff>
-
-**Implementation details:**                                     <- omit this whole block for a
-                                                                   small or single-purpose change
-- <Past-tense verb> <what changed, one logical change>, <why, or the consequence>.
-- <one bullet per logical change; no tests, no documentation>
-```
-
-No template file, so the body ends here. There is no checklist.
-
-</example>
-
-<example name="template present">
-
-```markdown
-## <KEY: short description>
-
-<the template's own sections, in the template's own order, with its headings kept exactly as
-written — including any bold or punctuation inside them — and each instruction line replaced by
-real content:>
-
-### <Purpose, as the template spells it>
-<why this change is needed>
+<1–2 sentences: the problem and resulting behavior>
 Jira: [<KEY>](https://folio-org.atlassian.net/browse/<KEY>)
 
-### <Approach, as the template spells it>
-<summary, then Implementation details only if the change needs them>
+### Approach
+<2–3 sentences explaining the change>
 
----
-
-### <the template's checklist heading>
-
-<the checklist reproduced from the template file: every item, same wording, same order, same
-indentation, same blockquote notes and sub-items — and every box left unticked>
+**Implementation details:**
+- <One concise bullet per substantive part>
 ```
 
-</example>
+There is no default checklist. Show the title separately above the body; pass it as `--title`
+when creating the PR.
 
-## Create mode
+## Repository template
 
-Both skeletons are draft mode, where the title is printed as a `##` heading above the sections.
+Use the repository template's own headings and their order, even when they differ from Purpose
+and Approach. Replace prose instructions with content. Preserve checklist wording, indentation,
+notes and sub-items, leaving every box unticked.
 
-In create mode the title is the `--title` value, so the body file starts at the first section and
-never repeats it.
+## Commit task files
+
+When opening a PR with uncommitted task files, list the files and ask whether to commit them.
+Stop before modifying Git. After approval, use only those paths for staging and committing:
+
+```bash
+git add -- <approved paths>
+git commit --only -m "<task summary>" -- <approved paths>
+```
+
+This includes intended new files and keeps unrelated staged changes out of the commit.
+An answer declining the commit stops creation; a request only for text does not commit anything.
+
+## Confirm publication
+
+Show the actual title and filled body, then one question:
+
+> Create the PR? This will push the current branch and open the PR.
+
+If the current commits are already on the remote, say that no push is needed.
+After approval, push only if necessary and create the PR. Do not ask a second push question.
