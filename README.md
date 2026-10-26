@@ -22,6 +22,7 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 - `testrail-bug-report` - Generates Jira-ready bug reports from failed FOLIO TestRail cases.
 - `unit-testing` - Applies Java unit testing guidance for JUnit 5, Mockito, strict stubbing, and clear test structure.
 - `write-bug` - Drafts reproducible FOLIO bug reports with steps, expected and actual results, and supporting evidence.
+- `write-karate-first-cases` - Writes TestRail cases API-first: business rules as Karate cases, thin Cypress cases only for UI wiring; raises open questions and can post them to Jira.
 - `write-pr-description` - Prepares PR text using the repository's template or a default. Asks before committing remaining task files; after text approval, can push the current branch and open the PR. Drafting does not need `gh`.
 - `write-testrail-cases` - Generates structured manual test cases from a Jira story and posts them directly to TestRail. Uses app-specific context files and automatically enriches from Jira, GitHub, and TestRail when context is insufficient.
 - `write-user-story` - Drafts user stories with scope, requirements, acceptance criteria, and task-appropriate verification guidance.
