@@ -1,0 +1,363 @@
+<title>__TITLE__</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one calm column (max 980px). Order: summary → filter (team + 6 root causes) → priorities → subgroup cards, each with its tests */
+:root{
+  --bg:#f4f5f7; --surface:#ffffff; --sunken:#eceef2; --fg:#14171d; --muted:#5a6270; --faint:#8a92a0; --line:#dfe2e8;
+  --accent:#2b56c8; --accent-soft:#e7edfb;
+  --c-tbd:#7b8494; --c-env:#c73a2f; --c-old:#2b56c8; --c-ext:#7448c9; --c-par:#b36b00; --c-code:#23784a;
+  --s-tbd:#eef0f3; --s-env:#fbeae8; --s-old:#e7edfb; --s-ext:#f1ebfb; --s-par:#fdf2df; --s-code:#e3f3e9;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101318; --surface:#181c23; --sunken:#20252e; --fg:#eceff4; --muted:#a3abb9; --faint:#79818f; --line:#2c323d;
+  --accent:#86a4ff; --accent-soft:#1f2946;
+  --c-tbd:#a3abb9; --c-env:#ff8277; --c-old:#86a4ff; --c-ext:#b99dff; --c-par:#f2b552; --c-code:#64d295;
+  --s-tbd:#262b34; --s-env:#3a1f1d; --s-old:#1f2946; --s-ext:#2a2344; --s-par:#36291a; --s-code:#173024; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101318; --surface:#181c23; --sunken:#20252e; --fg:#eceff4; --muted:#a3abb9; --faint:#79818f; --line:#2c323d;
+  --accent:#86a4ff; --accent-soft:#1f2946;
+  --c-tbd:#a3abb9; --c-env:#ff8277; --c-old:#86a4ff; --c-ext:#b99dff; --c-par:#f2b552; --c-code:#64d295;
+  --s-tbd:#262b34; --s-env:#3a1f1d; --s-old:#1f2946; --s-ext:#2a2344; --s-par:#36291a; --s-code:#173024; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 80px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.25}
+h1{font-size:32px;font-weight:700;letter-spacing:-.015em}
+h2{font-size:22px;font-weight:650}
+h3{font-size:17px;font-weight:600}
+p{margin:0}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-size:.86em}
+.eyebrow{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+section{display:flex;flex-direction:column;gap:18px}
+.sechead{display:flex;flex-direction:column;gap:6px}
+.sechead p{color:var(--muted);max-width:70ch}
+
+/* header */
+header{display:flex;flex-direction:column;gap:16px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 20px;color:var(--muted);font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:2px}
+.stat b{font-size:28px;font-weight:650;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:14px;color:var(--muted)}
+@media (max-width:640px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.lead{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px 24px;display:flex;flex-direction:column;gap:10px}
+.lead .eyebrow{color:var(--c-env)}
+.lead p{max-width:72ch}
+
+/* filter */
+.filter{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;gap:22px}
+.fgroup{display:flex;flex-direction:column;gap:10px}
+.fgroup > .eyebrow{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.teams{display:flex;flex-wrap:wrap;gap:8px}
+.tchip{font:inherit;font-size:14px;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;display:inline-flex;gap:8px;align-items:baseline}
+.tchip b{font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.tchip:hover{border-color:var(--accent)}
+.tchip[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.tchip[aria-pressed="true"] b{color:var(--bg)}
+.tchip:disabled{opacity:.4;cursor:default}
+.causes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.causes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:440px){.causes{grid-template-columns:1fr}}
+.cause{font:inherit;text-align:left;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.cause:hover{border-color:var(--cc)}
+.cause .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.cause .name{font-weight:600;font-size:15px;line-height:1.3}
+.cause .n{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums;color:var(--cc);line-height:1}
+.cause .meter{height:6px;border-radius:3px;background:var(--sunken);overflow:hidden}
+.cause .meter i{display:block;height:100%;background:var(--cc);border-radius:3px}
+.cause .hint{font-size:13px;color:var(--muted);line-height:1.45}
+.cause[aria-pressed="true"]{background:var(--cs);border-color:var(--cc);box-shadow:inset 0 0 0 1px var(--cc)}
+.cause:disabled{opacity:.45;cursor:default}
+.copybtn{font:inherit;font-size:14px;font-weight:600;padding:9px 14px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--bg);cursor:pointer;display:inline-flex;gap:8px;align-items:center;width:max-content}
+.copybtn.ghost{background:transparent;color:var(--accent);padding:5px 10px;font-size:13px;border-radius:8px}
+.copybtn:hover{filter:brightness(1.08)}
+.copybtn.done{background:var(--c-code);border-color:var(--c-code);color:var(--bg)}
+.copyfb{width:100%;min-height:160px;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);padding:10px}
+.cardactions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 24px 18px}
+.cardactions .muted{font-size:13.5px}
+.aihow{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+.aihow ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:15px}
+.searchrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.searchrow input{flex:1 1 260px;min-width:0;font:inherit;font-size:15px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+.btn{font:inherit;font-size:14px;padding:9px 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.result{font-size:15px;color:var(--muted)}
+.result strong{color:var(--fg)}
+
+/* priorities */
+ol.prio{margin:0;padding:0;list-style:none;counter-reset:p;display:flex;flex-direction:column;gap:12px}
+ol.prio li{counter-increment:p;display:grid;grid-template-columns:36px minmax(0,1fr);gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+ol.prio li::before{content:counter(p);font-weight:700;width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+ol.prio li > div{display:flex;flex-direction:column;gap:6px}
+ol.prio p{color:var(--muted);max-width:72ch}
+.gain{font-size:14px;color:var(--c-code);font-weight:600}
+
+/* subgroup cards */
+.cards{display:flex;flex-direction:column;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.card .chead{padding:20px 24px 0;display:flex;flex-direction:column;gap:10px}
+.card .titleline{display:flex;gap:16px;align-items:flex-start}
+.card .count{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;min-width:44px;color:var(--cc)}
+.card .titleline > div{display:flex;flex-direction:column;gap:8px;min-width:0}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--sunken);color:var(--muted);white-space:nowrap}
+.tag.rc{background:var(--cs);color:var(--cc)}
+.tag.yes{color:var(--c-code)} .tag.prob{color:var(--c-par)}
+.cbody{padding:18px 24px 20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+@media (max-width:720px){.cbody{grid-template-columns:1fr;gap:16px}}
+.cbody .lbl{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:6px}
+.cbody p{font-size:15px;line-height:1.6}
+details.tl{border-top:1px solid var(--line)}
+details.tl > summary{cursor:pointer;list-style:none;padding:14px 24px;font-size:15px;font-weight:600;color:var(--accent);display:flex;align-items:center;gap:8px}
+details.tl > summary::-webkit-details-marker{display:none}
+details.tl > summary::before{content:"›";display:inline-block;transition:transform .15s;font-size:18px;line-height:1}
+details.tl[open] > summary::before{transform:rotate(90deg)}
+.tests{display:flex;flex-direction:column}
+.t{padding:14px 24px;border-top:1px solid var(--line);display:grid;grid-template-columns:110px minmax(0,1fr) 80px;gap:6px 16px;align-items:start}
+.t:nth-child(odd){background:var(--bg)}
+.t .tid{font-family:var(--f-mono);font-size:13px;font-weight:600;display:flex;flex-direction:column;gap:2px}
+.t .st{font-family:var(--f-body);font-size:12px;font-weight:600}
+.st-failed{color:var(--c-env)} .st-broken{color:var(--c-par)}
+.t .tmain{display:flex;flex-direction:column;gap:6px;min-width:0}
+.t .tname{font-size:15px;font-weight:500;line-height:1.45}
+.t .tsub{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px}
+.t .tnote{font-size:14.5px;line-height:1.55}
+.t .terr{font-family:var(--f-mono);font-size:12px;line-height:1.5;color:var(--muted);background:var(--sunken);border-radius:8px;padding:8px 10px;word-break:break-word}
+.t .thist{text-align:right;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.35}
+.t .thist b{display:block;font-size:15px;color:var(--fg)}
+.t .thist b.zero{color:var(--c-env)}
+@media (max-width:640px){.t{grid-template-columns:minmax(0,1fr) auto}.t .tmain{grid-column:1/-1;grid-row:2}.t .tid{flex-direction:row;gap:10px;align-items:baseline}}
+.fixbox{margin:0 24px 20px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.fixbox > .lbl{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--fg);font-weight:700}
+.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:14px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px}
+.steps li::before{content:counter(s);width:24px;height:24px;border-radius:50%;background:var(--cs);color:var(--cc);font-size:13px;font-weight:700;display:grid;place-items:center}
+.steps li > div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.floc{font-family:var(--f-mono);font-size:13px;font-weight:600;word-break:break-all;text-decoration:none;color:var(--accent)}
+.floc:hover{text-decoration:underline}
+.envtag{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--s-env);color:var(--c-env);width:max-content}
+.steps p{font-size:15px}
+pre.diff{margin:0;overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 0;font-family:var(--f-mono);font-size:12.5px;line-height:1.55}
+pre.diff span{display:block;padding:0 12px;white-space:pre}
+pre.diff .add{background:var(--s-code);color:var(--c-code)}
+pre.diff .del{background:var(--s-env);color:var(--c-env)}
+.triage{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.twhere{display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+.twhere .wl{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.twhere .wk{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.twhere code{font-family:var(--f-mono);font-size:12px;color:var(--muted);word-break:break-word}
+.twhere .guess{font-size:12px;color:var(--faint)}
+.central{font-size:13.5px;color:var(--c-code);font-weight:600}
+.alink{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none}
+.alink:hover{text-decoration:underline}
+.devnote{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 20px;font-size:15px;display:flex;flex-direction:column;gap:6px}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:28px;text-align:center;color:var(--muted)}
+
+.need{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.need{grid-template-columns:1fr}}
+.need div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:6px}
+.need p{color:var(--muted);font-size:15px}
+footer{color:var(--muted);font-size:13px;max-width:80ch}
+</style>
+
+<style>
+.ty-test{--cc:var(--c-old);--cs:var(--s-old)} .ty-app{--cc:var(--c-env);--cs:var(--s-env)} .ty-data{--cc:var(--c-par);--cs:var(--s-par)}
+.typecount{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.typecount{grid-template-columns:1fr}}
+.fixtype{font-weight:700;font-size:12.5px;padding:3px 10px;border-radius:6px;background:var(--cs);color:var(--cc);white-space:nowrap}
+.evidence{padding:14px 24px 0;font-size:15px;max-width:90ch}
+.evidence b{font-weight:600}
+.block{margin:16px 24px 0;display:flex;flex-direction:column;gap:12px}
+.block > .lbl{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.change{display:flex;flex-direction:column;gap:6px}
+.change p{font-size:15px}
+.req{font-family:var(--f-mono);font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow-x:auto;white-space:pre}
+.req b{color:var(--cc)}
+.ui{margin:0;padding-left:20px;font-size:15px;display:flex;flex-direction:column;gap:2px}
+.jira{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;font-size:15px}
+.jira code{font-family:var(--f-mono);font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+.cardactions{margin:18px 24px 18px}
+.ready{font-weight:700;font-size:12.5px;padding:3px 10px;border-radius:6px;white-space:nowrap}
+.ready.ok{background:var(--s-code);color:var(--c-code)} .ready.no{background:var(--s-par);color:var(--c-par)}
+.verify{margin:14px 24px 0;padding:12px 16px;border-radius:10px;background:var(--s-par);color:var(--fg);font-size:14.5px}
+.verify b{color:var(--c-par)} .verify ul{margin:6px 0 0;padding-left:18px}
+.ticket{font-family:var(--f-mono);font-size:13px}
+</style>
+<div class="wrap">
+<header>
+  <div class="eyebrow">__JOB__</div>
+  <h1>Nightly #__BUILD__: __NFAIL__ failures, __FIXES__ fixes</h1>
+  <div class="meta">
+    <span>__PERIOD__</span><span>__ENV__</span><span>stripes-testing @ __SHORTSHA__</span>
+    <a href="__ALLURE__" target="_blank" rel="noopener">Open Allure</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>__TOTAL__</b><span>tests in the run</span></div>
+    <div class="stat"><b style="color:var(--c-code)">__PASSPCT__</b><span>passed (__PASSED__)</span></div>
+    <div class="stat"><b style="color:var(--c-env)">__NFAIL__</b><span>failed or broken</span></div>
+    <div class="stat"><b style="color:var(--c-code)">__NREADY__</b><span>tests with a ready fix</span></div>
+  </div>
+</header>
+
+<section id="filter">
+  <div class="filter">
+    <div class="fgroup">
+      <div class="eyebrow"><span>What to fix</span></div>
+      <div class="typecount" id="types"></div>
+    </div>
+    <div class="fgroup">
+      <div class="eyebrow"><span>Readiness</span></div>
+      <div class="teams" id="readiness"></div>
+    </div>
+    <div class="fgroup">
+      <div class="eyebrow"><span>Team (from the test tag)</span></div>
+      <div class="teams" id="teams"></div>
+    </div>
+    <div class="searchrow">
+      <input id="q" type="search" placeholder="Search: test ID, name, file, module, error" aria-label="Search">
+      <button class="btn" id="reset" type="button">Reset</button>
+    </div>
+    <div class="result" id="result"></div>
+  </div>
+</section>
+
+<section><div class="cards" id="cards"></div></section>
+</div>
+
+<script>
+const DATA = __DATA__;
+const TYPE = {
+  test:{label:"Fix the test",short:"Test",hint:"Change stripes-testing"},
+  app:{label:"Fix the application",short:"App",hint:"Bug in a FOLIO module"},
+  data:{label:"Fix the data",short:"Data",hint:"Create or restore data on the environment"}
+};
+const esc=s=>String(s??"").replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+const fixes=Object.fromEntries(DATA.fixes.map(f=>[f.id,f]));
+const state={team:"",type:"",q:"",ready:""};
+const qEl=document.getElementById("q");
+const teamCount={}; DATA.tests.forEach(t=>teamCount[t.team]=(teamCount[t.team]||0)+1);
+const TEAMS=Object.keys(teamCount).sort((a,b)=>(a==="untagged")-(b==="untagged")||teamCount[b]-teamCount[a]);
+const hay=t=>{const f=fixes[t.fix];return [t.id,t.name,t.err,t.spec,t.note,f.title,f.repo,f.owner,f.ticket,f.evidence,...(f.changes||[]).map(c=>c.path)].join(" ").toLowerCase();};
+const pass=(t,skip)=>(skip==="team"||!state.team||t.team===state.team)&&(skip==="type"||!state.type||fixes[t.fix].type===state.type)
+  &&(skip==="ready"||!state.ready||(state.ready==="yes")===fixes[t.fix].ready)&&(!state.q||hay(t).includes(state.q));
+const ticketLink=k=>/^https?:/.test(k)?k:/^[A-Z][A-Z0-9]+-\d+$/.test(k)?`https://folio-org.atlassian.net/browse/${k}`:null;
+const ghLink=(repo,ref,p,l)=>`https://github.com/folio-org/${repo}/blob/${ref||"HEAD"}/${p}${l?`#L${l}`:""}`;
+const repoOf=f=>f.type==="test"||!f.repo?"stripes-testing":f.repo;
+const refOf=f=>repoOf(f)==="stripes-testing"?DATA.sha:(f.ref||"HEAD");
+
+function diff(code){return `<pre class="diff">${code.split("\n").map(l=>`<span class="${l.startsWith("+")?"add":l.startsWith("-")?"del":""}">${esc(l)||" "}</span>`).join("")}</pre>`;}
+function reqText(r){return `${r.method} ${r.path}`+(r.body?`\n${JSON.stringify(r.body,null,2)}`:"");}
+function curl(r){return `curl -s -X ${r.method} "$OKAPI${r.path}" -H "x-okapi-tenant: $TENANT" -H "x-okapi-token: $TOKEN" -H "Content-Type: application/json"`+(r.body?` \\\n  -d '${JSON.stringify(r.body)}'`:"");}
+
+function renderTypes(){
+  const c={}; DATA.tests.filter(t=>pass(t,"type")).forEach(t=>{const k=fixes[t.fix].type;c[k]=(c[k]||0)+1;});
+  const max=Math.max(1,...Object.values(c));
+  document.getElementById("types").innerHTML=Object.keys(TYPE).map(k=>`<button type="button" class="cause ty-${k}" data-type="${k}" aria-pressed="${state.type===k}" ${c[k]||state.type===k?"":"disabled"}>
+    <span class="top"><span class="name">${TYPE[k].label}</span><span class="n">${c[k]||0}</span></span>
+    <span class="meter"><i style="width:${((c[k]||0)/max*100).toFixed(1)}%"></i></span>
+    <span class="hint">${TYPE[k].hint}</span></button>`).join("");
+}
+function renderReady(){
+  const c={yes:0,no:0}; DATA.tests.filter(t=>pass(t,"ready")).forEach(t=>c[fixes[t.fix].ready?"yes":"no"]++);
+  document.getElementById("readiness").innerHTML=[["","All",c.yes+c.no],["yes","Ready to apply",c.yes],["no","Needs verification",c.no]]
+    .map(([k,l,n])=>`<button type="button" class="tchip" data-ready="${k}" aria-pressed="${state.ready===k}">${l} <b>${n}</b></button>`).join("");
+}
+function renderTeams(){
+  const c={}; DATA.tests.filter(t=>pass(t,"team")).forEach(t=>c[t.team]=(c[t.team]||0)+1);
+  const tot=Object.values(c).reduce((a,b)=>a+b,0);
+  document.getElementById("teams").innerHTML=`<button type="button" class="tchip" data-team="" aria-pressed="${!state.team}">All teams <b>${tot}</b></button>`+
+    TEAMS.map(t=>`<button type="button" class="tchip" data-team="${esc(t)}" aria-pressed="${state.team===t}" ${c[t]||state.team===t?"":"disabled"}>${esc(t)} <b>${c[t]||0}</b></button>`).join("");
+}
+function changesHtml(f){
+  if(!(f.changes||[]).length) return "";
+  const repo=repoOf(f), ref=refOf(f);
+  return `<div class="block"><div class="lbl">${repo==="stripes-testing"?"Change in stripes-testing":`Change in ${esc(repo)}`}</div>${f.changes.map(c=>`<div class="change">
+    <a class="floc" href="${ghLink(repo,ref,c.path,c.line)}" target="_blank" rel="noopener">${esc(c.path)}${c.line?`:${c.line}`:""}</a>
+    ${c.why?`<p>${esc(c.why)}</p>`:""}${c.ticket?`<p>Ticket: <span class="ticket">${esc(c.ticket)}</span></p>`:""}${c.diff?diff(c.diff):""}</div>`).join("")}</div>`;
+}
+function dataHtml(f){
+  if(!(f.data||[]).length) return "";
+  return `<div class="block"><div class="lbl">Data on the environment</div>${f.data.map(d=>`<div class="change">
+    <p>${esc(d.what||"")}</p>
+    ${d.request?`<div class="req"><b>${esc(d.request.method)}</b> ${esc(reqText(d.request).slice(d.request.method.length+1))}</div>`:""}
+    ${d.ui?`<ol class="ui">${d.ui.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`:""}</div>`).join("")}</div>`;
+}
+function testRow(t){
+  const h=t.ht?`<b class="${t.hp===0?"zero":""}">${t.hp}/${t.ht}</b>passed`:`<b>—</b>no history`;
+  const ws=(t.where||[]).filter(w=>w.path&&w.line);
+  return `<div class="t"><div class="tid">${t.id}<span class="st st-${t.status}">${t.status}</span></div>
+  <div class="tmain"><div class="tname">${esc(t.name)}</div>
+    <div class="tsub"><span>${esc(t.team)}</span><span>failed in: ${t.stage}</span><a class="alink" href="${DATA.allure}#testresult/${t.uid}" target="_blank" rel="noopener">Allure</a></div>
+    ${t.note?`<div class="tnote">${esc(t.note)}</div>`:""}
+    ${ws.length?`<div class="twhere">${ws.map(w=>`<div class="wl"><a class="floc" href="${ghLink("stripes-testing",DATA.sha,w.path,w.line)}" target="_blank" rel="noopener">${esc(w.path.replace(/^cypress\//,""))}:${w.line}</a><code>${esc(w.code||"")}</code></div>`).join("")}</div>`:""}
+    <div class="terr">${esc(t.err)}</div></div>
+  <div class="thist">${h}</div></div>`;
+}
+function promptFor(f,ts){
+  const repo=repoOf(f);
+  const rules=repo==="stripes-testing"
+    ?`Rules:\n- Work in the stripes-testing repository root. Line numbers refer to commit ${DATA.sha.slice(0,7)}; if a line moved, find it by code.\n- Change only what is described. Do not weaken assertions.\n- Run npx eslint on changed files and fix lint errors.\n- Show the final diff. Do not commit.`
+    :`Rules:\n- Work in the ${repo} repository root (folio-org/${repo}).\n- Make the described change, add or update a unit test that covers it, and run the module's tests for the touched classes.\n- If the code differs from what is described, find the equivalent place; if the fix needs a product decision, stop and explain.\n- Show the final diff. Do not commit.`;
+  return `${f.type==="app"?`Fix a bug in ${repo}`:"Fix failing Cypress tests in stripes-testing"} (found by nightly run #${DATA.build}).
+
+Problem: ${f.title}
+Evidence: ${f.evidence}
+${f.jira?`Jira summary: ${f.jira}\n`:""}
+${f.ticket?`Ticket: ${f.ticket}\n`:""}${f.ready?"":`Before applying, verify: ${f.reasons.join("; ")}. If verification shows the cause is different, stop and report instead of changing code.\n`}
+Affected tests (${ts.length}): ${ts.map(t=>t.id).join(", ")}
+
+Changes:
+${(f.changes||[]).map((c,i)=>`${i+1}. ${c.path}${c.line?`:${c.line}`:""}${c.why?` — ${c.why}`:""}${c.diff?`\n\`\`\`diff\n${c.diff}\n\`\`\``:""}`).join("\n\n")}
+
+${rules}`;
+}
+function renderCards(){
+  const by={}; DATA.tests.filter(t=>pass(t)).forEach(t=>(by[t.fix]=by[t.fix]||[]).push(t));
+  const keys=DATA.fixes.map(f=>f.id).filter(k=>by[k]);
+  const total=keys.reduce((s,k)=>s+by[k].length,0);
+  const openSet=new Set([...document.querySelectorAll("details.tl[open]")].map(d=>d.dataset.fix));
+  document.getElementById("result").innerHTML=`<strong>${total}</strong> tests, <strong>${keys.length}</strong> fixes`;
+  document.getElementById("cards").innerHTML=keys.length?keys.map(k=>{
+    const f=fixes[k], ts=by[k].sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
+    const repo=repoOf(f);
+    const canPrompt=(f.changes||[]).length>0;
+    return `<article class="card ty-${f.type}">
+      <div class="chead"><div class="titleline"><span class="count">${ts.length}</span><div><h3>${esc(f.title)}</h3>
+      <div class="tags"><span class="ready ${f.ready?"ok":"no"}">${f.ready?"Ready":"Needs verification"}</span><span class="fixtype">${TYPE[f.type].short}${f.type==="app"?`: ${esc(repo)}`:""}</span>${f.teams.map(x=>`<span class="tag">${esc(x)}</span>`).join("")}${f.owner?`<span class="tag">owner: ${esc(f.owner)}</span>`:""}<span class="tag ${f.confidence==="Confirmed"?"yes":"prob"}">${esc(f.confidence)}</span></div></div></div></div>
+      <p class="evidence"><b>Why:</b> ${esc(f.evidence)}${f.ticket?` <b>Ticket:</b> ${ticketLink(f.ticket)?`<a class="ticket" href="${ticketLink(f.ticket)}" target="_blank" rel="noopener">${esc(f.ticket)}</a>`:`<span class="ticket">${esc(f.ticket)}</span>`}`:""}</p>
+      ${f.ready?"":`<div class="verify"><b>Verify before applying:</b><ul>${f.reasons.map(r=>`<li>${esc(r)}</li>`).join("")}</ul></div>`}
+      ${f.jira?`<div class="block"><div class="jira"><span class="lbl" style="font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700">Jira</span><code>${esc(f.jira)}</code></div></div>`:""}
+      ${dataHtml(f)}${changesHtml(f)}
+      <div class="cardactions">${canPrompt?`<button type="button" class="copybtn" data-copy="prompt" data-fix="${k}">Copy AI prompt${repo!=="stripes-testing"?` for ${esc(repo)}`:""}</button>`:""}
+        ${(f.data||[]).some(d=>d.request)?`<button type="button" class="copybtn ghost" data-copy="curl" data-fix="${k}">Copy as curl</button>`:""}
+        <div data-fb="${k}"></div></div>
+      <details class="tl" data-fix="${k}" ${openSet.has(k)||(state.q&&ts.length<=5)?"open":""}><summary>Tests (${ts.length})</summary><div class="tests">${ts.map(testRow).join("")}</div></details>
+    </article>`;}).join(""):`<div class="empty">No tests match. Click Reset.</div>`;
+}
+function copyText(text,btn,fb){
+  const ok=()=>{const o=btn.textContent;btn.textContent="Copied";btn.classList.add("done");setTimeout(()=>{btn.textContent=o;btn.classList.remove("done");},1600);};
+  const fallback=()=>{const box=document.querySelector(`[data-fb="${fb}"]`);if(!box)return;box.innerHTML=`<textarea class="copyfb" readonly aria-label="Text to copy">${esc(text)}</textarea>`;const ta=box.querySelector("textarea");ta.focus();ta.select();};
+  try{navigator.clipboard.writeText(text).then(ok,fallback);}catch(e){fallback();}
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-copy]"); if(!b) return;
+  const f=fixes[b.dataset.fix], ts=DATA.tests.filter(t=>t.fix===f.id);
+  copyText(b.dataset.copy==="curl"?f.data.filter(d=>d.request).map(d=>`# ${d.what||""}\n${curl(d.request)}`).join("\n\n"):promptFor(f,ts),b,f.id);
+});
+function renderAll(){renderTypes();renderReady();renderTeams();renderCards();}
+document.getElementById("readiness").addEventListener("click",e=>{const b=e.target.closest("button[data-ready]");if(!b)return;state.ready=b.dataset.ready;renderAll();});
+document.getElementById("types").addEventListener("click",e=>{const b=e.target.closest("button[data-type]");if(!b)return;state.type=state.type===b.dataset.type?"":b.dataset.type;renderAll();});
+document.getElementById("teams").addEventListener("click",e=>{const b=e.target.closest("button[data-team]");if(!b)return;state.team=b.dataset.team;renderAll();});
+let tmr; qEl.addEventListener("input",()=>{clearTimeout(tmr);tmr=setTimeout(()=>{state.q=qEl.value.trim().toLowerCase();renderAll();},150);});
+document.getElementById("reset").addEventListener("click",()=>{state.team=state.type=state.q=state.ready="";qEl.value="";renderAll();});
+renderAll();
+</script>
