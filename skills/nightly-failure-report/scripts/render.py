@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Render the HTML report from extracted data and the analysis.
 
-Usage: python3 -I render.py <workdir>
+Usage: python render.py <workdir>
 
-Reads <workdir>/tests.json, meta.json, analysis.json and writes <workdir>/report.html.
+Reads <workdir>/tests.json, meta.json, analysis.json (and linked_defects.json, if present) and
+writes <workdir>/report.html.
 Hard errors (the report is not built) are listed first; every fix also gets a readiness
 verdict: "Ready" or "Needs verification" with the reasons, shown on its card.
 """
@@ -12,6 +13,9 @@ import json
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import common  # noqa: E402,F401  (UTF-8 console output)
 
 TYPES = ('test', 'app', 'data')
 CAUSES = ('test-bug', 'outdated-test', 'env-pollution', 'parallel-conflict', 'app-bug', 'data-missing', 'infra')
@@ -69,11 +73,13 @@ def check(an, tests):
                 errs.append(f'{name}: missing {field}')
         if VAGUE.search(f.get('title', '')):
             errs.append(f'{name}: vague title {f.get("title")!r}; one fix = one concrete problem')
-        if typ in ('test', 'app') and not ch:
+        # an app bug that is already filed needs no diff: the fix is the existing ticket
+        existing = typ == 'app' and f.get('ticket') and str(f.get('jira', '')).startswith('Existing:')
+        if typ in ('test', 'app') and not ch and not existing:
             errs.append(f'{name}: a {typ} fix needs "changes"')
         if typ == 'data' and not data:
             errs.append(f'{name}: a data fix needs "data"')
-        if typ == 'app':
+        if typ == 'app' and not existing:
             if not f.get('repo') or f.get('repo') == 'stripes-testing':
                 errs.append(f'{name}: an app fix needs "repo" (the FOLIO module)')
             if not f.get('ref'):
@@ -167,14 +173,28 @@ def readiness(f):
     return list(dict.fromkeys(r))
 
 
+def unreferenced_open_links(f, linked):
+    """Open tickets linked to this fix's tests in TestRail that the fix never mentions."""
+    text = json.dumps({k: f.get(k) for k in ('title', 'evidence', 'ticket', 'jira', 'changes', 'tests', 'same_cause')})
+    by_key = collections.defaultdict(list)
+    for tid in f['tests']:
+        for l in linked['tests'].get(tid, []):
+            if linked['issues'].get(l['key'], {}).get('open') and l['key'] not in text:
+                by_key[l['key']].append(tid)
+    return [f"{k} ({linked['issues'][k].get('status')}) on {len(ts)} test(s): {', '.join(ts[:8])}"
+            + (' ...' if len(ts) > 8 else '') for k, ts in by_key.items()]
+
+
 def main():
     if len(sys.argv) != 2:
         sys.exit(__doc__)
     work = sys.argv[1]
     here = os.path.dirname(os.path.abspath(__file__))
-    tests = json.load(open(os.path.join(work, 'tests.json')))
-    meta = json.load(open(os.path.join(work, 'meta.json')))
-    an = json.load(open(os.path.join(work, 'analysis.json')))
+    tests = json.load(open(os.path.join(work, 'tests.json'), encoding='utf-8'))
+    meta = json.load(open(os.path.join(work, 'meta.json'), encoding='utf-8'))
+    an = json.load(open(os.path.join(work, 'analysis.json'), encoding='utf-8'))
+    linked_path = os.path.join(work, 'linked_defects.json')
+    linked = json.load(open(linked_path, encoding='utf-8')) if os.path.exists(linked_path) else None
     errs = check(an, tests)
     if errs:
         sys.exit(f'analysis.json is not ready ({len(errs)} problems):\n- ' + '\n- '.join(errs))
@@ -189,10 +209,13 @@ def main():
                       'teams': [t for t, _ in teams.most_common()], 'ready': not reasons, 'reasons': reasons})
         for tid, note in f['tests'].items():
             t = by_id[tid]
+            links = [{**l, **{k: linked['issues'].get(l['key'], {}).get(k) for k in ('summary', 'status', 'open')}}
+                     for l in (linked['tests'].get(tid, []) if linked else [])]
             out_tests.append(dict(uid=t['uid'], id=tid, name=t['name'], team=t['team'], status=t['status'],
                                   stage=t['stage'], fix=f['id'], note=note, err=t['err'], spec=t['spec'],
-                                  hp=t['hp'], ht=t['ht'], where=t['where']))
-    data = dict(fixes=fixes, tests=out_tests, sha=meta['sha'], allure=meta['allure'], build=meta.get('build', ''))
+                                  hp=t['hp'], ht=t['ht'], where=t['where'], linked=links))
+    data = dict(fixes=fixes, tests=out_tests, sha=meta['sha'], allure=meta['allure'], build=meta.get('build', ''),
+                linked=({k: linked[k] for k in ('run_id', 'run_name', 'since')} if linked else None))
 
     counts = {k: sum(len(f['tests']) for f in an['fixes'] if f['type'] == k) for k in TYPES}
     n_ready = sum(1 for t in out_tests if next(f for f in fixes if f['id'] == t['fix'])['ready'])
@@ -204,17 +227,25 @@ def main():
         '__PASSPCT__': pct, '__PASSED__': str(meta['passed']), '__NFAIL__': str(len(tests)),
         '__FIXES__': str(len(fixes)), '__NREADY__': str(n_ready), '__SHORTSHA__': meta['sha'][:7],
     }
-    tpl = open(os.path.join(here, '..', 'assets', 'template.html')).read()
+    tpl = open(os.path.join(here, '..', 'assets', 'template.html'), encoding='utf-8').read()
     for k, v in repl.items():
         tpl = tpl.replace(k, v)
     tpl = tpl.replace('__DATA__', json.dumps(data, ensure_ascii=False).replace('</', '<\\/'))
     out = os.path.join(work, 'report.html')
-    open(out, 'w').write(tpl)
+    open(out, 'w', encoding='utf-8').write(tpl)
     print(f"fixes={len(fixes)} tests={len(tests)} ready_tests={n_ready} "
           f"test={counts['test']} app={counts['app']} data={counts['data']} → {out}")
     for f in fixes:
         if not f['ready']:
             print(f"  needs verification {f['id']} ({len(f['teams'])} team(s)): " + '; '.join(f['reasons']))
+    if linked:
+        for f in an['fixes']:
+            refs = unreferenced_open_links(f, linked)
+            if refs:
+                print(f"  {f['id']} does not mention open ticket(s) linked to its tests: " + '; '.join(refs)
+                      + ' - confirm they are unrelated, or reference them')
+    else:
+        print('  no linked_defects.json: previously linked tickets were not checked (run linked_defects.py)')
 
 
 if __name__ == '__main__':

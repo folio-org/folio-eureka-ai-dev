@@ -17,7 +17,7 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 - `fat-creator` - Creates FAT Jira review tasks for TestRail manual test cases, one per case or one combined ticket.
 - `implement-automated-test` - Generates or updates Cypress E2E tests for FOLIO Stripes.
 - `liquibase-migration` - Guides FOLIO Liquibase migration authoring, structure, naming, and database conventions.
-- `nightly-failure-report` - Triages a nightly Cypress run from its Jenkins Allure report and builds an HTML fix list: a stripes-testing diff, a module fix with a Jira summary, or the exact environment data for every failed test, each marked Ready or Needs verification.
+- `nightly-failure-report` - Triages a nightly Cypress run from its Jenkins Allure report and builds an HTML fix list: a stripes-testing diff, a module fix with a Jira summary, or the exact environment data for every failed test, each marked Ready or Needs verification. Uses tickets already linked to the tests in TestRail and the findings of earlier analyses; needs only Python and git, no MCP server.
 - `review-generated-automated-test` - Reviews Cypress E2E test changes against FOLIO Stripes testing conventions.
 - `skill-feedback` - Captures user-validated feedback after a skill session and prepares a GitHub-ready report.
 - `testrail-bug-report` - Generates Jira-ready bug reports from failed FOLIO TestRail cases.

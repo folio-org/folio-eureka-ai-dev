@@ -1,6 +1,6 @@
 # API path to FOLIO module
 
-Use this map to find which module repository serves a failing request. Clone it with `scripts/app_repo.sh`.
+Use this map to find which module repository serves a failing request. Clone it with `scripts/app_repo.py`.
 
 | API path prefix | module repository |
 |---|---|

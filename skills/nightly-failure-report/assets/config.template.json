@@ -1,0 +1,31 @@
+{
+  "environments": {
+    "snapshot": {
+      "description": "Regular (non-ECS) snapshot - a clone of the nightly 'cypress' environment",
+      "ui": "https://folio-etesting-snapshot-diku.ci.folio.org",
+      "api": "https://folio-etesting-snapshot-kong.ci.folio.org",
+      "tenant": "diku",
+      "username": "",
+      "password": ""
+    },
+    "snapshot-ecs": {
+      "description": "ECS (consortia) snapshot - central tenant plus member tenants",
+      "ui": "https://folio-etesting-snapshot-consortium.ci.folio.org",
+      "api": "https://ecs-folio-etesting-snapshot-kong.ci.folio.org",
+      "tenant": "consortium",
+      "members": ["college", "university"],
+      "username": "",
+      "password": ""
+    }
+  },
+  "testrail": {
+    "base_url": "https://foliotest.testrail.io",
+    "username": "",
+    "password": ""
+  },
+  "paths": {
+    "stripes_testing_repo": "",
+    "work_dir": "",
+    "repos_dir": ""
+  }
+}
