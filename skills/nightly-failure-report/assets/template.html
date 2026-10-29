@@ -191,6 +191,11 @@ footer{color:var(--muted);font-size:13px;max-width:80ch}
 .verify{margin:14px 24px 0;padding:12px 16px;border-radius:10px;background:var(--s-par);color:var(--fg);font-size:14.5px}
 .verify b{color:var(--c-par)} .verify ul{margin:6px 0 0;padding-left:18px}
 .ticket{font-family:var(--f-mono);font-size:13px}
+.tlinks{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;font-size:13px}
+.tlinks .lbl{color:var(--muted)}
+.lk{font-family:var(--f-mono);font-size:12.5px;padding:2px 8px;border-radius:6px;text-decoration:none;border:1px solid var(--line)}
+.lk.open{background:var(--s-par);color:var(--c-par);border-color:transparent}
+.lk.closed{background:var(--sunken);color:var(--muted)}
 </style>
 <div class="wrap">
 <header>
@@ -199,6 +204,7 @@ footer{color:var(--muted);font-size:13px;max-width:80ch}
   <div class="meta">
     <span>__PERIOD__</span><span>__ENV__</span><span>stripes-testing @ __SHORTSHA__</span>
     <a href="__ALLURE__" target="_blank" rel="noopener">Open Allure</a>
+    <span id="linkedmeta"></span>
   </div>
   <div class="stats">
     <div class="stat"><b>__TOTAL__</b><span>tests in the run</span></div>
@@ -246,7 +252,7 @@ const state={team:"",type:"",q:"",ready:""};
 const qEl=document.getElementById("q");
 const teamCount={}; DATA.tests.forEach(t=>teamCount[t.team]=(teamCount[t.team]||0)+1);
 const TEAMS=Object.keys(teamCount).sort((a,b)=>(a==="untagged")-(b==="untagged")||teamCount[b]-teamCount[a]);
-const hay=t=>{const f=fixes[t.fix];return [t.id,t.name,t.err,t.spec,t.note,f.title,f.repo,f.owner,f.ticket,f.evidence,...(f.changes||[]).map(c=>c.path)].join(" ").toLowerCase();};
+const hay=t=>{const f=fixes[t.fix];return [t.id,t.name,t.err,t.spec,t.note,f.title,f.repo,f.owner,f.ticket,f.evidence,...(f.changes||[]).map(c=>c.path),...(t.linked||[]).map(l=>l.key)].join(" ").toLowerCase();};
 const pass=(t,skip)=>(skip==="team"||!state.team||t.team===state.team)&&(skip==="type"||!state.type||fixes[t.fix].type===state.type)
   &&(skip==="ready"||!state.ready||(state.ready==="yes")===fixes[t.fix].ready)&&(!state.q||hay(t).includes(state.q));
 const ticketLink=k=>/^https?:/.test(k)?k:/^[A-Z][A-Z0-9]+-\d+$/.test(k)?`https://folio-org.atlassian.net/browse/${k}`:null;
@@ -298,6 +304,7 @@ function testRow(t){
   <div class="tmain"><div class="tname">${esc(t.name)}</div>
     <div class="tsub"><span>${esc(t.team)}</span><span>failed in: ${t.stage}</span><a class="alink" href="${DATA.allure}#testresult/${t.uid}" target="_blank" rel="noopener">Allure</a></div>
     ${t.note?`<div class="tnote">${esc(t.note)}</div>`:""}
+    ${(t.linked||[]).length?`<div class="tlinks"><span class="lbl">Linked in TestRail:</span>${t.linked.map(l=>`<a class="lk ${l.open===false?"closed":"open"}" href="${ticketLink(l.key)}" target="_blank" rel="noopener" title="${esc(l.summary||"")} · linked ${esc(l.last_linked)}">${esc(l.key)} · ${esc(l.status||"?")}</a>`).join("")}</div>`:""}
     ${ws.length?`<div class="twhere">${ws.map(w=>`<div class="wl"><a class="floc" href="${ghLink("stripes-testing",DATA.sha,w.path,w.line)}" target="_blank" rel="noopener">${esc(w.path.replace(/^cypress\//,""))}:${w.line}</a><code>${esc(w.code||"")}</code></div>`).join("")}</div>`:""}
     <div class="terr">${esc(t.err)}</div></div>
   <div class="thist">${h}</div></div>`;
@@ -359,5 +366,6 @@ document.getElementById("types").addEventListener("click",e=>{const b=e.target.c
 document.getElementById("teams").addEventListener("click",e=>{const b=e.target.closest("button[data-team]");if(!b)return;state.team=b.dataset.team;renderAll();});
 let tmr; qEl.addEventListener("input",()=>{clearTimeout(tmr);tmr=setTimeout(()=>{state.q=qEl.value.trim().toLowerCase();renderAll();},150);});
 document.getElementById("reset").addEventListener("click",()=>{state.team=state.type=state.q=state.ready="";qEl.value="";renderAll();});
+document.getElementById("linkedmeta").textContent=DATA.linked?`Linked tickets: TestRail run ${DATA.linked.run_id} (${DATA.linked.run_name}), since ${DATA.linked.since}`:"Linked tickets: not checked";
 renderAll();
 </script>

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Download the Allure screenshots of given tests so you can look at them.
 
-Usage: python3 -I screenshot.py <workdir> <test id> [<test id> ...]
+Usage: python screenshot.py <workdir> <test id> [<test id> ...]
 
 Saves <workdir>/shots/<test id>-<n>.png and prints the paths. Open the images to see what the page showed.
 """
@@ -10,6 +10,9 @@ import os
 import sys
 import urllib.request
 from glob import glob
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import common  # noqa: E402,F401  (UTF-8 console output)
 
 
 def attachments(stage, out):
@@ -24,11 +27,11 @@ def main():
     if len(sys.argv) < 3:
         sys.exit(__doc__)
     work, ids = sys.argv[1], set(sys.argv[2:])
-    base = json.load(open(os.path.join(work, 'allure', 'index.json')))['allure']
+    base = json.load(open(os.path.join(work, 'allure', 'index.json'), encoding='utf-8'))['allure']
     os.makedirs(os.path.join(work, 'shots'), exist_ok=True)
     found = set()
     for f in glob(os.path.join(work, 'allure', 'tc', '*.json')):
-        t = json.load(open(f))
+        t = json.load(open(f, encoding='utf-8'))
         tid = t['name'].split(' ', 1)[0]
         if tid not in ids:
             continue

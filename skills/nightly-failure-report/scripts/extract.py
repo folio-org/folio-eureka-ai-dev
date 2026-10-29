@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Turn downloaded Allure test cases into analysis input.
 
-Usage: python3 -I extract.py <workdir> <stripes-testing repo path>
+Usage: python extract.py <workdir> <stripes-testing repo path>
 
 For every failed/broken test it finds the root-cause stage (before / test body),
 the root error, the run history, the spec, and the exact code line it failed at
@@ -22,12 +22,15 @@ import subprocess
 import sys
 from glob import glob
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import common  # noqa: E402,F401  (UTF-8 console output)
+
 WEBPACK = re.compile(r'webpack://@folio/stripes-testing/\./(cypress/(?:e2e|support)/[^\s)":]+?\.js):(\d+)')
-TEAMS = r'\((thunderjet|promin|athena|vega|helios|corsair|folijet|spitfire|firebird|volaris|citation)\)'
+TEAMS = r'\((thunderjet|promin|eureka|athena|vega|helios|corsair|folijet|spitfire|firebird|volaris|citation)\)'
 
 
 def git(repo, *args):
-    return subprocess.run(['git', '-C', repo, *args], capture_output=True, text=True)
+    return subprocess.run(['git', '-C', repo, *args], capture_output=True, text=True, encoding='utf-8', errors='replace')
 
 
 class Source:
@@ -126,9 +129,9 @@ def main():
     if len(sys.argv) != 3:
         sys.exit(__doc__)
     work, repo = sys.argv[1], os.path.expanduser(sys.argv[2])
-    idx = json.load(open(os.path.join(work, 'allure', 'index.json')))
-    summary = json.load(open(os.path.join(work, 'allure', 'summary.json')))
-    cases = [json.load(open(f)) for f in glob(os.path.join(work, 'allure', 'tc', '*.json'))]
+    idx = json.load(open(os.path.join(work, 'allure', 'index.json'), encoding='utf-8'))
+    summary = json.load(open(os.path.join(work, 'allure', 'summary.json'), encoding='utf-8'))
+    cases = [json.load(open(f, encoding='utf-8')) for f in glob(os.path.join(work, 'allure', 'tc', '*.json'))]
 
     start = datetime.datetime.fromtimestamp(summary['time']['start'] / 1000, datetime.timezone.utc)
     stop = datetime.datetime.fromtimestamp(summary['time']['stop'] / 1000, datetime.timezone.utc)
@@ -190,13 +193,13 @@ def main():
     m = re.search(r'/job/([^/]+)/job/([^/]+)/(\d+)/allure', idx['allure'])
     if m:
         meta.update(job=f'{m.group(1)} · {m.group(2)}', build=m.group(3))
-    json.dump(tests, open(os.path.join(work, 'tests.json'), 'w'), indent=1)
-    json.dump(meta, open(os.path.join(work, 'meta.json'), 'w'), indent=1)
+    json.dump(tests, open(os.path.join(work, 'tests.json'), 'w', encoding='utf-8'), indent=1)
+    json.dump(meta, open(os.path.join(work, 'meta.json'), 'w', encoding='utf-8'), indent=1)
 
     clusters = collections.defaultdict(list)
     for t in tests:
         clusters[t['cluster']].append(t)
-    with open(os.path.join(work, 'dump.md'), 'w') as f:
+    with open(os.path.join(work, 'dump.md'), 'w', encoding='utf-8') as f:
         f.write(f"# {len(tests)} failed/broken tests, {len(clusters)} clusters, commit {sha[:7]}, run start {meta['start']} UTC\n\n")
         for k, ts in sorted(clusters.items(), key=lambda kv: -len(kv[1])):
             f.write(f"## [{len(ts)}] {k}\n")

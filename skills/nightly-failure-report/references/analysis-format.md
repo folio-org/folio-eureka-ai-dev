@@ -1,6 +1,6 @@
 # analysis.json format
 
-Write `$WORK/analysis.json` once, in English. `render.py` reads it together with `tests.json` and `meta.json`.
+Write `<WORK>/analysis.json` once, in English. `render.py` reads it together with `tests.json` and `meta.json`.
 
 ## Example
 
@@ -45,14 +45,16 @@ Write `$WORK/analysis.json` once, in English. `render.py` reads it together with
 | `confidence` | yes | `Confirmed` (a response body, code or screenshot proves it) \| `Likely` |
 | `evidence` | yes | The proof in one or two sentences. Not the error text. |
 | `repo` | app | Module repository, e.g. `mod-orders`, `ui-users`. |
-| `ref` | app | Module commit you read (printed by `app_repo.sh`). |
-| `jira` | app | Jira summary for the module bug. |
+| `ref` | app | Module commit you read (printed by `app_repo.py`). |
+| `jira` | app | Jira summary for the module bug. When an existing ticket covers it (often one linked to the tests in TestRail or in the case's `refs`), write `Existing: <KEY> <summary>` and put the key in `ticket` too; such a fix needs no `changes`, `ref` or `repo`. |
 | `owner` | no | Team owning the module. Teams on the card come from the test tags automatically. |
 | `ticket` | no | Jira key (`UIEH-1553`) or commit/PR URL that shows why the behavior changed. Allowed on the fix or on a single change. |
 | `same_cause` | no | One sentence proving why tests with different errors are fixed by the same change, e.g. "all 13 specs import calendar id a8531527 from calendar-e2e-test-values.js". Without it, a shared change may only cover tests that fail with the same error. |
 | `changes[]` | test, app | Code changes, see below. |
 | `data[]` | data | Environment changes, see below. |
-| `tests` | yes | Map of test id to note. Every failed test id appears exactly once across all fixes. The note says what is specific to this test and is required when its error differs from the rest of the fix; otherwise `null`. |
+| `tests` | yes | Map of test id to note. Every failed test id appears exactly once across all fixes. The note says what is specific to this test and is required when its error differs from the rest of the fix; otherwise `null`. When an open ticket linked to the test (`linked_defects.json`) is not the cause, the note says why. |
+
+Linked tickets (from `linked_defects.py`) are shown on each test in the report automatically; you do not copy them into `analysis.json`. `render.py` warns about open linked tickets that a fix's text never mentions.
 
 ## changes[]
 

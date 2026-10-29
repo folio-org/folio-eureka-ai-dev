@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Download failed/broken test cases from a Jenkins Allure report.
 
-Usage: python3 -I fetch_allure.py <allure_url> <workdir>
+Usage: python fetch_allure.py <allure_url> <workdir>
 
 Writes:
   <workdir>/allure/summary.json, suites.json
@@ -12,6 +12,9 @@ import os
 import sys
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import common  # noqa: E402,F401  (UTF-8 console output)
 
 
 def get(url):
@@ -27,9 +30,9 @@ def main():
     os.makedirs(os.path.join(out, 'tc'), exist_ok=True)
 
     summary = json.loads(get(base + 'widgets/summary.json'))
-    json.dump(summary, open(os.path.join(out, 'summary.json'), 'w'))
+    json.dump(summary, open(os.path.join(out, 'summary.json'), 'w', encoding='utf-8'))
     suites = json.loads(get(base + 'data/suites.json'))
-    json.dump(suites, open(os.path.join(out, 'suites.json'), 'w'))
+    json.dump(suites, open(os.path.join(out, 'suites.json'), 'w', encoding='utf-8'))
 
     uids = []
 
@@ -50,7 +53,7 @@ def main():
     with ThreadPoolExecutor(16) as pool:
         list(pool.map(fetch, uids))
 
-    json.dump({'allure': base, 'uids': uids}, open(os.path.join(out, 'index.json'), 'w'))
+    json.dump({'allure': base, 'uids': uids}, open(os.path.join(out, 'index.json'), 'w', encoding='utf-8'))
     st = summary['statistic']
     print(f"total={st['total']} passed={st['passed']} failed={st['failed']} "
           f"broken={st['broken']} skipped={st['skipped']} downloaded={len(uids)}")
