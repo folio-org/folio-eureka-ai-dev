@@ -12,6 +12,8 @@ This repository serves as a skills registry containing guidelines (`SKILL.md`). 
 
 - `build-app-context` - Builds or refreshes `references/context/<area>.md` from live TestRail, Jira, and GitHub sources for manual test design.
 - `code-review` - Reviews committed branch changes or the uncommitted working-tree candidate against a resolved base branch and reports findings.
+- `create-backport-tasks` - Creates one Jira backport task per source ticket and flower patch from the team template: links the source, checks for an existing backport, copies labels, and shows the full draft before creating anything. Works from Jira alone, with no git.
+- `create-release-tasks` - Creates the module release task for a version or flower patch and links the backports that wait for it. Checks that the Fix Version exists and that no release task exists yet, and shows the full draft before creating anything. Works from Jira alone, with no git.
 - `document-feature` - Documents implemented behavior from committed or uncommitted changes, in the repository's existing documentation structure.
 - `ecs-user-setup` - Guides ECS and multi-tenant user setup for FOLIO automated tests.
 - `fat-creator` - Creates FAT Jira review tasks for TestRail manual test cases, one per case or one combined ticket.
@@ -38,6 +40,8 @@ Install only the preset that matches your role:
 npx skills add folio-org/folio-eureka-ai-dev \
   --skill write-user-story \
   --skill write-bug \
+  --skill create-backport-tasks \
+  --skill create-release-tasks \
   --skill skill-feedback
 ```
 
@@ -62,6 +66,8 @@ npx skills add folio-org/folio-eureka-ai-dev \
   --skill code-review \
   --skill document-feature \
   --skill write-pr-description \
+  --skill create-backport-tasks \
+  --skill create-release-tasks \
   --skill skill-feedback
 ```
 
