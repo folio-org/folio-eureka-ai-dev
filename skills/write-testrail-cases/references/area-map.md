@@ -15,6 +15,7 @@ Context files live in `references/context/`. Determine the area from (in priorit
 | Receiving | `references/context/receiving.md` | UIREC; "piece", "receive", "receiving title" |
 | Finance | `references/context/finance.md` | UIF, MODFIN; "fund", "budget", "ledger", "fiscal year", "allocation", "encumbrance", "transfer", "rollover", "expense class", "acquisition unit" |
 | Inventory | `references/context/inventory.md` | UIIN, MODINV; "instance", "holdings", "item" |
+| Inventory Browse | `references/context/inventory-browse.md` | UIIN, MSEARCH; "browse", "call number browse", "subject browse", "contributor browse", "classification browse", "browse option", "Number of titles", "would be here" |
 | Requests | `references/context/requests.md` | UIREQ; "request", "hold", "page", "recall", "pickup" |
 | Mediated Requests | `references/context/mediated-requests.md` | UIREQMED, MODREQMED; "mediated request", "secure tenant", "secure request", "interim service point" |
 | Users | `references/context/users.md` | UIU, MODUSERS; "patron", "user record", "custom fields", "proxy", "service points", "profile picture" |
@@ -29,6 +30,7 @@ Context files live in `references/context/`. Determine the area from (in priorit
 | Data Export | `references/context/data-export.md` | UIDEXP, MDEXP; "export", "mapping profile", ".mrc" |
 | MARC Authority | `references/context/marc-authority.md` | UIMARCAUTH, MODELINKS; "authority", "quickMARC" |
 | MARC Bib (quickMARC) | `references/context/marc-bib-quickmarc.md` | UIQM, MODSOURCE; "quickMARC", "MARC bib", "MARC bibliographic", "LDR", "leader", "008 field", "derive", "controlled field", "linking authority" |
+| MARC Holdings (quickMARC) | `references/context/marc-holdings.md` | UIQM, MODQM; "MARC holdings", "MARC holdings record", "852", "004", "Add MARC holdings record", "Edit in quickMARC" on a holdings record |
 | eHoldings | `references/context/eholdings.md` | UIEH; "package", "title", "provider", "KB", "EBSCO" |
 | Licenses | `references/context/licenses.md` | UILIC, MODLIC, ERM; "license", "amendment", "term", "core document", "supplementary document" |
 | Lists | `references/context/lists.md` | UILISTS, MODLISTS, MODFQM; "list", "FQM", "query" |
@@ -43,7 +45,7 @@ Context files live in `references/context/`. Determine the area from (in priorit
 | Eureka platform (login, authorization, tenants) | `references/context/eureka.md` | EUREKA, KEYCLOAK, STCOR (stripes-core), UIROLES, MODROLESKC, UISAUTHCOM, UIPSELAPP, MODUSERSKC, MODLOGINKC, MGRENTITLE, MODSCHED, UID; "login", "log in", "logout", "session timeout", "idle session", "fixed-length session", "RTR", "refresh token", "Keycloak", "realm", "auth user", "Keycloak record", "promote user", "capability", "capability set", "authorization role", "authorization policy", "default role", "tenant", "entitlement", "application", "sidecar", "Kong", "password reset link", "SSO-only theme", "tenant selection screen" |
 | DCB (Direct Consortia Borrowing) | `references/context/dcb.md` | Jira prefix not recorded in dcb.md — detect by keywords: "DCB", "direct consortia borrowing", "lending library", "borrowing library", "pickup library", "borrowing-pickup", "virtual item", "DCB transaction" |
 
-A story can span two areas (e.g. closing an order affects Finance) — read both context files. Acquisitions chains: Serials Management → Receiving; Claiming → Receiving + Organizations + Export Manager; EDIFACT order export → Orders + Organizations + Export Manager.
+A story can span two areas (e.g. closing an order affects Finance) — read both context files. Acquisitions chains: Serials Management → Receiving; Claiming → Receiving + Organizations + Export Manager; EDIFACT order export → Orders + Organizations + Export Manager. Inventory: MARC holdings → `marc-holdings.md` + `inventory.md` (+ `data-import.md` for imported records); browse stories → `inventory-browse.md` + `inventory.md`.
 
 Login/session/authorization stories in an ECS environment span **Eureka platform** and **Consortium Manager** — read both.
 

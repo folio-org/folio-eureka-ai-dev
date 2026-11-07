@@ -538,6 +538,22 @@ If the user says "refresh" or "update context for <area>" and the file already e
 
 **Delta format (lightweight refresh).** When a full merge is not practical, append a `## Changes since <build date> (delta refresh <today>)` section at the end of the file with: What changed (each bullet tied to a Jira key or commit), UI strings changed since the build date (new / changed / removed keys from the `en.json` diff build-date → HEAD; removed strings marked "do not assert"), Jira Done issues since the build date, and TestRail cases created since the build date. Add `Delta-refreshed: <today>` to the header line. `write-testrail-cases` reads this section first and lets it override older sections.
 
+**Scripted delta refresh.** `scripts/delta_refresh.py` collects the delta data for one, several or all areas listed in `scripts/areas.json` (UI repos, Jira projects, TestRail root sections, optional translation-key filter):
+
+```bash
+python3 scripts/delta_refresh.py --areas orders,finance           # preview to stdout
+python3 scripts/delta_refresh.py --areas all --write               # update context files in place
+python3 scripts/delta_refresh.py --areas lists --since 2026-09-01 --skip-testrail
+```
+
+- Base date: `Delta-refreshed` from the file header, else `Built`; `--since` overrides.
+- GitHub: anonymous blob-less clone, `en.json` diff base-date → HEAD (new / changed / removed, removed strings deduplicated by value), filtered commit subjects.
+- Jira (`JIRA_BASE_URL`, `JIRA_USER_EMAIL`, `JIRA_API_TOKEN`): Story, Bug, New Feature in Done since the base date.
+- TestRail (`TESTRAIL_URL`, `TESTRAIL_USER`, `TESTRAIL_API_KEY`): manual cases created since the base date under the area's root sections.
+- Credentials are read from `.env`, then `~/.folio-credentials`, then environment variables. A missing source is reported in the section, not silently skipped.
+- `--write` replaces the previous `## Changes since …` section and updates `Delta-refreshed`. The script leaves a placeholder under **What changed**: the agent must replace it with 3–8 bullets tied to Jira keys or commits before the file is committed. Fold earlier deltas into the main sections first if they matter, because `--write` replaces them.
+- New area: add a row to `areas.json` and to `write-testrail-cases/references/area-map.md`.
+
 ---
 
 ## Quick Reference

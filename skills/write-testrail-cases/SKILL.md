@@ -22,7 +22,8 @@ description: Use when writing, generating, or adding manual test cases to TestRa
 | `references/area-map.md` | Step 1 — area detection, context file rules, freshness |
 | `references/context/<area>.md` | Step 1 — business rules, exact UI texts, domain model |
 | `references/house-style.md` | Step 5 — Type / size / journey / priority / title conventions per area |
-| `references/examples.md` | Step 2 — golden cases (verification depth bar) |
+| `references/examples.md` | Step 2 — cross-area golden cases and anti-patterns (verification depth bar) |
+| `references/examples/<area>.md` | Step 2 — golden case for the detected area, when the file exists |
 | `references/writing-rules.md` | Step 6 — preconditions and steps rules, case template |
 | `references/step-patterns.md` | Step 6 — reusable step shapes |
 | `references/testrail-api.md` | Step 8 — metadata IDs, HTML markup, posting, fallback output |
@@ -32,9 +33,10 @@ description: Use when writing, generating, or adding manual test cases to TestRa
 1. **Detect the application area** from the story (see `references/area-map.md`) and **read the matching context file(s)**. If the area cannot be determined, ask.
    - Read the file's `## Changes since …` section (if present) first — it overrides older sections.
    - **1b. Assess context quality.** Run Lightweight Context Enrichment (below) if ANY is true: context file missing; header says DRAFT; header date older than 90 days or built for an older release than the story's Fix Version; fewer than 10 Key Business Rules; no "Exact UI Texts" section or fewer than 3 confirmed toasts; more than 5 items in "Known Gaps / Items to Verify".
-2. **Read `references/examples.md`.** New cases must match their verification depth.
+2. **Read `references/examples.md` and `references/examples/<area>.md`** (if it exists for the detected area). New cases must match their verification depth, value precision and step shape.
 3. **Read the User Story / Jira ticket** (Jira MCP if a key is given). Extract Summary, Description, Acceptance Criteria, Development Team (→ `custom_dev_team`), Fix Version, labels (ECS?), and the `refs` key(s). **`refs` = the work item(s) this case verifies** — often a Bug or Tech-Debt ticket, or several keys across projects (e.g. `UIF-525, MODFIN-391`). Include every ticket the user gave and every ticket the case directly verifies; do not auto-add links Jira merely shows; never invent a story key.
 4. **Sample the target section.** Ask for the TestRail Section ID now (optional — the user may defer it). If given, fetch the 10 most recent cases of that section and note: preconditions format (`<ol>` / `<p>1)` / `<ul>` / table), permissions block (capabilities only vs Okapi + Eureka), title prefixes in use, separators (`->` / `=>`), Type, labels (`BFreviewed`), typical step count. These observations override the defaults in `house-style.md` and `writing-rules.md`.
+4b. **Check for existing coverage.** Query TestRail for cases that already reference the story or its related keys: `get_cases/14&suite_id=21&refs=<KEY>` for every key from step 3 (the `refs` filter matches any listed key). Also search the target section by the feature's main noun (`search_test_cases` on title). For each match decide: **duplicate** (same scenario — do not generate), **update** (existing case covers the flow but its expected results are outdated by this story — propose the change, to be applied with the `test-case-updater` skill), or **unrelated**. List the matches with this decision in Scenario Analysis under "Existing coverage".
 5. **Map the story to the context file's Key Business Rules**: each touched rule and each acceptance criterion is a scenario candidate. Then perform **Scenario Analysis** (below), present it, and **wait for confirmation**.
 6. **Generate cases**, one per confirmed scenario, following `references/writing-rules.md` and `references/step-patterns.md`.
 7. **Self-review every case** against the Self-review gate (below). Fix violations silently.
@@ -90,6 +92,9 @@ Negative / edge cases:
 
 Inferred integration scenarios (not in the ACs — from the context file, confirm scope):
 J1. [cross-feature / over-time journey: rollover, create-from-template, new FY, ECS share]
+
+Existing coverage (step 4b):
+- C<id> <title> — duplicate | update (what changes) | unrelated
 
 Does this coverage look complete?
 ```
@@ -151,6 +156,7 @@ Wait for the user's confirmation or corrections.
 - [ ] Title follows `house-style.md` → Titles; prefix only if already used in the target section.
 - [ ] Type, Priority, Test Group, Journey flag match the area's measured norms (default Priority = Medium, Test Group = Extended).
 - [ ] `refs` = what the case verifies; label `ai` present; `BFreviewed` only if the section uses it.
+- [ ] No generated case duplicates a case found in step 4b; cases marked "update" are proposed as edits, not re-created.
 - [ ] HTML payload renders the same as the preview shown to the user (`testrail-api.md` → pre-post check).
 
 ---

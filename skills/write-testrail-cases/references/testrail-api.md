@@ -182,6 +182,14 @@ GET {TESTRAIL_URL}/index.php?/api/v2/get_cases/14&suite_id=21&section_id={sectio
 
 Use the 10 most recently created cases (sort by `created_on`). Read the **raw** `custom_preconds` and `custom_steps_separated` (not an HTML-stripped preview) and record: preconditions markup, permissions block, title prefixes, separators, Type, labels, step count. Prefer cases without the `ai` label as the style reference — they are what reviewers accept as the norm.
 
+### Finding existing cases (workflow step 4b)
+
+```
+GET {TESTRAIL_URL}/index.php?/api/v2/get_cases/14&suite_id=21&refs=UICIRC-1390
+```
+
+The `refs` filter returns every case whose `refs` contains the key (e.g. `UICIRC-1387,UICIRC-1390,UICIRC-1399`). Run it for each key from step 3. Title search: `search_test_cases` (MCP) or `get_cases/14&suite_id=21&section_id=<id>&filter=<text>`.
+
 ### Posting preview
 
 After generation and self-review, ask: _"Please provide the TestRail Section (folder) ID where the cases should be posted."_ Then show:

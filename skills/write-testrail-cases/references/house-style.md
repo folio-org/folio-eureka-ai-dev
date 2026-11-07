@@ -34,6 +34,8 @@ Type IDs: Functional = 6, Other = 7 (resolve at runtime via `get_case_types`).
 | eHoldings **(Nov)** | Functional (96%) | 6 | **~44%** | Journey flag now frequent in new cases; title prefixes like `Package detail record:` |
 | Inventory **(Nov)** | Functional (65%) | 6 | ~3% | Compact; per-variant (record type / OS) |
 | Inventory import **(Nov)** | Functional (94%) | 4 | 0% | Short; `<ol>` preconditions |
+| Inventory Browse **(Nov)** | Functional | not measured (sample: 2) | 0% | One case per browse option; example query value in each step |
+| MARC Holdings **(Nov)** | Functional | not measured (sample: 7–14) | mostly No | Create and edit as separate cases; Okapi/Eureka permissions table |
 | Receiving | Functional (99%) | 8 | ~0% | Piece flow + Inventory/Finance side effects |
 | Data Import **(Nov)** | Other 52% / Func 30% / Acceptance 18% | 6 | ~2% | Matching-rule cases are short per variant; mostly `<ol>` preconditions |
 | OAI-PMH **(Nov)** | Other (100%) | 8 | 0% | API/protocol assertions; title prefixes `ListRecords:` / `ListIdentifiers:` / `GetRecord \|` |

@@ -125,7 +125,12 @@ Before generating, the skill samples the 10 most recent cases of the target Test
 
 ### Refreshing context files
 
-If context for your app area is missing or outdated, run `build-app-context`:
+If context for your app area is missing or outdated, run `build-app-context`. For a quick delta (new and changed UI strings, Done Jira issues, new TestRail cases since the file's last refresh), run its script:
+
+```bash
+python3 skills/build-app-context/scripts/delta_refresh.py --areas orders,finance   # preview
+python3 skills/build-app-context/scripts/delta_refresh.py --areas all --write       # update files
+```
 
 ### GitHub issue reporter
 

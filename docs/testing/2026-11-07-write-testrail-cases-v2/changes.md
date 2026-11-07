@@ -36,6 +36,8 @@ Sample: 500 manual cases in suite 21 created between 2026-03-02 and 2026-11-05 (
 - **Capability set names** are taken from the context file, recent section cases or the module's `package.json`; otherwise they are explicitly marked as unconfirmed.
 - **Context freshness:** every context file carries a `Built / Delta-refreshed` header; files older than 90 days or built for an older release trigger enrichment and a warning.
 - Verification checks for record types (instance / holdings / item, task / job), link targets, and UI data provided by the backend.
+- **Golden examples per area:** `references/examples/<area>.md` holds one real, human-written case per area (Orders, Invoices, eHoldings, Data Import, OAI-PMH, Agreements, Circulation settings, Data Export, Circulation log, Loans) with a note on why it sets the bar. Read in workflow step 2 together with `examples.md`.
+- **Existing coverage check (step 4b):** before generating, TestRail is queried by the story keys (`get_cases … &refs=<KEY>`) and the target section is searched by the feature's main noun. Each match is classified as duplicate, update (proposed as an edit, not re-created) or unrelated, and listed in the Scenario Analysis.
 
 ## Resolved inconsistencies
 
@@ -50,6 +52,8 @@ Sample: 500 manual cases in suite 21 created between 2026-03-02 and 2026-11-05 (
 ## Context files
 
 - **30 existing files — delta refresh.** Each file ends with a `## Changes since <build date>` section that takes precedence over older content: summary of changes (each item tied to a Jira key or commit), UI strings added / changed / removed since the build date (from the `en.json` diff; removed strings marked "do not assert"), Jira stories and bugs closed since the build date, and TestRail cases created since the build date (890 new cases in suite 21 since 2026-06-12). Largest changes: eHoldings package record and visibility, Orders payment terms and email templates, Users SMS contact and role selection, Lists search and MARC querying, Inventory custom links and number generators, Data Import deletion of MARC authority records, Bulk Edit deletion of user records, Circulation automatic renewals and text-message notices.
+- **eHoldings, Orders, Lists, Inventory — deltas merged.** The `Changes since` content of these four files was folded into the main sections (UI structure, filters, exact texts, business rules, settings); outdated statements were corrected (e.g. eHoldings "Show to patrons" visibility, Orders deprecated acquisition methods and budget errors). Each file now ends with a short change log (Jira keys and reference TestRail cases) and carries `Built: 2026-11-07`.
+- **2 more new areas:** `marc-holdings.md` (quickMARC create/edit of MARC holdings, required and non-repeatable fields, FOLIO field mapping) and `inventory-browse.md` (call number, classification, contributor and subject browse, browse settings), built from TestRail sections 16714/39766/39767 and 17147/17148/17888/35111/35321/55320/55325, `en.json` and Jira.
 - **6 new areas:** `inn-reach.md`, `open-access.md`, `serials-management.md`, `claiming.md`, `export-manager.md`, `linked-data.md` (Marigold), built with the `build-app-context` method.
 - `dcb.md`: a stray code fence that broke rendering of half the file was removed.
 - `invoices.md`, `requests.md`, `users.md`: the 2026-08-06 date reflected a partial refresh only; the delta was calculated from the original June build.
@@ -59,12 +63,14 @@ Sample: 500 manual cases in suite 21 created between 2026-03-02 and 2026-11-05 (
 - Translations read from `en.json` only.
 - `Built` header line added to the output template.
 - Delta format documented for lightweight refreshes.
+- **`scripts/delta_refresh.py` + `scripts/areas.json`:** collects the delta for one, several or all areas (GitHub `en.json` diff and commit subjects, Jira Done issues, new TestRail cases), prints it or replaces the `Changes since` section in place and updates `Delta-refreshed`. The agent writes the "What changed" summary from the collected data.
 - Jira access table re-checked: ERM, UIEH / MODKBEKBJ and UIMARCAUTH / MODELINKS are accessible.
 
 ## Known limitations
 
 - Coverage remains limited for Open Access (12 smoke cases), Serials Management and Claiming. Capability set names for INN-Reach settings, Open Access, Serials Management and Export Manager are not confirmed by any existing case and are flagged in the respective files.
-- Delta sections are additive. A full `build-app-context` rebuild of the most active areas (eHoldings, Orders, Lists, Inventory) would merge them into the main sections.
+- Delta sections in the remaining 26 files are additive; they can be merged into the main sections the same way as for eHoldings, Orders, Lists and Inventory.
+- `delta_refresh.py` was tested against GitHub only; the Jira and TestRail parts use the documented REST endpoints and need a run with real credentials.
 
 ## Evaluation
 
