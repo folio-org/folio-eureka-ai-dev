@@ -1,5 +1,7 @@
 # FOLIO Organizations — Business Logic Context
 
+> Built: 2026-07-21 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Built 2026-07-21 (browser-based). **Exact UI Texts confirmed against `folio-org/ui-organizations/translations/ui-organizations/en_US.json` (2026-07-21).** TestRail: suite 21 section 107 "Organizations" (+ Settings 121, Interface details 201, Consortium 31406). UI repo `ui-organizations`; storage `mod-organizations-storage`.
 
 ---
@@ -209,3 +211,35 @@ Organizations: **`Func` ~85%** / Other ~15%, median ~8 steps, `User Journey` ~15
 > N≥10 audit round (2026-07-22): 14 cases read (C613152, C656329, C663330, C700855, C688767, C825311, C434063, C423630, C423547, C590820, C730, C421981, C359169, C422163). This was the file's first pull directly from TestRail section 107 (previously GitHub-translation-only) — resolved that Known Gap. Surfaced entirely new/previously undocumented features: Version History, Number Generator for Organization Code, the Integration form's dynamic required-field matrix (File format vs Transmission method vs Integration type, independently), Privileged-donor contact search isolation, the Banking-information tenant kill switch, the Account-type delete guard, and the Add-contact/Add-donor picker's cross-page bulk-selection mechanic. Added 8 new Key Business Rules (12-19).
 
 > Random spot-check (2026-07-23): picked one fresh uncited case at random from section 107 (C466130) — found the "Date created" facet's timezone-aware midnight-boundary behavior was undocumented. Added Key Business Rule 20.
+
+
+---
+
+## Changes since 2026-07-21 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-organizations (translations/ui-organizations/en.json, HEAD v7.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-07-21; TestRail suite 21 cases created since 2026-07-21.
+
+### What changed
+- EDI integration: warning when the same account number is assigned to another integration of the same type; account numbers stay editable (UIORGS-481).
+- Version history hides metadata fields (UIORGS-482).
+
+### UI strings changed since 2026-07-21 [source — en.json, 2026-11-07]
+
+> `en.json` is the source of truth; `en_US.json` is a Lokalise copy that can lag behind. `<b>`/`<strong>` render as bold; `{x}` are placeholders.
+
+**New strings**
+
+| Key | Text |
+|---|---|
+| `integration.edi.accountNumbers.inUseWarning` | The following account numbers are also assigned to another integration of the same type: {accounts}. An account number should be assigned to only one integration. |
+
+### Jira — Done since build (organizations (UIORGS, MODORGS*) since 2026-07-21)
+
+- UIORGS-482 Story — Do not show metadata.updatedDate in "Version history" for Organization
+- UIORGS-481 Bug — Account numbers of a duplicated integration cannot be viewed/removed in edit form
+- MODORGSTOR-201 Story — Old object in EDIT audit events for Organization
+
+### TestRail — cases created since 2026-07-21: 0 (0 manual, 0 automated/Karate)
+
+- No new manual cases.

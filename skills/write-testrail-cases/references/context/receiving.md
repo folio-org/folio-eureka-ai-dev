@@ -1,5 +1,7 @@
 # FOLIO Receiving App — Business Logic Context
 
+> Built: 2026-06-17 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Generated/refreshed by the build-app-context workflow on 2026-06-17.
 > Sources:
 > - TestRail section subtree rooted at section_id=17995 (suite_id=21): sections 17995, 17996, 36735
@@ -339,3 +341,42 @@ Receiving is almost **purely `Functional` (~99.6%, 243/244)**, median ~8 steps, 
 > N≥10 audit round (2026-07-21): 10 cases read — C436495, C436793, C436794, C476838, C476880, C503243, C503244, C813585, C700856, C959222. This was the first round to surface entirely new feature areas not previously in this file: Bind pieces/Bound items, abandoned-holdings handling, Late-status timing precedence rules, full-screen batch receiving (50-at-a-time), and Number Generators for Barcode/Accession/Call number. All added above as dedicated sections plus Key Business Rules 13-17.
 >
 > ECS/Consortia enrichment round (2026-07-22, per self-assessment report priority #2): this file previously had zero ECS/Consortia content despite section 36735 ("Consortium (Receiving)") holding 104+ cases. Read 10 cases from that subtree — C471514, C471515, C471516, C471517, C473256, C473257, C473258, C473259, C511231, plus title-scan of the C468235 family — surfacing two distinct mechanics (Location-lookup Affiliation dropdown, reused from orders.md; and the separate "Active affiliation default" segmented-toggle setting). Added the ECS section and Key Business Rule 18. The remaining ~94 cases in section 36735 (piece/title-level ECS behaviors, not filter/search UI) are still unaudited — a candidate for a future round if deeper ECS piece-lifecycle coverage is wanted.
+
+
+---
+
+## Changes since 2026-06-17 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-receiving (translations/ui-receiving/en.json, HEAD v8.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-06-17; TestRail suite 21 cases created since 2026-06-17.
+
+### What changed
+- Column manager in the Receiving main list and in the Receive table (UIREC-494/492); new **Vendor** column (UIREC-499).
+- Connected Tasks/Jobs on title and piece pages; button in piece form header (UIREC-511).
+- Number generator modal shows a no-permission notice (SI-166).
+- Bugs to regress: routing list on duplicated POL (UIREC-512); ECS member-tenant export with item data (UIREC-509).
+
+### UI strings changed since 2026-06-17 [source — en.json, 2026-11-07]
+
+> `en.json` is the source of truth; `en_US.json` is a Lokalise copy that can lag behind. `<b>`/`<strong>` render as bold; `{x}` are placeholders.
+
+**New strings**
+
+| Key | Text |
+|---|---|
+| `numberGenerator.noPermission` | You do not have the necessary permissions to use number generator sequences. Please contact your system administrator. |
+
+### Jira — Done since build (receiving (UIREC) since 2026-06-17)
+
+- UIREC-512 Bug — Unable to save routing list on duplicated POL
+- UIREC-499 Story — Vendor column in Receiving main list
+- UIREC-509 Bug — [ECS] Export in Receiving (member tenant) fails when CSV includes item data
+- UIREC-492 Story — Actions button to hide/show columns in the Receive form
+- UIREC-494 Story — Hide/show columns in the main list
+
+### TestRail — cases created since 2026-06-17: 14 (4 manual, 10 automated/Karate)
+
+- C1574484 User without delete capability does not see Bulk edit action for pieces — refs UIREC-239,MODORDERS-1087
+- C1574483 Bulk edit form keeps edit button and Delete all disabled until pieces are selected — refs UIREC-239,MODORDERS-1087
+- C1574482 Bulk delete received and expected pieces from the Bulk edit form — refs UIREC-239,MODORDERS-1087
+- C1453676 .csv export in Receiving — refs UIREC-306,UIREC-341

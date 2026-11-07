@@ -1,5 +1,7 @@
 # FOLIO Course Reserves — Business Logic Context
 
+> Built: 2026-07-21 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Built 2026-07-21 (browser-based). **Exact UI Texts confirmed against `folio-org/ui-courses/translations/ui-courses/en_US.json` (2026-07-21).** TestRail: suite 21 section 1116 "Course Reserves" (subsections 1117 Courses, 1118 Reserve Items, 1119 Settings, 1125 Permissions, 1126 "Courses: Read only"). This area is legacy/lightly-maintained (many cases from 2020, unchanged since) — real cases are often thinner and less rigorous than newer areas like Fees/Fines; still apply this skill's full verification-depth rules when generating new cases, don't mirror the legacy case's shallowness.
 
 ---
@@ -184,3 +186,27 @@ Course Reserves: **`Other` ~61%** / Func ~39%, median **~3 steps** (short), `Use
 - [ ] Courses app baseline keyboard shortcuts (C350570) exist as a dedicated list (same convention as Organizations/Licenses) but the exact shortcut table itself was only referenced via an attachment image in the pulled case, not captured as text — pull again with an eye toward extracting the literal key combinations if a case specifically needs them.
 
 > N≥10 audit round (2026-07-22): 14 cases read (C421983, C9176, C9184, C357543, C9189, C343206, C350570, C825318, C605979, C9175, C9185, C9186, C9174, C9187). Resolved three of the file's four open Known Gaps (Copyright/Processing status behavior, Notes-accordion — including correcting a prior mischaracterization of C421983 as a bug when it's actually a regression guard confirming no leak, and full settings-entity parity for Course Types/Departments/Processing/Copyright Statuses). Also surfaced a known live filter bug (BF-809, Course type filter non-functional) worth flagging rather than assuming works. Added 3 new Key Business Rules (11-13).
+
+
+---
+
+## Changes since 2026-07-21 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-courses (translations/ui-courses/en.json, HEAD v7.1.1); Jira folio-org.atlassian.net Done issues resolved since 2026-07-21; TestRail suite 21 cases created since 2026-07-21.
+
+### What changed
+- No changes found since 2026-07-21.
+
+### Jira — Done since build (eureka / data-export / oai-pmh / courses / dcb / ERM (STCOR, MODUSERSKC, MODROLESKC, UIROLES, MDEXP, UIDEXP, MODOAIPMH, UICR, MODCR, MODDCB, ERM) since 2026-06-16 (first 50))
+
+- STCOR-1087 Bug — session timeout counter resets to 1 min after refresh / affiliation change; STCOR-1095 session refresh after closing original tab; STCOR-1089/1099 forgot password/username requests; STCOR-1105 "Sorry, there was an error during initialization. Please try again." on first open; STCOR-1109 dates not affected by time zone for non-admin user (Sunflower)
+- STCOR-781/782/780 Story — application unloading UI message; "update is ready" indicator; polling tenant entitlements
+- MODROLESKC-413 Story — role names: "/" character constraint; MODROLESKC-388 Bug — ECS role create in member via Consortium manager; MODUSERSKC-143 Bug — reset password works from 2nd attempt for users with no capabilities; UIROLES-175 Bug — Authorization roles UI slowness
+- MDEXP-936 Bug — download-record returns stale MARC after SRS update
+- ERM-4161 Story — on-demand GOKB package harvesting (Agreements, Sunflower CSP); ERM-4123..4126/4133 domain events for agreement lines and licenses (backend)
+- Jira projects ERM are accessible with the current token (contrary to the build-app-context note)
+
+### TestRail — cases created since 2026-07-21: 0 (0 manual, 0 automated/Karate)
+
+- No new manual cases.

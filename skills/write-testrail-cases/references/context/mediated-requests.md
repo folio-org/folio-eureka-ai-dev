@@ -1,5 +1,7 @@
 # FOLIO Mediated Requests — Business Logic Context
 
+> Built: 2026-07-21 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Built 2026-07-21 (browser-based); **corrected 2026-07-21 same day** after re-verification found real 2025 TestRail coverage that was missed on first pass. **Exact UI Texts confirmed against `folio-org/ui-requests-mediated/translations/ui-requests-mediated/en_US.json`.** TestRail: suite 21 section 32570 "Mediated requests" (subsections 57628 "oLOAN", 61629 "Mediated request notices", 74667 "Mediated request patron blocks") — contains 15+ cases created in 2025 alone (releases Sunflower=19/Trillium=20); this is NOT a thin-coverage area, it was simply not pulled when this file was first built from GitHub translations only. Business rules below now include both translation-derived and live-case-confirmed content (marked accordingly).
 
 ---
@@ -192,3 +194,36 @@ Mediated Requests: strongly **`Func` ~94%**, median ~6 steps, `User Journey` ~0%
 
 > N≥10 audit round (2026-07-22): 14 cases read (C692073, C692119, C831971, C831973, C624245, C630441, C627409, C812848, C825435, C825272, C594453, C651539, C856508, C692201). Resolved the file's last open Known Gap by pulling both the Mediated request notices (61629) and Mediated request patron blocks (74667) subsections. Surfaced substantial new previously undocumented content: Secure-patron-data masking (exact placeholder format + Actions-menu suppression + two accepted cross-tenant staleness quirks), the "congressional loan" terminology and its cross-tenant Declare-lost/Claim-returned lifecycle, the one-way cancel cascade from real Request to Mediated Request, the two-independent-gates nature of Requests vs Borrowing patron blocks, hidden proxy/sponsor UI, and the inactive-user confirm-failure cleanup guarantee. Added 5 new Key Business Rules (12-16).
 > Blind-generate/diff validation round (2026-07-22): predicted (before reading) that a $0 Set-cost policy would auto-close a congressional loan the same way it does an ordinary loan per `loans.md` — confirmed exactly against C895640, which also surfaced 2 new masking nuances (Central has zero oLOAN records; check-in row actions menu suppression). Closed the file's last real open Known Gap (congressional-loan generalization); the two remaining items are external-ticket-status re-checks, not undocumented behavior.
+
+
+---
+
+## Changes since 2026-07-21 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-requests-mediated (translations/ui-requests-mediated/en.json, HEAD v4.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-07-21; TestRail suite 21 cases created since 2026-07-21.
+
+### What changed
+- No ui-requests-mediated commits or Done issues since 2026-07-21. Notice bug for mediated requests fixed in CIRC-2639.
+
+### Jira — Done since build (circulation: check-in / check-out / circulation-settings / patron-notices / requests / mediated / circulation-log (CIRC, UICIRC, UICHKIN, UICHKOUT, UIREQ, UIREQMED, MODREQMED, UICIRCLOG, MODAUD) since 2026-07-21)
+
+- UICIRC-1351 / 1387 / 1390 Story — "Automatic renewals" section on Loan policy form and page (settings + validation)
+- UICIRC-1355 / 1372 Story — Reordering of patron notice policies (drag & drop)
+- UICIRC-1353 Story — Shortened tokens in patron notices for text messages
+- UICHKIN-515 / CIRC-2685 Story — [PoC] In-house use option in Check in (inHouseUse persisted on check-in-by-barcode)
+- UICHKIN-510 Story — Check in modals: default focus on the action button, not "X"
+- CIRC-2130 Story — Both Set cost and Actual cost fees/fines closed when item returned
+- CIRC-2705/2706/2707 Bug — America/Vancouver time zone: due date cut-off by patron expiration; releases for Sunflower/Trillium (see Vancouver incident)
+- CIRC-2664 Bug — Hold shelf expiration notice sent twice; CIRC-2679 notice not sent after aged to lost; CIRC-2639 item/title missing in email notices for ECS and mediated requests
+- CIRC-2697 Bug — [LoC] batch requests duplicated queue positions; CIRC-2538 ECS pick slips printed from wrong SP; CIRC-2629 extra "Aged to lost" action (ECS); CIRC-2673 declare lost 500
+- CIRC-2496 Bug — staff slip preview name always "Transit"
+- MODAUD-324 Bug — fee/fine actions missing from Circulation log; MODAUD-323 circ logs not appearing; MODAUD-326 preferred contact changes missing in user version history
+- (2026-06-16..07-21) UIREQ-1365 Bug — Requests app crashes opening a request with erased data; CIRC-2497 Bug — staff slip name missing in due date receipt; UICHKOUT-1012 Bug — all custom fields shown at Check out with default Other settings; UICIRC-1354 staff slips localisation; UICIRC-1316 Save button state for "Patron id(s) for checkout scanning"
+- (no other Done issues found for UIREQ / UIREQMED / MODREQMED / UICHKOUT / UICIRCLOG in this window)
+
+### TestRail — cases created since 2026-07-21: 3 (3 manual, 0 automated/Karate)
+
+- C1528161 [LoC, API] Check error handling for Secure loan renewal override scenarios that cannot be reproduced on UI — refs UIU-3537,CIRC-2632
+- C1525841 [LoC, API] Check error handling for Secure loan renewal scenarios that cannot be reproduced on UI — refs UIU-3537,CIRC-2632
+- C1434658 Mediated Requests application is available only in Secure tenant — refs BF-1522

@@ -1,5 +1,7 @@
 # FOLIO Fees/Fines — Business Logic Context
 
+> Built: 2026-07-21 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Built 2026-07-21 (browser-based). Sources: TestRail suite 21 section 88 "Fees&Fines" and subsections (Pay 91, Waive 1533, Transfer 1534, Cancel 1530, Refund 1532, Manual 90, Overdue Fines 1141, Lost item fees 1531/1312, Bursar 11060, reports 16509/16510); Jira UIU/MODFEE stories. UI lives in `folio-org/ui-users` (fees/fines are part of the patron record). **Exact UI Texts confirmed against `ui-users/translations/ui-users/en_US.json` (2026-07-21)** — including corrections to several outdated case strings (see that section).
 
 ---
@@ -51,9 +53,26 @@ Closed (balance = 0)
 ## UI structure
 
 - **Users app → patron record → "Fees/fines" accordion**: closed accordion shows a count/total badge of outstanding fees/fines; expanded shows open count + amount and a **`View all fees/fines`** link.
-- **Fees/Fines History** page: tabs `Open`, `Closed`, `All`; each row selectable via checkbox; row `Actions` (ellipsis) menu; page-level `Actions` menu.
-- **Fee/Fine Details** page: opened by clicking a history row; shows the original charge plus an action table (Action date, Action, Amount, Balance, Fee/fine owner, Source, Comments).
-- **New fee/fine** page: `Fee/fine owner` dropdown, `Fee/fine type` dropdown, amount, etc.; buttons `Charge only`, `Charge and pay`.
+- **Fees/Fines History** page (confirmed from `userAllFeesFines.js`, 2026-08-06):
+  - Page header format: `Fees/fines - {username}` (e.g. `Fees/fines - Smith, Jane`)
+  - Fees/fines list DOM id: `list-accounts-history-view-feesfines`
+  - Tabs: `Open` (id `open-accounts`), `Closed` (id `closed-accounts`), `All` (id `all-accounts`)
+  - Each row selectable via checkbox; page-level `Actions` menu; row `Actions` (ellipsis) menu
+  - `Charge` button id: `open-closed-all-charge-button`; `Waive all` button id: `open-closed-all-wave-button`
+  - **Row ellipsis — "Cancel as error" action label is `Error`** (not "Cancel as error"). The same label `Error` is used on the Fee/Fine Details page action button. Do not assert the string "Cancel as error" in the row menu or detail page button — it does not appear in the source.
+- **Fee/Fine Details** page (confirmed from `feeFineDetails.js`, 2026-08-06):
+  - Pane id: `pane-account-action-history`; pane title includes `Fee/fine details`
+  - KV fields visible at top: `Billed date`, `Billed amount`, `Latest payment status`, `Remaining amount`
+  - Action buttons (their DOM ids): Pay (`payAccountActionsHistory`), Waive (`waiveAccountActionsHistory`), Refund (`refundAccountActionsHistory`), Transfer (`transferAccountActionsHistory`), Error / Cancel-as-error (`errorAccountActionsHistory`), Export (`exportAccountActionsHistoryReport`)
+  - Action table columns: `Action date`, `Action`, `Amount`, `Balance`, `Fee/fine owner`, `Source`, `Comments`
+  - Staff info KV value format: `STAFF : {info}` (with spaces around colon)
+- **New fee/fine modal** (confirmed from `newFeeFine.js`, 2026-08-06):
+  - Modal id: `new-modal`
+  - `Fee/fine owner` select id: `ownerId`; `Fee/fine type` select id: `feeFineType`
+  - Amount text field id: `amount`; Comments textarea id: `comments`; Notify patron checkbox name: `notify`
+  - Item barcode field placeholder: `Scan or enter item barcode`
+  - Buttons: `Cancel` (id `cancelCharge`), `Charge and pay` (id `chargeAndPay`), `Charge only` (id `chargeOnly`)
+  - Access denied message when no service point is selected: `You must select a service point`
 
 ---
 
@@ -66,6 +85,9 @@ Closed (balance = 0)
 `The {feeFineType} fee/fine of {amount} has been successfully {paymentStatus} for {name}.`
 where `{paymentStatus}` ∈ `paid` / `waived` / `refunded` / `transferred` (key `accounts.actions.calloutMessage`).
 
+**Cancel as error** uses a different callout pattern (confirmed from `cancelFeeFine.js`, 2026-08-06):
+`{feeFineType} has been successfully cancelled as error for {name}` — note: no leading "The … fee/fine of {amount}" segment; the pattern includes the literal phrase `cancelled as error for`.
+
 ### Action modals [confirmed]
 
 | Action | Modal title | Amount field | Method field | Summary verb (full / partial) |
@@ -74,7 +96,7 @@ where `{paymentStatus}` ∈ `paid` / `waived` / `refunded` / `transferred` (key 
 | Waive | `Waive fee/fine` | `Waive amount` | `Waive reason` | `Waiving` / `Partially waive` |
 | Transfer | `Transfer fee/fine` | `Transfer amount` | `Transfer Account` | `Transferring` / `Partially transfer` |
 | Refund | `Refund fee/fine` | `Refund amount` | `Refund reason` | `Refunding` / `Partially refunding` |
-| Cancel as error | `Confirm fee/fine cancellation` (`Back` / `Confirm`); body `<b>{amount}</b> {feeFineType} fee/fine will be <b>cancelled</b>` | — | — | — |
+| Cancel as error | `Confirm fee/fine cancellation` (`Back` / `Confirm`); body `<b>{amount}</b> {feeFineType} fee/fine will be <b>cancelled</b>`; modal id `error-modal`; `Confirm` button is **disabled until a Comment is entered** (validation: `Comment must be provided`); triggered via row ellipsis / page Actions button labeled **`Error`** | — | — | — |
 
 Pay modal also has: `Fee/fine owner desk` (`Select desk`), `Transaction information` (`Enter check #, etc.`), `Staff information`, `Notify patron`, `Cancel`. Page/menu action labels: `Pay fees/fines`, `Waive fees/fines`, `Transfer fees/fines`.
 
@@ -236,8 +258,46 @@ Fees&Fines has the **shortest cases in the project — median ~2 steps** (many a
 - [x] Action success-toast + modal/error/settings strings — **confirmed** against `ui-users/en_US.json` (2026-07-21); corrected the outdated case strings.
 - [x] Confirm-Pay/Refund step exact heading — **confirmed**: `Confirm fee/fine payment` / `Confirm fee/fine refund` (Waive/Transfer equivalents inferred by naming convention, not independently re-verified).
 - [x] Automatic lost-item-fee refund/adjustment rules on return/renew of aged-to-lost/declared-lost items — **confirmed** with exact action-history strings and the paired Credit+Refund transaction mechanic; see new "Lost Item Fee Refund Mechanics" section above.
+- [x] UI structure IDs and KV field names — **confirmed** from `userAllFeesFines.js`, `feeFineDetails.js`, `cancelFeeFine.js`, `newFeeFine.js` (2026-08-06): list/pane IDs, tab button IDs, action button IDs, Fee/Fine Details KV fields, cancel-as-error callout pattern, new-fee/fine modal field IDs.
+- [x] Row ellipsis action label for "Cancel as error" — **confirmed `Error`** (not "Cancel as error") from `userAllFeesFines.js` (2026-08-06).
 - [ ] The Owners / Transfer accounts / Waive reasons / Refund reasons / Comment-required settings **column** labels are still not individually confirmed — a few settings sub-pages weren't in the grep sample; verify in env or a targeted ui-users pass.
 - [ ] Capability-set names above are inferred from precondition prose — verify exact Eureka capability strings in env.
 - [ ] Waive/Transfer's second-confirm modal titles (`Confirm fee/fine waiver` / `Confirm fee/fine transfer`) are inferred by pattern from the confirmed Pay/Refund titles, not independently pulled from a case this round.
 
 > N≥10 audit round (2026-07-22): 14 cases read (C11031, C11032, C15201, C15198, C196743, C356793, C17157, C343311, C343314, C343324, C343207, C400625, C458, C6643). Resolved three of four prior Known Gaps: the second "Confirm" modal step, the full lost-item-fee refund/reversal mechanics (Declared lost + Aged to lost, both via return and renew), and the Cash Drawer Reconciliation / Financial Transactions Detail report validation strings and title format. Surfaced two previously undocumented rules: Claimed-returned loans are excluded from aged-to-lost entirely, and recalled items age to lost on a separate configurable interval. Added 5 new Key Business Rules (11-15).
+
+
+---
+
+## Changes since 2026-07-21 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-users (translations/ui-users/en.json, HEAD v12.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-07-21; TestRail suite 21 cases created since 2026-07-21.
+
+### What changed
+- DCB service point as fee/fine owner produced repeated bills (MODFEE-450).
+- Set cost and Actual cost fees/fines both close on return (CIRC-2130).
+- Fee/fine actions missing from Circulation log fixed (MODAUD-324).
+
+### Jira — Done since build (users / fees-fines / loans (UIU, MODUSERS, MODFEE, MODPATRON) since 2026-06-17 (users) / 2026-07-21 (fees-fines, loans))
+
+- UIU-3614 Story — New permission: Restrict access to patron information
+- UIU-3557/3558 Story — User role selection: "Selected / Unselected" filter, selection separated from assignment status; UIU-3633 bug typo "Role assigment status"
+- UIU-3550 Story — Roles hyperlinked in "User roles" accordion
+- UIU-3388/3385/3566 Story — Version history for Users (+settings), Actions/Tags not disabled when open; UIU-3630 bug crash
+- UIU-3553 Story — Preferred contact dropdown includes Text messages
+- UIU-3610 Story — Column header "Active" → "Status"
+- UIU-3591 Story — User buttons on edit/create pages updated
+- UIU-3485 Story — Pop-up note modal: "do not show again for the session" (Users + Check out)
+- UIU-3625 Bug — "Renew Confirmation" popup missing after renewing multiple items
+- UIU-3624 Bug — search >1000 results with custom field; UIU-3612 stale open loans; UIU-3375 proxy/sponsor edit; UIU-3571 "Unknown user" in Departments
+- MODFEE-450 Bug — DCB service point as fine owner → repeated bills
+- MODUSERS-594 Bug — [ECS] patron group sharing error
+- (2026-06-17..07-21) UIU-3604 Bug — new user not created on Save & close; UIU-1140 Bug — "Loans: Renew loans" permission not working; UIU-3549 Bug — Refund disabled on Fee/Fine History after fresh login; UIU-3529/3517 item status / payment status not localized; UIU-3597 custom field label wrap
+
+### TestRail — cases created since 2026-07-21: 4 (4 manual, 0 automated/Karate)
+
+- C1504471 Set cost lost item fee is closed on check-in when Lost item fee policy changed to Actual cost after item aged to lost — refs CIRC-2130
+- C1464248 Set cost lost item fee is closed on check-in — refs CIRC-2130
+- C1464247 Actual cost lost item fee is closed on check-in when Lost item fee policy changed to Set cost after item aged to lost — refs CIRC-2130
+- C1464246 Actual cost lost item fee is closed on check-in — refs CIRC-2130

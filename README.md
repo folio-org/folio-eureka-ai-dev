@@ -121,6 +121,8 @@ The `write-testrail-cases` skill generates structured manual test cases from a J
 
 The skill always presents a **Scenario Analysis** for your review before writing anything, and waits for your confirmation before posting.
 
+Before generating, the skill samples the 10 most recent cases of the target TestRail section and follows that section's conventions (preconditions format, permissions block, labels, title prefixes). Context files carry a `Built` / `Delta-refreshed` header; files older than 90 days trigger lightweight enrichment from Jira and GitHub (`en.json`, including the story's PR branch for stories not yet merged). Covered areas are listed in `skills/write-testrail-cases/references/area-map.md`.
+
 ### Refreshing context files
 
 If context for your app area is missing or outdated, run `build-app-context`:

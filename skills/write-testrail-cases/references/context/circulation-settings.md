@@ -1,5 +1,7 @@
 # FOLIO Circulation Settings — Business Logic Context
 
+> Built: 2026-07-21 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Built 2026-07-21 (browser-based). **Exact UI Texts confirmed against `folio-org/ui-circulation/translations/ui-circulation/en_US.json` (2026-07-21).** TestRail: suite 21 section 102 "Circulation" (+ Loan Policies 103, Rules 104, Floating collections 52794) and Permissions → Circulation 169. This file covers **Settings > Circulation**; the runtime circulation apps have their own files (check-in.md, check-out.md, loans.md, requests.md, fees-fines.md). Patron notice *templates and policies* are split into `patron-notices.md`.
 
 ---
@@ -143,3 +145,61 @@ Circulation Settings: **`Other` ~69%** / Func ~31%, median **~3 steps** (short),
 > Blind-generate/diff validation round (2026-07-22): predicted (before reading) that an open request would override floating and route the item to the pickup SP without relocating it — confirmed exactly against C605982. Closed the file's last open Known Gap.
 
 > Random spot-check (2026-07-23): picked one fresh uncited case at random from section 102/103/104's 42-case tree (C831956) — confirmed the previously-inferred "beginning of next open hours" due-date direction AND found the undocumented `Opening time offset` field, which adds to that calculated due date.
+
+
+---
+
+## Changes since 2026-07-21 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-circulation (translations/ui-circulation/en.json, HEAD v12.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-07-21; TestRail suite 21 cases created since 2026-07-21.
+
+### What changed
+- Loan policy: **Automatic renewals** section — "Attempt first renewal" (On due date / N day(s) before due date), "Attempt additional retries for N day(s)"; only for intervals ≥ 1 day; validation 1–100 / 0–100 or blank (UICIRC-1351/1387/1390). TestRail already has cases C1554460–C1554463.
+- America/Vancouver time zone fixes for due dates (CIRC-2705..2707) — see fixed due date schedule cases C1594647–C1594650.
+- Staff slip preview name bug fixed (CIRC-2496).
+
+### UI strings changed since 2026-07-21 [source — en.json, 2026-11-07]
+
+> `en.json` is the source of truth; `en_US.json` is a Lokalise copy that can lag behind. `<b>`/`<strong>` render as bold; `{x}` are placeholders.
+
+**New strings**
+
+| Key | Text |
+|---|---|
+| `settings.loanPolicy.automaticRenewals` | Automatic renewals |
+| `settings.loanPolicy.automaticRenewals.infoPopover` | Automatic renewals are available for loans with intervals of one day or longer. |
+| `settings.loanPolicy.attemptFirstRenewal` | Attempt first renewal |
+| `settings.loanPolicy.attemptFirstRenewal.onDueDate` | On due date |
+| `settings.loanPolicy.attemptFirstRenewal.daysBefore` | day(s) before due date |
+| `settings.loanPolicy.attemptAdditionalRetries` | Attempt additional retries for |
+| `settings.loanPolicy.days` | day(s) |
+| `settings.validate.intervalBetween1And100` | The value must be integer and must be between 1 and 100 |
+| `settings.validate.intervalBetween0And100` | The value must be integer and must be between 0 and 100 or blank |
+
+### Jira — Done since build (circulation: check-in / check-out / circulation-settings / patron-notices / requests / mediated / circulation-log (CIRC, UICIRC, UICHKIN, UICHKOUT, UIREQ, UIREQMED, MODREQMED, UICIRCLOG, MODAUD) since 2026-07-21)
+
+- UICIRC-1351 / 1387 / 1390 Story — "Automatic renewals" section on Loan policy form and page (settings + validation)
+- UICIRC-1355 / 1372 Story — Reordering of patron notice policies (drag & drop)
+- UICIRC-1353 Story — Shortened tokens in patron notices for text messages
+- UICHKIN-515 / CIRC-2685 Story — [PoC] In-house use option in Check in (inHouseUse persisted on check-in-by-barcode)
+- UICHKIN-510 Story — Check in modals: default focus on the action button, not "X"
+- CIRC-2130 Story — Both Set cost and Actual cost fees/fines closed when item returned
+- CIRC-2705/2706/2707 Bug — America/Vancouver time zone: due date cut-off by patron expiration; releases for Sunflower/Trillium (see Vancouver incident)
+- CIRC-2664 Bug — Hold shelf expiration notice sent twice; CIRC-2679 notice not sent after aged to lost; CIRC-2639 item/title missing in email notices for ECS and mediated requests
+- CIRC-2697 Bug — [LoC] batch requests duplicated queue positions; CIRC-2538 ECS pick slips printed from wrong SP; CIRC-2629 extra "Aged to lost" action (ECS); CIRC-2673 declare lost 500
+- CIRC-2496 Bug — staff slip preview name always "Transit"
+- MODAUD-324 Bug — fee/fine actions missing from Circulation log; MODAUD-323 circ logs not appearing; MODAUD-326 preferred contact changes missing in user version history
+- (2026-06-16..07-21) UIREQ-1365 Bug — Requests app crashes opening a request with erased data; CIRC-2497 Bug — staff slip name missing in due date receipt; UICHKOUT-1012 Bug — all custom fields shown at Check out with default Other settings; UICIRC-1354 staff slips localisation; UICIRC-1316 Save button state for "Patron id(s) for checkout scanning"
+- (no other Done issues found for UIREQ / UIREQMED / MODREQMED / UICHKOUT / UICIRCLOG in this window)
+
+### TestRail — cases created since 2026-07-21: 8 (8 manual, 0 automated/Karate)
+
+- C1594650 Fixed due date schedule created before moment-timezone update keeps old offset until re-saved in America/Vancouver time zone — refs UICIRC-1391,FOLIO-4580
+- C1594649 Fixed due date after 2026-11-01 still follows standard time in America/Los_Angeles time zone — refs UICIRC-1391,FOLIO-4580
+- C1594648 Change due date to a date after 2026-11-01 keeps entered time in America/Vancouver time zone — refs UICIRC-1391,FOLIO-4580
+- C1594647 Fixed due date after 2026-11-01 is applied without one-hour shift in America/Vancouver time zone — refs UICIRC-1391,FOLIO-4580
+- C1554463 Settings - "Automatic renewals" fields validation during loan policy editing — refs UICIRC-1387,UICIRC-1390
+- C1554462 Settings - "Automatic renewals" fields validation during loan policy creation — refs UICIRC-1387,UICIRC-1390
+- C1554461 Settings - Edit loan policy and enable "Automatic renewals" option — refs UICIRC-1387,UICIRC-1390,UICIRC-1399
+- C1554460 Settings - Create loan policy with "Automatic renewals" enabled — refs UICIRC-1387,UICIRC-1390,UICIRC-1399

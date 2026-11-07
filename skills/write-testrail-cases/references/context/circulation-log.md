@@ -1,5 +1,7 @@
 # FOLIO Circulation Log — Business Logic Context
 
+> Built: 2026-07-21 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Built 2026-07-21 (browser-based). **Exact UI Texts confirmed against `folio-org/ui-circulation-log/translations/ui-circulation-log/en_US.json` (2026-07-21).** TestRail: suite 21 section 1539 "Circulation log" (+ subsection 25716 "Additional Loan Comments"). This is a small, single-purpose read-only audit app: it has no create/edit of its own — every row is produced by an action in another app (Check in, Check out, Requests, Loans, Fees/Fines, Users) and viewed/filtered here. Cases that assert "a notice/action was logged" should read the destination app's context file (check-in.md, check-out.md, requests.md, loans.md, fees-fines.md) for the triggering action, and this file for the exact log row shape and filter behavior.
 
 ---
@@ -152,3 +154,38 @@ Circulation Log: **`Other` ~82%** / Func ~18%, median **~5 steps**, `User Journe
 > N≥10 audit round (2026-07-22): 14 cases read (C17092, C17093, C353955, C825329, C365625, C449382, C449383, C407706, C1282808, C958914, C1259771, C360554, C770448, C368490). Resolved both of the file's open Known Gaps (Notice-row navigation, CSV export record-count/isolation behavior). Surfaced additional previously undocumented rules: the View-permission tier's complete removal (not just disabling) of the Action column and CSV export option, anonymization's forward-looking effect on future log events for the same item, the Source column always reflecting the acting user rather than the original clerk, the Shared-cancellation-reason Description format, the barcode-less-user "-" placeholder, and tenant-timezone-aware Description timestamps matching between UI and CSV. Added 7 new Key Business Rules (10-16).
 >
 > Random spot-check (2026-07-22): picked one fresh uncited case at random (C17047) to sanity-check this file's "Match" verdict from the earlier self-assessment. Found a real, if narrow, mistake: the Circ-action table listed `Staff information only added` only under `Loan` — the real case shows it also independently exists under `Fee/Fine` (filtered via the Fee/fine accordion's own checkbox, populated by a fee/fine's own comments feature, separate from a loan's). Corrected the table rather than treating this as a new file miss.
+
+
+---
+
+## Changes since 2026-07-21 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-circulation-log (translations/ui-circulation-log/en.json, HEAD v6.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-07-21; TestRail suite 21 cases created since 2026-07-21.
+
+### What changed
+- Fee/fine actions were missing from the Circulation log and circ logs did not appear (MODAUD-324, MODAUD-323) — regression candidates.
+
+### Jira — Done since build (circulation: check-in / check-out / circulation-settings / patron-notices / requests / mediated / circulation-log (CIRC, UICIRC, UICHKIN, UICHKOUT, UIREQ, UIREQMED, MODREQMED, UICIRCLOG, MODAUD) since 2026-07-21)
+
+- UICIRC-1351 / 1387 / 1390 Story — "Automatic renewals" section on Loan policy form and page (settings + validation)
+- UICIRC-1355 / 1372 Story — Reordering of patron notice policies (drag & drop)
+- UICIRC-1353 Story — Shortened tokens in patron notices for text messages
+- UICHKIN-515 / CIRC-2685 Story — [PoC] In-house use option in Check in (inHouseUse persisted on check-in-by-barcode)
+- UICHKIN-510 Story — Check in modals: default focus on the action button, not "X"
+- CIRC-2130 Story — Both Set cost and Actual cost fees/fines closed when item returned
+- CIRC-2705/2706/2707 Bug — America/Vancouver time zone: due date cut-off by patron expiration; releases for Sunflower/Trillium (see Vancouver incident)
+- CIRC-2664 Bug — Hold shelf expiration notice sent twice; CIRC-2679 notice not sent after aged to lost; CIRC-2639 item/title missing in email notices for ECS and mediated requests
+- CIRC-2697 Bug — [LoC] batch requests duplicated queue positions; CIRC-2538 ECS pick slips printed from wrong SP; CIRC-2629 extra "Aged to lost" action (ECS); CIRC-2673 declare lost 500
+- CIRC-2496 Bug — staff slip preview name always "Transit"
+- MODAUD-324 Bug — fee/fine actions missing from Circulation log; MODAUD-323 circ logs not appearing; MODAUD-326 preferred contact changes missing in user version history
+- (2026-06-16..07-21) UIREQ-1365 Bug — Requests app crashes opening a request with erased data; CIRC-2497 Bug — staff slip name missing in due date receipt; UICHKOUT-1012 Bug — all custom fields shown at Check out with default Other settings; UICIRC-1354 staff slips localisation; UICIRC-1316 Save button state for "Patron id(s) for checkout scanning"
+- (no other Done issues found for UIREQ / UIREQMED / MODREQMED / UICHKOUT / UICIRCLOG in this window)
+
+### TestRail — cases created since 2026-07-21: 5 (5 manual, 0 automated/Karate)
+
+- C1554431 [LoC] "Description" field displays time according to current time zone in Circulation log for Renewed ECS and Secure loans — refs CIRC-2295,MCBFF-218
+- C1554383 [LoC] "Description" field displays time according to current time zone in Circulation log for Recall requested — refs CIRC-2295,MCBFF-218
+- C1554374 [LoC] "Description" field displays time according to current time zone in Circulation log for closed ecs and secure loans — refs CIRC-2295
+- C1554373 [LoC] "Description" field displays time according to current time zone in Circulation log for Changed due date — refs CIRC-2295
+- C1543989 [LoC] Verify that patron information is not stored in Circulation log after ECS loans anonymization — refs CIRC-2045,MCBFF-217

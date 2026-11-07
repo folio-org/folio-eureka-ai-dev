@@ -1,5 +1,7 @@
 # FOLIO Orders App — Business Logic Context
 
+> Built: 2026-06-17 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Generated/refreshed by the `build-app-context` skill on 2026-06-17.
 > Sources: TestRail section subtree rooted at 105 (Orders): sections 105, 106, 122, 123, 11057, 17146, 23016, 29148, 39358
 >          TestRail coverage: 708 cases total; 326 in focus releases (Umbrellaleaf, Trillium, Sunflower, Ramsons)
@@ -243,8 +245,9 @@ Receipt status, Payment status, Acquisition unit, Acquisition method, Location, 
 | Event | Toast text |
 |---|---|
 | POL created | `The purchase order line was successfully created` |
-| POL updated | `The purchase order line <POL number> was successfully updated` |
-| POL deleted | `The purchase order line was successfully deleted` |
+| POL updated | `The purchase order line {polNumber} was successfully updated` [from source — `orderStates.js`, regex `(?:\d+\-\d+)`] |
+| POL deleted | `The purchase order line {polNumber} was successfully deleted` [from source — `orderStates.js`; POL number IS included] |
+| POL cancelled | `The purchase order line {polNumber} was successfully cancelled` [from source — `orderStates.js`, 2026-08-06] |
 
 ### Toast messages — related flows seen from Orders
 | Event | Toast text |
@@ -252,6 +255,16 @@ Receipt status, Payment status, Acquisition unit, Acquisition method, Location, 
 | Export started (CSV) | `Export has been started successfully` |
 | Piece saved / deleted / received (Receiving) | `The piece was successfully saved` / `…deleted` / `…received` |
 | Invoice approved / paid / cancelled (Invoices) | `Invoice has been approved successfully` / `Invoice has been paid successfully` / `Invoice has been cancelled successfully` |
+| Order instance connection updated | `Order instance connection has been successfully updated` [from source — `orderStates.js`, 2026-08-06] |
+
+### Error / Blocking callouts (from source — `orders.js`, `orderStates.js`, 2026-08-06)
+| Condition | Message |
+|---|---|
+| Delete blocked (order linked to invoice) | `This order or order line is linked to Invoice(s) and can not be deleted` |
+| Open failed — insufficient funds in budget | `One or more fund distributions on this order can not be encumbered, because there is not enough money in [{fundCode}].` |
+| Open failed — fund invalid for POL location | `Unable to open PO. One or more funds for POL number {polNumber} are not valid with the selected location(s)` |
+| Exchange rate must be positive | `Amount must be a positive number` |
+| At least one location required on POL | `At least one location must be entered` |
 
 ### Modal titles
 | Modal | Trigger |
@@ -270,22 +283,47 @@ Receipt status, Payment status, Acquisition unit, Acquisition method, Location, 
 | `Add donors` | Donor information accordion |
 | `Update Expense Class` | Fund distribution expense class change |
 | `Fiscal year rollover` | Finance rollover (cross-app) |
+| POL lines limit modal | Triggered when adding a POL beyond the PO line limit (id `data-test-lines-limit-modal`); buttons: `Ok` (dismiss) and `Create new purchase order` [from source — `orders.js`, 2026-08-06] |
+| `Different account numbers` modal | When POLs on the order have different account numbers — warns of unique count [from source — `orders.js`, 2026-08-06] |
 
 ---
 
 ## UI Structure Inventory (panes and accordions)
 
-### Panes
-- `Orders` (search results) and `Order lines` (POL search results)
-- `Search & filter` — left pane on both search modes
-- `Purchase order - <PO number>` — PO detail pane
+### Panes (DOM IDs confirmed from source — `orders.js`, `orderDetails.js`, 2026-08-06)
+- `Orders` (search results pane id `orders-results-pane`) and `Order lines` (search results pane id `order-line-list`)
+- `Search & filter` (filter pane id `orders-filters-pane`) — left pane on both search modes
+- `Purchase order - <PO number>` — PO detail pane (pane id `order-details`)
 - `PO Line details - <POL number>` — POL detail pane
 - `Encumbrance` — Finance transaction pane (opened from Current encumbrance link)
 - `Transactions` — budget transactions list pane (Finance)
-- `Version history` — change history pane on PO/POL (clock icon)
+- `Version history` — change history pane on PO/POL (clock icon; pane id `versions-history-pane-order` [from source — `orders.js`, 2026-08-06])
+
+### PO detail pane — section IDs (confirmed from `orderDetails.js`, 2026-08-06)
+| Section | DOM ID |
+|---|---|
+| Purchase order | `purchaseOrder` |
+| Ongoing order | `ongoing` |
+| PO summary | `POSummary` |
+| PO lines listing | `POListing` |
+| Export details | `exportDetails` |
+| Related invoices | `relatedInvoices` |
+
+> While the Version history pane is open, the `POListing` and `relatedInvoices` sections are hidden from the PO detail pane (they reappear when Version history is closed).
+
+### PO detail pane — table columns (confirmed from `orderDetails.js`, 2026-08-06)
+
+**Related invoices** table columns: `Invoice #`, `Fiscal year`, `Invoice date`, `Vendor code`, `Vendor invoice #`, `Status`, `Invoice amount`
+
+**PO lines** list columns: `POL number`, `Title or package name`
+
+### Search results count format (confirmed from `orders.js`, 2026-08-06)
+`{n} records found` (plural) / `1 record found` (singular); rendered dynamically.
 
 ### PO detail pane accordions
 `PO summary`, `PO lines`, `Ongoing order information` (Ongoing orders only), `Acquisition`, `Vendor`, `Related invoices`, `Users`
+
+> **`Ongoing order information` section KV quirk (confirmed from `orders.js`, 2026-08-06):** When `Review date` has no value, it renders as `No value set-` (with trailing hyphen, not a blank field). Assert exactly this string — not an empty field — when verifying unset review date in the `ongoing` section.
 
 ### POL detail pane accordions
 `Item details`, `PO line details` / `POL details`, `Vendor`, `Cost details`, `Fund distribution`, `Location`, `Physical resource details` / `E-resources details`, `Donor information`, `Routing lists`, `Related invoice lines`, `Purchase order line` (in version history)
@@ -449,3 +487,125 @@ A POL-level feature for tracking known future payments across multiple fiscal ye
 > ECS/Consortia enrichment round (2026-07-22, per self-assessment report priority #2): this file previously had zero ECS/Consortia content — the systemic gap flagged in the self-assessment. Added the "Cross-Tenant Location Lookup" section and Key Business Rule 23 from 9 real cases (C468189, C471514, C471515, C471516, C471517, C473256, C473257, C473258, C473259). This is the canonical write-up; receiving.md and invoices.md cross-reference it rather than duplicating the full mechanic.
 >
 > Version history + further Consortia round (2026-07-22, per self-assessment report priority #5): the old Version history entry was a single unsourced sentence. Read 8 cases from the same section-105 subtree — C369046, C369047, C375995, C410833, C916261, C927735, C476746, C423660 — and rewrote it as a full section with the three-way card-labeling scheme (matching the pattern already documented in marc-bib-quickmarc.md), the no-op-save/lifecycle-transition rules, the >12-fields Show all/less threshold, and the BE-only-field filtering rule. Also read 2 more cases from the 107-case "Consortium (Orders)" subtree (C468203 plus a supporting read of C422252) and added the "user without matching affiliation can't Open/Save a POL" gate with its exact error toast — a different mechanic from the Location-lookup dropdown already documented, easy to conflate. Added Key Business Rules 24-26. ~85 of the 107 Consortium (Orders) cases remain unread (mostly template-creation and item-status-propagation variants); lower priority since the core mechanics are now covered.
+
+
+---
+
+## Changes since 2026-06-17 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-orders (translations/ui-orders/en.json, HEAD v9.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-06-17; TestRail suite 21 cases created since 2026-06-17.
+
+### What changed
+- PO line: new **Payment terms** accordion (UIOR-1530/1528, MODORDERS-1428). Enabled only when **Multi-year prepayment** is selected in Ongoing order information; fields Starting fiscal year, Prepayment term, Total price, per-FY fund distribution cards; at least 2 fiscal years required, all FYs for the term must already exist. Also in order templates (Payment terms accordion) and Version history.
+- Order CSV export includes prepayment information (UIOR-1535).
+- Acquisition methods can be marked **Deprecated** in Settings; opening an order with a deprecated method shows a warning modal but can proceed (UIOR-1157, MODORDERS-1465).
+- Settings > Orders > **Order email templates** (create, edit, preview; Handlebars tokens) (UIOR-1492/1493/1495).
+- Budget-not-found errors now name the action: cancel / close / re-encumber / unopen, with fund codes and FY code (UIOR-1568, UIOR-1547).
+- Duplicate / Reopen no longer copy closure reason and note (UIOR-1567). Version history hides metadata fields (UIOR-1585). Connected Tasks/Jobs pane on PO and POL views (UIOR-1578).
+- Regression risks from recent bugs: invoice cancel → order reopened but encumbrance not recreated (MODORDERS-1456); Create inventory overwritten when Order format chosen after Bindery active (UIOR-1582); POL hotlinks to holdings/items (MODORDERS-1473).
+
+### UI strings changed since 2026-06-17 [source — en.json, 2026-11-07]
+
+> `en.json` is the source of truth; `en_US.json` is a Lokalise copy that can lag behind. `<b>`/`<strong>` render as bold; `{x}` are placeholders.
+
+**New strings**
+
+| Key | Text |
+|---|---|
+| `openOrderModal.deprecatedAcquisitionMethods` | {count, plural, one {The acquisition method {methods} has} other {The acquisition methods {methods} have}} been set to deprecated. You can proceed without changing {count, plural, one {it} other {them}}, or close this dialog to change {count, plural, one {it} other {them}} before opening the order. |
+| `errors.budgetNotFoundForFiscalYear.cancel` | To cancel the order, the related fund(s) <b>{fundCodes}</b> must have an active budget for fiscal year <b>{fiscalYearCode}</b>. |
+| `errors.budgetNotFoundForFiscalYear.close` | To close the order, the related fund(s) <b>{fundCodes}</b> must have an active budget for fiscal year <b>{fiscalYearCode}</b>. |
+| `errors.budgetNotFoundForFiscalYear.re-encumber` | To update encumbrances, the related fund(s) <b>{fundCodes}</b> must have an active budget for fiscal year <b>{fiscalYearCode}</b>. |
+| `errors.budgetNotFoundForFiscalYear.unopen` | To unopen the order, the related fund(s) <b>{fundCodes}</b> must have an active budget for fiscal year <b>{fiscalYearCode}</b>. |
+| `line.accordion.paymentTerms` | Payment terms |
+| `line.accordion.paymentTerms.infoPopover` | To enable the fields in the "Payment terms" accordion, select "Multi-year payment" in the "Ongoing order information" accordion |
+| `poLine.paymentTerms.totalPrice` | Total price |
+| `poLine.paymentTerms.prepaymentTerm` | Prepayment term |
+| `poLine.paymentTerms.validation.notEnoughFYs` | Please ensure all fiscal years have been created for the duration of the prepayment term |
+| `poLine.paymentTerms.startingFY` | Starting fiscal year |
+| `poLine.paymentTerms.startingFY.infoPopover` | Fiscal years must have been created for each year of prepayment. |
+| `poLine.paymentTerms.FYDistributions.action.add` | Add fiscal year |
+| `poLine.paymentTerms.FYDistributions.action.remove` | Remove fiscal year |
+| `poLine.paymentTerms.FYDistributions.card.label` | <b>Fiscal year {sequenceNumber} ({code})</b> |
+| `poLine.paymentTerms.FYDistributions.validation.required` | At least 2 fiscal years must be specified for multi-year prepayment |
+| `poLine.paymentTerms.FYDistributions.validation.noMoreFYs` | No more fiscal years available to add. |
+| `poLine.paymentTerms.fetchFYsError` | Unable to load fiscal years. Please try again. |
+| `poLine.multiYearPayment` | Multi-year prepayment |
+| `poLine.multiYearPayment.infoPopover` | <p>Select <b>Multi-year prepayment</b> if paying for orders over multiple fiscal years.</p><p>When selected, the fields for <b>Prepayment term</b> and <b>Starting fiscal year</b> will become enabled. The fields within the <b>Payment terms</b> accordion will also become enabled.</p> |
+| `poLine.versionHistory.paymentTerms.fiscalYearDistributions` | Payment term fund distribution |
+| `poLine.versionHistory.paymentTerms.fiscalYearDistributions.fiscalYear` | Payment term fiscal year |
+| `poLine.versionHistory.paymentTerms.fiscalYearDistributions.fund` | Payment term fund |
+| `poLine.versionHistory.paymentTerms.fiscalYearDistributions.expenseClass` | Payment term expense class |
+| `poLine.versionHistory.paymentTerms.fiscalYearDistributions.distributionType` | Payment term type |
+| `poLine.versionHistory.paymentTerms.fiscalYearDistributions.value` | Payment term value |
+| `settings.emailTemplates.label` | Order email templates |
+| `settings.emailTemplates.entryLabel` | Order email template |
+| `settings.emailTemplates.new` | New email template |
+| `settings.emailTemplates.generalInformation` | General information |
+| `settings.emailTemplates.name` | Template name |
+| `settings.emailTemplates.description` | Description |
+| `settings.emailTemplates.active` | Active |
+| `settings.emailTemplates.active.yes` | Yes |
+| `settings.emailTemplates.active.no` | No |
+| `settings.emailTemplates.templateContent` | Template content |
+| `settings.emailTemplates.subject` | Email subject |
+| `settings.emailTemplates.body` | Email body |
+| `settings.emailTemplates.editAsHtml` | Edit as HTML |
+| `settings.emailTemplates.preview` | Preview |
+| `settings.emailTemplates.previewHeader` | Preview of template: {name} |
+| `settings.emailTemplates.tokens.general` | General |
+| `settings.emailTemplates.tokens.organization` | Organization |
+| `settings.emailTemplates.tokens.order` | Order |
+| `settings.emailTemplates.tokens.multipleOrders` | Multiple orders |
+| `settings.emailTemplates.tokens.orderLines` | Order lines |
+| `settings.emailTemplates.tokens.multipleOrderLines` | Multiple order lines |
+| `settings.emailTemplates.tokens.contributors` | Contributors |
+| `settings.emailTemplates.tokens.multipleContributors` | Multiple contributors |
+| `settings.emailTemplates.tokens.productIds` | Product IDs |
+| `settings.emailTemplates.tokens.multipleProductIds` | Multiple product IDs |
+| `settings.emailTemplates.tokens.funds` | Funds |
+| `settings.emailTemplates.tokens.multipleFunds` | Multiple funds |
+| `settings.emailTemplates.tokens.help.title` | Tips |
+| `settings.emailTemplates.tokens.help.handlebars` | This editor uses Handlebars. The {documentationLink} lists all tokens and an example template. |
+| `settings.emailTemplates.tokens.help.documentationLink` | documentation |
+| `settings.emailTemplates.tokens.help.loops` | Use the "Multiple …" options to repeat fields. Nested loops (order lines, contributors, product IDs, funds) must sit inside their parent loop. |
+| `settings.emailTemplates.tokens.help.optional` | To skip empty fields, wrap the line in section tags: {pattern}. |
+| `settings.emailTemplates.tokens.help.customFields` | Custom fields are library-specific and depend on the field type: single-value fields use {single}, multi-value fields loop over {multi}. |
+| `settings.emailTemplates.validation.nameRequired` | Template name is required |
+| `settings.emailTemplates.validation.subjectRequired` | Email subject is required |
+| `settings.emailTemplates.validation.bodyRequired` | Email body is required |
+| `settings.orderTemplates.accordion.polPaymentTerms` | Payment terms |
+| `settings.acquisitionMethods.aria-label.deprecated` | Mark {name} as deprecated |
+| `settings.acquisitionMethods.deprecated` | Deprecated |
+
+### Jira — Done since build (orders (UIOR, MODORDERS) since 2026-06-17)
+
+- UIOR-1492/1493/1495 Story — Order email templates in Settings: management, editing, preview
+- UIOR-1585 Story — Do not show metadata fields in "Version history" for PO and PO Lines
+- UIOR-1582 Bug — Create inventory overwritten by settings value when Order format selected after "Bindery active" checked
+- UIOR-1572 Task — Multi-year prepayments fixes and improvements
+- UIOR-1157 Story — Deactivation (deprecation) of obsolete Acquisition Method values
+- UIOR-1547 Story — Reopen order shows insufficient error message when budgets are empty
+- UIOR-1569 Bug — Prefix/suffix select refresh on create/edit PO
+- UIOR-1530 Story — Payment terms accordion in order line (10.0.0)
+- UIOR-1535 Story — Prepayment information in order CSV export
+- UIOR-1528 Story — Ongoing order information accordion defines multi-year payments
+- UIOR-1568 Bug — Closing an open PO blocked by open-order budget validation; message referenced Open instead of Close
+- UIOR-1567 Story — Closure reason/note not copied when duplicating or reopening orders
+- UIOR-1565 Bug — Permanent loan type not populated from item record
+- MODORDERS-1428 Story — acq-models new fields (payment terms) + business logic
+- MODORDERS-1465 Bug — GET /orders/acquisition-methods 500 (unrecognized "deprecated" field)
+- MODORDERS-1456 Bug — Cancelling an invoice reopens order but encumbrance not created
+- MODORDERS-1486 Bug — Order import jobs hanging indefinitely
+- MODORDERS-1473 Bug — POL hotlinks don't display for Holdings and Item created with Order
+
+### TestRail — cases created since 2026-06-17: 20 (7 manual, 13 automated/Karate)
+
+- C1574532 "Create inventory" set to "Instance, holdings, item" in order template when Bindery active = true regardless of when order format is selected — refs UIOR-1582
+- C1574531 "Create inventory" set to "Instance, holdings, item" when Bindery active = true regardless of when order format is selected — refs UIOR-1582
+- C1543957 Search orders and order line by note fields — refs UIOR-1548
+- C1538663 Correct validation for mixing percentage and amount for fund distributions — refs UINV-633
+- C1538661 Version history displays correct values when review period field is modified — refs MODORDERS-1485
+- C1538635 PO and PO Line details display more than 1000 related invoices with lines — refs UIOR-1576
+- C1415960 ECS \| Print order and order lines in Central tenant with enabled central ordering — refs UISACQCOMP-302

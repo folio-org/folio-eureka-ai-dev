@@ -1,5 +1,7 @@
 # FOLIO Consortium Manager App - Business Logic Context
 
+> Built: 2026-06-18 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Generated/refreshed by the build-app-context workflow on 2026-06-18.
 > Sources:
 > - TestRail section subtree under group_id=23689 scoped to Consortium Manager roots (sections: 80, cases: 380 total).
@@ -341,3 +343,52 @@ Consortium Manager: **`Func` 100%**, median **~18 steps** (the largest cases in 
 - [ ] The exact confirmation-modal title for role Delete ("Delete role" vs "Delete authorization role") appears in two slightly different forms across cases (C543745 says "Delete role" window; UI Texts table above cites "Delete authorization role" from a different, older case at position 6.50) — reconcile which is current.
 
 > N≥10 audit round (2026-07-22): 15 cases read (C523593, C523671, C552361, C552447, C986307, C692096, C1030054, C1263896, C543745, C543755, C663331, C552363, C566123, C552368, C1045994, C543762) — first deep pass into the "Consortium manager (Eureka)" TestRail subtree (section 40125), which the file's original build had left almost entirely uncited. Added a full new "Authorization Roles / Policies — Eureka Deep-Dive" section covering Create/Duplicate/Delete/Share-to-all name-collision rules (case-insensitive, per-member error text), the previously undocumented "Compare roles" capability-diff tool, CQL-safe role-name handling, the missing "Permission sets" heading in Consortium Manager's Users settings, and Management-pane collapse behavior. Added 9 new Key Business Rules (13-19, some cases covered by more than one) and several new exact toast strings including the literal "Failed to create keycloack role" backend-passthrough typo.
+
+
+---
+
+## Changes since 2026-06-18 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-consortia-settings (translations/ui-consortia-settings/en.json, HEAD v3.1.0); Jira folio-org.atlassian.net Done issues resolved since 2026-06-18; TestRail suite 21 cases created since 2026-06-18.
+
+### What changed
+- Consortium manager: **Custom links** controlled vocabulary for instances (create/delete, in-use protection) (UICONSET-248).
+- Collapse/expand management pane tooltips.
+
+### UI strings changed since 2026-06-18 [source — en.json, 2026-11-07]
+
+> `en.json` is the source of truth; `en_US.json` is a Lokalise copy that can lag behind. `<b>`/`<strong>` render as bold; `{x}` are placeholders.
+
+**New strings**
+
+| Key | Text |
+|---|---|
+| `consortiumManager.controlledVocab.instanceCustomLinks.cannotDeleteTermHeader` | Cannot delete the custom link |
+| `consortiumManager.controlledVocab.instanceCustomLinks.cannotDeleteTermMessage` | This custom link cannot be deleted, as it is in use by one or more records. |
+| `consortiumManager.controlledVocab.instanceCustomLinks.deleteEntry` | Delete custom link |
+| `consortiumManager.controlledVocab.instanceCustomLinks.termDeleted` | The custom link <b>{term}</b> was successfully <b>deleted</b>. |
+| `consortiumManager.controlledVocab.instanceCustomLinks.termWillBeDeleted` | The custom link <b>{term}</b> will be <b>deleted</b>. |
+| `collapse.management.pane.button.tooltip` | Collapse management pane |
+| `expand.management.pane.button.tooltip` | Expand management pane |
+
+### Jira — Done since build (consortium-manager / marc-authority / marc-bib (UICONSET, MODCON, UIMARCAUTH, MODELINKS, UIQM, MODQM) since 2026-06-17)
+
+- UICONSET-248 Story — ECS: custom link configuration options in Consortium manager
+- UIQM-836/837/838, MODQM-528/530/531 Story — LoC MARC bib specification update for field 008 (Continuing resources)
+- UIQM-835 Story — Default values for new Authority records
+- MODQM-519 Bug — 008 text boxes replaced with dropdown lists (bib/holdings)
+- UIQM-829 Bug — indicators reset after linking; UIQM-834 ECS 852 $b not changed after ownership update; UIQM-825 generic toast when editing authority deleted by another user
+- MODELINKS-433 Story — Lists > Authority shows number of linked bib records; MODELINKS-413 ECS member views shared authorities; MODELINKS-425 "See from reference – Relationship type" removed from Lists
+- UIMARCAUTH-541 Bug — deletion callout shows 400 heading instead of 100; UIMARCAUTH-544 Authority source facet; UIMARCAUTH-538 wrong header field
+
+### TestRail — cases created since 2026-06-18: 14 (8 manual, 6 automated/Karate)
+
+- C1574452 [ECS] Pick and Search slips for item level ECS request are printable at Central tenant — refs MCBFF-215,MODTLR-327
+- C1574446 Focus remains on the Management pane Collapse/Expand button in "Consortium manager" after duplicating an authorization role — refs HELIOS-42,UICONSET-246
+- C1574445 Focus remains on the Management pane Collapse/Expand button in "Consortium manager" when toggled with the keyboard — refs HELIOS-42,UICONSET-246
+- C1563887 [ECS] Allowed SPs endpoints shouldn't return empty arrays — refs MODTLR-247
+- C1528160 [LoC, API] Check error handling for ECS loan renewal override scenarios that cannot be reproduced on UI — refs UIU-3537,CIRC-2632
+- C1525840 [LoC, API] Check error handling for ECS loan renewal scenarios that cannot be reproduced on UI — refs UIU-3537,CIRC-2632
+- C1504468 [LOC] Loan sorting by call number is case-insensitive — refs UIU-3369
+- C1504464 ECS LoC \| Open loan total quantity is displayed correctly for different users — refs UIU-3612
