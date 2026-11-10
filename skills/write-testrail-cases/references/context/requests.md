@@ -1,6 +1,9 @@
 # FOLIO Requests App — Business Logic Context
 
+> Built: 2026-06-17 (Cypress-fragment refresh 2026-08-06) · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Generated/refreshed by the build-app-context workflow on 2026-06-17.
+> **GitHub fragment refresh on 2026-08-06**: `stripes-testing/cypress/support/fragments/requests/requests.js` scanned. New items added: `# Copies` column, `Printed` column, `Export expired holds to CSV` action. All other strings confirmed current.
 > Sources:
 > - TestRail section subtree rooted at section_id=96 (suite_id=21): sections 96, 343, 870, 1134, 1527, 2013, 17479, 29720, 93820, 34771
 > - TestRail coverage: 162 cases total in subtree; 44 cases tagged to focus releases Umbrellaleaf, Trillium, Sunflower, Ramsons
@@ -120,6 +123,7 @@ Important exception: Open - Awaiting pickup is governed by the hold shelf expira
 - Requests > Request details > Actions > Move request [from source, verify in env]
 - Requests > Request details > Actions > Reorder queue [from source, verify in env]
 - Requests > Actions > Export search results to CSV [from source, verify in env]
+- Requests > Actions > Export expired holds to CSV [from source — confirmed in fragment `requests.js` button id `exportExpiredHoldsToCsvPaneHeaderBtn`; separate action from regular CSV export; button is disabled when no expired holds exist in the current filter set]
 - Requests > Actions > Print pick slips [from source, verify in env]
 - Requests > Actions > Print hold request search slips [from source, verify in env]
 
@@ -155,6 +159,17 @@ Actions, Save & close, Save, Edit, Search, Reset all, New, Confirm, Cancel, Cont
 ### Empty-field display convention: literal `-`, never blank (confirmed C680499)
 
 Any field with no underlying data value renders as a literal `-` (dash), never an empty cell — confirmed consistently across multiple, otherwise-unrelated surfaces in one pass: the `Select item` modal's `Barcode` column (both from New-request title-level-item-selection and from `Move request`), the `Reorder queue` page's `Item barcode` and `Requester barcode` columns, and the main Requests results table's `Year`, `Item barcode`, `Effective call number string`, `Requester barcode`, and `Proxy` columns. When constructing test data specifically to exercise "missing field" display, create the item/user with only required fields and assert `-` in each of these locations rather than assuming an empty string or blank cell.
+
+### Result list columns (confirmed from `requests.js` fragment, 2026-08-06)
+
+**Fixed visible columns:** `Request date`, `Title`, `Year`, `Type` (Request type), `Item barcode`, `Request status`, `Queue position`, `Requester`, `Requester barcode`, `Proxy`
+
+**Optional toggle columns** (managed via Actions > column manager menu; unchecked by default): `Pickup service point`, `Retrieval service point`, `# Copies`, `Printed`
+
+- `# Copies` — numeric; displays how many copies of the item exist; NaN/empty cells sort last ascending
+- `Printed` — date/time string; when the request slip was last printed; empty cells sort last ascending
+
+When testing column visibility or sorting, enable the relevant toggle column via Actions first, then assert the column header and sort behavior.
 
 ### Search & filter — filter accordions (confirmed C540, C541)
 
@@ -375,3 +390,37 @@ Requests cases split ~53% `Functional` / 45% `Other` (pick per scenario; API/edg
 - Circulation-settings capability names related to request-printing settings should be re-validated in Eureka before using them in new cases.
 
 > Random spot-check (2026-07-22): picked one fresh uncited case at random (C680499) — no prior rule existed for empty-field display, so this was a genuine blind spot rather than a re-confirmation. Added the dedicated note and Key Business Rule 29.
+
+
+---
+
+## Changes since 2026-06-17 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-requests (translations/ui-requests/en.json, HEAD v13.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-06-17; TestRail suite 21 cases created since 2026-06-17.
+
+### What changed
+- No Done Jira issues and no ui-requests commits since 2026-08-06. Related backend fixes: [LoC] duplicated queue positions for batch requests (CIRC-2697); ECS pick slips SP (CIRC-2538).
+
+### Jira — Done since build (circulation: check-in / check-out / circulation-settings / patron-notices / requests / mediated / circulation-log (CIRC, UICIRC, UICHKIN, UICHKOUT, UIREQ, UIREQMED, MODREQMED, UICIRCLOG, MODAUD) since 2026-07-21)
+
+- UICIRC-1351 / 1387 / 1390 Story — "Automatic renewals" section on Loan policy form and page (settings + validation)
+- UICIRC-1355 / 1372 Story — Reordering of patron notice policies (drag & drop)
+- UICIRC-1353 Story — Shortened tokens in patron notices for text messages
+- UICHKIN-515 / CIRC-2685 Story — [PoC] In-house use option in Check in (inHouseUse persisted on check-in-by-barcode)
+- UICHKIN-510 Story — Check in modals: default focus on the action button, not "X"
+- CIRC-2130 Story — Both Set cost and Actual cost fees/fines closed when item returned
+- CIRC-2705/2706/2707 Bug — America/Vancouver time zone: due date cut-off by patron expiration; releases for Sunflower/Trillium (see Vancouver incident)
+- CIRC-2664 Bug — Hold shelf expiration notice sent twice; CIRC-2679 notice not sent after aged to lost; CIRC-2639 item/title missing in email notices for ECS and mediated requests
+- CIRC-2697 Bug — [LoC] batch requests duplicated queue positions; CIRC-2538 ECS pick slips printed from wrong SP; CIRC-2629 extra "Aged to lost" action (ECS); CIRC-2673 declare lost 500
+- CIRC-2496 Bug — staff slip preview name always "Transit"
+- MODAUD-324 Bug — fee/fine actions missing from Circulation log; MODAUD-323 circ logs not appearing; MODAUD-326 preferred contact changes missing in user version history
+- (2026-06-16..07-21) UIREQ-1365 Bug — Requests app crashes opening a request with erased data; CIRC-2497 Bug — staff slip name missing in due date receipt; UICHKOUT-1012 Bug — all custom fields shown at Check out with default Other settings; UICIRC-1354 staff slips localisation; UICIRC-1316 Save button state for "Patron id(s) for checkout scanning"
+- (no other Done issues found for UIREQ / UIREQMED / MODREQMED / UICHKOUT / UICIRCLOG in this window)
+
+### TestRail — cases created since 2026-06-17: 6 (4 manual, 2 automated/Karate)
+
+- C1574456 Patron account endpoint returns information about failed batches — refs MODPATRON-284,MODPATRON-291,EDGPATRON-211
+- C1543956 Create batch ECS and Mediated requests for more than 10 items and same patron — refs MODPATRON-283,MCBFF-216,MCBFF-224,MODPATRON-289
+- C1474739 Create Mediated batch request for Secure patron who has another request in "Open - Awaiting pickup" status — refs MCBFF-206
+- C1395025 Hyperlink is removed for cancelled Inn-Reach requests — refs UIREQ-1365

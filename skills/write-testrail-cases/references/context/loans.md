@@ -1,5 +1,7 @@
 # FOLIO Loans — Business Logic Context
 
+> Built: 2026-07-21 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Built 2026-07-21 (browser-based). Sources: TestRail suite 21 section 97 "Loans" and subsections (Change due date 1287, Declare lost 1290, Claim returned 1294, Renewals 1540, Anonymization 1132, Additional Loan Comments 25717); Jira UIU/CIRC stories. UI lives in `folio-org/ui-users` (Loans list + Loan details page). Exact strings tagged `[from cases]` are the team's asserted wording; confirm/upgrade against `ui-users/translations/ui-users/en_US.json` next pass.
 
 ---
@@ -104,7 +106,7 @@ Claimed returned
 
 ### Override patron block on renewal [confirmed — C170386]
 - Attempting to renew a blocked patron's loan opens a modal titled `Patron blocked from renewing` with a `Reason for block:` line, and buttons `Override`, `Close`, `View block details`. If more than three blocks exist on the patron, only the first three are shown.
-- Clicking `Override` opens a second modal requiring a free-text comment; `Save & close` completes the override, the renewal proceeds, and the comment is saved directly onto the loan record (same Comments mechanism as other loan actions).
+- Clicking `Override` opens a second modal titled **`Override patron block`** requiring a free-text comment (field label: `Comment*`); `Save & close` completes the override, the renewal proceeds, and the comment is saved directly onto the loan record (same Comments mechanism as other loan actions).
 
 ### Recall due-date recalculation rules [confirmed — C466157, C466158, C466159; previously undocumented]
 > When an active Recall request is placed against a Checked-out item, the loan's due date is recalculated per the interaction of two Loan Policy fields: **Recall return interval** and **Minimum guaranteed loan period for recalled items**. Let `recallDueDate` = today + Recall return interval, `minGuaranteedDate` = checkout date + Minimum guaranteed loan period.
@@ -206,3 +208,74 @@ Loans skews **`Other` (~85%, 59/69)** with only ~15% `Functional` — the most O
 > N≥10 audit round (2026-07-22): 14 cases read (C9217, C422021, C10959, C10960, C568, C569, C571, C397378, C397379, C466157, C466159, C10948, C170386, C6667). Resolved every open Known Gap from the prior build: pulled verbatim Claim-returned/Resolve-claim/Anonymization modal text, exact Renewal failure-reason strings, and full Additional-Loan-Comments behavior. Surfaced two entirely new, previously undocumented features/rules: the "Resolve claim" dropdown (Declare lost / Mark as missing) for Claimed-returned loans, and the full Recall due-date recalculation algorithm (Recall return interval vs. Minimum guaranteed loan period). Added 7 new Key Business Rules (13-19).
 >
 > Random spot-check (2026-07-22): picked one fresh uncited case at random (C584) to sanity-check this file's "Mostly match" verdict. Found a genuine cross-file gap — check-in.md thoroughly documents the backdate feature's effect on the Check-in app's own UI (Scanned Items "Time returned" column), but loans.md never mentioned the resulting loan-record-side effect: the closed loan's `Return date`/`Check in service point` fields take the backdated values while the Action-history `Action Date` column stays on system time. Added Key Business Rule 20 with a cross-reference to check-in.md.
+
+
+---
+
+## Changes since 2026-07-21 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-users (translations/ui-users/en.json, HEAD v12.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-07-21; TestRail suite 21 cases created since 2026-07-21.
+
+### What changed
+- Renewal failure messages are now explicit per reason (e.g. "Loan at maximum renewal number.", "Items cannot be renewed when there is an active recall request.", "Renewals not allowed for loans with reminders.") — see string table.
+- "Renew Confirmation" popup after renewing multiple items fixed (UIU-3625).
+
+### UI strings changed since 2026-07-21 [source — en.json, 2026-11-07]
+
+> `en.json` is the source of truth; `en_US.json` is a Lokalise copy that can lag behind. `<b>`/`<strong>` render as bold; `{x}` are placeholders.
+
+**New strings**
+
+| Key | Text |
+|---|---|
+| `messages.renewalRequestItemBarcodeRequired` | Renewal request must have an item barcode. |
+| `messages.renewalRequestUserBarcodeRequired` | Renewal request must have a user barcode. |
+| `messages.renewalBlockedByReminderFees` | Renewals not allowed for loans with reminders. |
+| `messages.itemNotLoanable` | Item is not loanable. |
+| `messages.renewalBlockedByRecall` | Items cannot be renewed when there is an active recall request. |
+| `messages.itemAgedToLostNotRenewable` | Item is Aged to lost. |
+| `messages.itemDeclaredLostNotRenewable` | Item is Declared lost. |
+| `messages.itemClaimedReturnedNotRenewable` | Item is Claimed returned. |
+| `messages.loanRenewalLimitReached` | Loan at maximum renewal number. |
+| `messages.loanNotRenewable` | Loan is not renewable. |
+| `messages.renewalBlockedByHoldRequest` | Items with this loan policy cannot be renewed when there is an active, pending hold request. |
+| `messages.fixedLoanPolicyHasAlternateRenewalPeriodForHolds` | Item's loan policy has fixed profile but alternative renewal period for holds is specified. |
+| `messages.fixedLoanPolicyHasRenewalPeriod` | Item's loan policy has fixed profile but renewal period is specified. |
+| `messages.loanPolicyProfileNotRecognized` | Profile {profile} in the loan policy is not recognised. |
+| `messages.loanPolicyRenewFromNotRecognized` | Cannot determine when to renew from. |
+| `messages.loanPolicyRenewalPeriodNotRecognized` | The loan period in the loan policy is not recognised. |
+| `messages.loanPolicyRenewalPeriodIntervalNotRecognized` | The interval {interval} in the loan policy is not recognised. |
+| `messages.loanPolicyRenewalPeriodDurationInvalid` | The duration {duration} in the loan policy is invalid. |
+| `messages.renewalDateOutsideLoanPolicyDateRanges` | Renewal date falls outside of date ranges in the loan policy. |
+| `messages.renewalDateOutsideFixedLoanPolicyDateRanges` | Renewal date falls outside of date ranges in fixed loan policy. |
+| `messages.renewalWouldNotChangeDueDate` | Renewal would not change the due date. |
+| `messages.calendarOpenPeriodsNotFound` | Calendar open periods are not found. |
+| `messages.calendarTimetableAbsent` | Calendar timetable is absent for requested date. |
+| `messages.overrideRenewalCommentRequired` | Override renewal request must have a comment. |
+| `messages.overrideRenewalDueDateRequired` | New due date must be specified when due date calculation fails. |
+| `messages.overrideRenewalDueDateRequiredWhenDueDateUnchanged` | New due date is required when renewal would not change the due date. |
+| `messages.overrideRenewalNotAllowedForCurrentLoan` | Override renewal does not match any of expected cases: ... |
+
+### Jira — Done since build (users / fees-fines / loans (UIU, MODUSERS, MODFEE, MODPATRON) since 2026-06-17 (users) / 2026-07-21 (fees-fines, loans))
+
+- UIU-3614 Story — New permission: Restrict access to patron information
+- UIU-3557/3558 Story — User role selection: "Selected / Unselected" filter, selection separated from assignment status; UIU-3633 bug typo "Role assigment status"
+- UIU-3550 Story — Roles hyperlinked in "User roles" accordion
+- UIU-3388/3385/3566 Story — Version history for Users (+settings), Actions/Tags not disabled when open; UIU-3630 bug crash
+- UIU-3553 Story — Preferred contact dropdown includes Text messages
+- UIU-3610 Story — Column header "Active" → "Status"
+- UIU-3591 Story — User buttons on edit/create pages updated
+- UIU-3485 Story — Pop-up note modal: "do not show again for the session" (Users + Check out)
+- UIU-3625 Bug — "Renew Confirmation" popup missing after renewing multiple items
+- UIU-3624 Bug — search >1000 results with custom field; UIU-3612 stale open loans; UIU-3375 proxy/sponsor edit; UIU-3571 "Unknown user" in Departments
+- MODFEE-450 Bug — DCB service point as fine owner → repeated bills
+- MODUSERS-594 Bug — [ECS] patron group sharing error
+- (2026-06-17..07-21) UIU-3604 Bug — new user not created on Save & close; UIU-1140 Bug — "Loans: Renew loans" permission not working; UIU-3549 Bug — Refund disabled on Fee/Fine History after fresh login; UIU-3529/3517 item status / payment status not localized; UIU-3597 custom field label wrap
+
+### TestRail — cases created since 2026-07-21: 13 (4 manual, 9 automated/Karate)
+
+- C1538662 Renew loan with fixed policy when calendar timetable is absent for requested date — refs CIRC-2632,UIU-3537
+- C1528148 [API] Check error handling for loan renewal override scenarios that cannot be reproduced on UI — refs UIU-3537,CIRC-2632
+- C1505018 [API] Check error handling for loan renewal scenarios that cannot be reproduced on UI — refs UIU-3537,CIRC-2632
+- C1453709 Renewal: failure because renewal date is not in fixed loan policy's due date schedule — refs CIRC-2632,UIU-3537

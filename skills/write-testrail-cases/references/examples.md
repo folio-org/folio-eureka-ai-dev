@@ -34,7 +34,7 @@ ECS Unsupported:    No
 Capabilities Ready: Yes
 Execution Type:     Manual
 Dev Team:           Vega
-Labels:             AI
+Labels:             ai
 References:         UICHKIN-485
 
 Preconditions:
@@ -83,7 +83,7 @@ ECS Unsupported:    No
 Capabilities Ready: Yes
 Execution Type:     Manual
 Dev Team:           Thunderjet
-Labels:             AI
+Labels:             ai
 References:         UIOR-1519, UISACQCOMP-300, UIREC-504, MODORDSTOR-407, UICLAIM-31, MODORDERS-1464
 
 Preconditions:
@@ -192,7 +192,7 @@ ECS Unsupported:    No
 Capabilities Ready: Yes
 Execution Type:     Manual
 Dev Team:           Vega
-Labels:             AI
+Labels:             ai
 References:         CIRC-1719, FAT-1218
 
 Preconditions:
@@ -333,7 +333,7 @@ Preconditions must be **flat**: each user, each data record, and the starting pa
 
 ## How to populate this file for real
 
-Once TestRail credentials are available (see `SKILL.md` → Credentials), pull real cases from 2–3 of the team's best-maintained sections and refresh the examples above. Note: direct API calls to `foliotest.testrail.io` may be blocked by your network/sandbox egress rules — if so, open the case in a browser where you're already logged in and hit the same API path directly (e.g. `https://foliotest.testrail.io/index.php?/api/v2/get_case/{id}`); TestRail accepts the existing session cookie, no API key needed in that context.
+Once TestRail credentials are available (see `references/testrail-api.md` → Credentials), pull real cases from 2–3 of the team's best-maintained sections and refresh the examples above. Note: direct API calls to `foliotest.testrail.io` may be blocked by your network/sandbox egress rules — if so, open the case in a browser where you're already logged in and hit the same API path directly (e.g. `https://foliotest.testrail.io/index.php?/api/v2/get_case/{id}`); TestRail accepts the existing session cookie, no API key needed in that context.
 
 ```
 GET {TESTRAIL_URL}/index.php?/api/v2/get_cases/14&suite_id=21&section_id={section_id}&limit=20

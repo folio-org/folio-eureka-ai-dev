@@ -1,5 +1,7 @@
 # FOLIO quickMARC — MARC Bibliographic Editing — Business Logic Context
 
+> Built: 2026-07-21 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Built 2026-07-21 (browser-based). **Exact UI Texts / validation errors confirmed against `folio-org/ui-quick-marc/translations/ui-quick-marc/en.json` (2026-07-21).** TestRail: suite 21 section 1285 "MARC" > 16715 "MARC Bibliographic" (subsections 23705 Create new MARC bib, 23706 Derive MARC bib, 24360 Edit MARC bib, each with Manual linking / Automated linking / Consortia sub-subsections, plus 27186 Optimistic locking, 39274 "API | MARC validation rules (bibliographic)", 58862 Version history). This file covers **MARC Bibliographic** editing only. MARC Holdings editing (section 16714) and MARC Authority (section 17151, already covered by `marc-authority.md`) share the same quickMARC editor shell and much of the same validation-error vocabulary, but have their own field-level rules — don't assume a Bib rule (e.g. exact 1XX/010 handling) transfers unchanged to Holdings.
 
 ---
@@ -208,7 +210,7 @@ Automated linking is driven by two things, not just the button click: (1) each b
 8. Optimistic locking blocks saving a record that was changed/deleted by another user/session since it was opened, surfacing a dedicated conflict message rather than a generic save error. (github — pull section 27186 for a live confirmed case before writing new optimistic-locking cases)
 9. Deriving a bib record from a stale/deprecated Instance version is blocked with its own message distinct from the generic save error. (github)
 10. **LDR position 05 (Record status) has real cross-entity effect**: setting it to `d` (Deleted) flips the Instance's `Set for deletion`, `Suppressed from discovery`, and `Staff suppressed` flags to true; reverting to `c` only un-sets `Set for deletion` — the two suppression flags stay true until explicitly cleared on the Instance. Assert all three Instance flags, not just the LDR value. (cases — C1307997, 2025)
-11. Every rule and message above is Bibliographic-specific by confirmation source — MARC Holdings and MARC Authority share the same editor shell and much of the same string vocabulary, but have field-specific rules of their own (e.g. Holdings' own required/repeatable-field set centers on 852, not 1XX/245) — read `marc-authority.md` for Authority-side rules and pull section 16714 directly before writing Holdings cases.
+11. Every rule and message above is Bibliographic-specific by confirmation source — MARC Holdings and MARC Authority share the same editor shell and much of the same string vocabulary, but have field-specific rules of their own (e.g. Holdings' own required/repeatable-field set centers on 852, not 1XX/245) — read `marc-authority.md` for Authority-side rules and `marc-holdings.md` for Holdings.
 12. Derive treats `001`/`005` and `006`/`007` oppositely: a manually-added duplicate `001`/`005` is silently collapsed to the single system-generated value on save, while multiple `006`/`007` rows are genuinely repeatable and all persist. A derive case touching fixed fields must state which of these two behaviors it's testing — they are not interchangeable. (cases — C387459, C496210, C499607)
 13. `245` is required on Derive exactly as on Create/Edit — an empty/missing `$a` blocks save with `Field 245 is required.` at Fail tier. (cases — C503056)
 14. Manual linking (Create/Edit) locks a fixed subset of a linked field's boxes (tag+indicators, the authority-heading subfield, `$0`) while leaving non-heading subfields the user typed (e.g. `$t`) editable; the link action itself is via a per-field "Link to MARC authority record" icon → **Select MARC authority** modal (Browse toggle, auto-preselected heading-type filter for personal-name fields) → clicking the `Link` icon next to the highlighted result. (cases — C422126)
@@ -238,3 +240,42 @@ MARC Bib / quickMARC: **`Func` ~79%** / Other ~21%, median ~8 steps, `User Journ
 
 > N≥10 audit round (2026-07-22): 14 cases read (C345388, C496231, C499607, C387459, C496210, C503056, C422126, C388560, C663247, C692071, C405507, C503160, C24361/24362/23706/58862/27434 section title surveys) — resolved 4 of 5 prior Known Gaps; added 6 new confirmed sections and Key Business Rules 12-17.
 > Follow-up round (2026-07-22): 6 more cases read (C503160 full detail, C692168, C692230, C692169, C552462, C514877) — closed the 2 remaining residual items (Local-control-field derive behavior, Consortia Create/Version-history sub-flows); corrected the Version-history Card-labeling rule (newest = "Current version", not just oldest = "Original Version"); added Key Business Rules 18-19. Remaining open items are now narrow and specific (Edit-flow linking re-confirmation, Consortia Derive sub-flow) rather than whole unexplored areas.
+
+
+---
+
+## Changes since 2026-07-21 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-quick-marc (translations/ui-quick-marc/en.json, HEAD v8.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-07-21; TestRail suite 21 cases created since 2026-07-21.
+
+### What changed
+- LoC MARC bib 008 for Continuing resources updated — new options "Activity report", "Serial zine", "Serial podcast" (UIQM-836..838, MODQM-528..531).
+- Bugs to regress: indicators reset after linking (UIQM-829); ECS 852 $b after ownership update (UIQM-834).
+
+### UI strings changed since 2026-07-21 [source — en.json, 2026-11-07]
+
+> `en.json` is the source of truth; `en_US.json` is a Lokalise copy that can lag behind. `<b>`/`<strong>` render as bold; `{x}` are placeholders.
+
+**New strings**
+
+| Key | Text |
+|---|---|
+| `record.fixedField.Activity report` | Activity report |
+| `record.fixedField.Serial zine` | Serial zine |
+| `record.fixedField.Serial podcast` | Serial podcast |
+
+### Jira — Done since build (consortium-manager / marc-authority / marc-bib (UICONSET, MODCON, UIMARCAUTH, MODELINKS, UIQM, MODQM) since 2026-06-17)
+
+- UICONSET-248 Story — ECS: custom link configuration options in Consortium manager
+- UIQM-836/837/838, MODQM-528/530/531 Story — LoC MARC bib specification update for field 008 (Continuing resources)
+- UIQM-835 Story — Default values for new Authority records
+- MODQM-519 Bug — 008 text boxes replaced with dropdown lists (bib/holdings)
+- UIQM-829 Bug — indicators reset after linking; UIQM-834 ECS 852 $b not changed after ownership update; UIQM-825 generic toast when editing authority deleted by another user
+- MODELINKS-433 Story — Lists > Authority shows number of linked bib records; MODELINKS-413 ECS member views shared authorities; MODELINKS-425 "See from reference – Relationship type" removed from Lists
+- UIMARCAUTH-541 Bug — deletion callout shows 400 heading instead of 100; UIMARCAUTH-544 Authority source facet; UIMARCAUTH-538 wrong header field
+
+### TestRail — cases created since 2026-07-21: 4 (2 manual, 2 automated/Karate)
+
+- C1563888 Restore System and Standard validation rules for MARC bib's Fields from LOC with preserve local changes — refs MRSPECS-12,MRSPECS-53,MODELINKS-255,MRSPECS-70,MRSPECS-95,MRSPECS-194,MRSPECS-214
+- C1434628 Verify "Source" field in "Version history" for Local MARC bib as user without Central tenant capabilities — refs UIIN-3686

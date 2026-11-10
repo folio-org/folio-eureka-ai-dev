@@ -1,5 +1,7 @@
 # FOLIO Finance App - Business Logic Context
 
+> Built: 2026-07-21 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Generated/refreshed by the build-app-context workflow on 2026-06-18.
 > **Manual enrichment on 2026-07-21** (browser-based). TestRail cases C186156/C380517/C648502 supplied the Transaction detail-pane fields, Budget structure, Rollover page/dialogs and rollover rules. The public GitHub translation file `folio-org/ui-finance/translations/ui-finance/en_US.json` supplied every exact toast, error, confirm-dialog and create-form field label. "Exact UI Texts" is now complete for Finance; see Known Gaps for the (minor) remaining metadata staleness.
 > Sources used in the 2026-06-18 run:
@@ -396,6 +398,9 @@ Actions, Increase allocation, Decrease allocation, Move allocation, Transfer, Co
 | Batch budgets created | `Budgets have been created successfully.` |
 | Export budget CSV started | `Export of <b>{name}</b> data has started` |
 | Export budget CSV success | `<b>{name}</b> data was successfully exported to CSV` |
+| Budget creation failed | `Budget has not been created` [from source — `finance/states.js`, 2026-08-06] |
+| Rollover test started | `{name} rollover test has started successfully` [from source — `finance/states.js`, 2026-08-06] |
+| Rollover budget results export started | `Export of budget results has been started` [from source — `finance/states.js`, 2026-08-06] |
 
 ### Error / Validation Messages (confirmed — GitHub translations, 2026-07-21)
 
@@ -404,6 +409,7 @@ Actions, Increase allocation, Decrease allocation, Move allocation, Transfer, Co
 | Allocation/transfer would make total allocation negative | `Total allocation cannot be less than zero` (inline; disables Confirm) |
 | Allocate more than source has | `{amount} was not successfully allocated to the budget <b>{toBudgetName}</b> because it exceeds the total allocation amount of <b>{fromBudgetName}</b>.` |
 | Allocate more than source has, restrictions active | `{amount} was not successfully allocated to the budget <b>{toBudgetName}</b> because it exceeds the total allocation amount of <b>{fromBudgetName}</b> and ledger fund restrictions are active.` |
+| Transfer exceeds expenditure limit (restrictions active) | `$X.XX could not be transferred to the budget {firstBudgetName} because it exceeds the allowable expenditure limit for {secondBudgetName} and ledger fund restrictions are active.` [from source — `finance/states.js`, 2026-08-06; `X.XX` = the formatted dollar amount] |
 | Transfer more than Available | `Transfer was not successful. There is not enough money Available in the budget to complete this Transfer.` |
 | Same-budget transfer/allocation | `Transfers and allocations can not be made from one budget to that same budget` |
 | Transfer restriction (allow transfer to/from) blocks it | `This transaction cannot be made between these two Funds as the "allow transfer to or from" Fund setting on one or more of the Funds is too restrictive.` |
@@ -430,6 +436,16 @@ Actions, Increase allocation, Decrease allocation, Move allocation, Transfer, Co
 | Unrelease encumbrance | `Unrelease encumbrance` / `Are you sure you want to unrelease this encumbrance? Any remaining amount will be encumbered against the budget.` |
 | Rollover confirm | `Fiscal year rollover` / `Ledger <b>{ledgerName}</b> for <b>{currentFYCode}</b> will be rolled over to <b>{chosenFYCode}</b>. ... This process may take several minutes to complete and cannot be undone.` |
 | Save fund (duplicate name) | `Save fund` / `Warning: You are about to add a fund with the same name as an existing fund. Would you like to complete this action?` |
+
+### Fiscal Year detail view — sub-table columns (confirmed from `financeDetails.js`, 2026-08-06)
+
+The Fiscal Year detail view contains three sections (ids `ledger`, `group`, `fund`) each with a table. Common columns: `Name`, `Code`, `Allocated`, `Unavailable`, `Available`. Empty table text: `The list contains no items`.
+
+Financial summary section (id `financial-summary`) text labels: `Cash balance: {value}` and `Available balance: {value}` (rendered as inline HTML, not key-value pairs).
+
+### Budget Expense classes table columns (confirmed from `financeDetails.js`, 2026-08-06)
+
+The `Expense classes` accordion inside a budget shows a table with these columns: `Expense class`, `Encumbered`, `Awaiting payment`, `Expended`, `Percent of total expended`, `Status`. An `Unassigned` row (with info icon tooltip: `applies to transactions completed prior to the inclusion of expense classes on the budget, if there are any that exist`) appears for transactions made before expense classes were applied.
 
 ### Create-form titles & field labels (confirmed — GitHub translations)
 
@@ -522,3 +538,48 @@ Finance is strongly **`Functional` (~94%)**, median ~7 steps, `User Journey` ~2%
 - [ ] Only the automated `build-app-context` **run metadata** at the top is stale (0 Jira issues, 9 GitHub files) — the content has since been enriched manually. A fresh full run would also pull `mod-finance-storage` API schemas and Jira acceptance criteria, but is no longer needed to write accurate Finance cases.
 
 > Random spot-check (2026-07-22): picked one fresh uncited case at random from the "Fiscal Year Rollover" subsection (C376609) — a large, detailed rollover scenario. The general "Planned budget is created" rule already existed (21) but didn't cover the specific zeroed-out outcome when Rollover allocation is off and Rollover budget value is None. Added Rule 30 as a refinement rather than a new top-level fact.
+
+
+---
+
+## Changes since 2026-07-21 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-finance (translations/ui-finance/en.json, HEAD v9.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-07-21; TestRail suite 21 cases created since 2026-07-21.
+
+### What changed
+- **Browse** tab in Finance (Search | Browse): select a fiscal year, hierarchy Ledger → Group → Fund → Budget → Expense class, status filters (Ledger/Group/Fund/Budget/Expense class status), New fiscal year/ledger/group/fund actions (UIF-545..548; enabled via finance navigation setting UIF-544). Commits show a revert on 2026-08-18 and re-introduction in Sep–Oct — verify the tab is present in the target env before asserting.
+- Fiscal year **Period End Date** displays as the end of the selected day, labelled UTC (UIF-666).
+
+### UI strings changed since 2026-07-21 [source — en.json, 2026-11-07]
+
+> `en.json` is the source of truth; `en_US.json` is a Lokalise copy that can lag behind. `<b>`/`<strong>` render as bold; `{x}` are placeholders.
+
+**New strings**
+
+| Key | Text |
+|---|---|
+| `browse.tab.search` | Search |
+| `browse.tab.browse` | Browse |
+| `browse.title` | Browse finance |
+| `browse.subtitle` | Select a fiscal year to browse results |
+| `browse.selectFiscalYear` | Select a fiscal year to browse results. |
+| `browse.filter.fiscalYear` | Fiscal years |
+| `browse.filter.ledgerStatus` | Ledger status |
+| `browse.filter.groupStatus` | Group status |
+| `browse.filter.fundStatus` | Fund status |
+| `browse.filter.budgetStatus` | Budget status |
+| `browse.filter.expenseClassStatus` | Expense class status |
+| `browse.actions.newFiscalYear` | New fiscal year |
+| `browse.actions.newLedger` | New ledger |
+| `browse.actions.newGroup` | New group |
+| `browse.actions.newFund` | New fund |
+
+### Jira — Done since build (finance (UIF, MODFIN) since 2026-07-21)
+
+- UIF-666 Bug — Fiscal year Period End Date displayed as end of selected day (23:59 UTC)
+- (GitHub only, no Done ticket yet) UIF-544..548 Browse tab / finance hierarchy
+
+### TestRail — cases created since 2026-07-21: 1 (1 manual, 0 automated/Karate)
+
+- C1504439 Create and update budget via upload allocation worksheet (CSV) for the Current fiscal year from Ledger view — refs UIF-526,UIF-527,UIF-528,UIF-529,UIF-591,MODFIN-419,UIF-628,UISACQCOMP-283,MODFIN-443,MODFIN-442,MODFIN-444

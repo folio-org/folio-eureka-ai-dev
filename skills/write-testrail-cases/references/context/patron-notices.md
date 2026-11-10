@@ -1,6 +1,8 @@
 # FOLIO Patron Notices — Business Logic Context
 
-> Built 2026-07-21 (browser-based). **Exact UI Texts confirmed against `folio-org/ui-circulation/translations/ui-circulation/en_US.json` (2026-07-21).** TestRail: suite 21 section 328 "Patron notices" (templates 331, loan/request/fee subsections). Two related settings live under `Settings > Circulation > Patron notices`: **Patron notice templates** (the message content) and **Patron notice policies** (which template fires on which event, and when). The runtime effect (a notice landing in the mailbox) is asserted in the circulation apps — see check-in.md / requests.md / loans.md.
+> Built: 2026-07-21 · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
+> Built 2026-07-21 (browser-based). **Exact UI Texts confirmed against `folio-org/ui-circulation/translations/ui-circulation/en_US.json` (2026-07-21).** TestRail: suite 21, parent section **328 "Patron notices"** with children **331 "Patron notices settings"** (notice-template AND notice-policy editor cases — e.g. UICIRC-1355 posted here 2026-08), **17059 "Loan patron notices"**, **17139 "Request notice triggers"**, **17145 "Fees/fines patron notices"**, **111082 "ECS patron notices"**. Two related settings live under `Settings > Circulation > Patron notices`: **Patron notice templates** (the message content) and **Patron notice policies** (which template fires on which event, and when). The runtime effect (a notice landing in the mailbox) is asserted in the circulation apps — see check-in.md / requests.md / loans.md.
 
 ---
 
@@ -48,6 +50,16 @@ Delete guard: `Cannot delete patron notice` / `This notice policy cannot be dele
 ### Multiples radio options — "Lost item fee(s) charged" event only [confirmed — C385643]
 
 Selecting Triggering event = `Lost item fee(s) charged` uniquely swaps the usual descriptive text for two mutually-exclusive REQUIRED radio buttons (not a dropdown): `Send overnight with multiple lost item fee charges by patron` / `Send throughout the day with one lost item fee charge per notice`. Neither is pre-selected; Save & close is blocked with `Please fill this in to continue` under both radios until one is chosen. Switching the Triggering event away and back to this option clears the radio selection again. Every OTHER triggering event instead shows the plain description text (e.g. `Always sent when event is triggered`) with no radio choice.
+
+### Notice-card reordering controls — "Add notice above" / "Delete notice" [from UICIRC-1355, In Code Review 2026-08 — verify exact labels/tooltips on first execution]
+
+Groundwork for reordering notice cards inside a policy (full drag & drop tracked separately in UICIRC-1372). Each `Notice {counter}` card in the `Loan notices`, `Request notices`, and `Fee/fine notices` accordions carries two per-card icon buttons in its header: a **plus** icon ("Add notice above") to the LEFT of the existing **trash** icon ("Delete notice"). Behavior derived from the story:
+- **Plus / Add notice above** inserts a NEW empty notice card DIRECTLY ABOVE the card whose plus was clicked (contrast with the accordion-level `Add notice` button, which appends a card at the BOTTOM). After insertion the `Notice {counter}` labels renumber sequentially top-to-bottom, so an inserted card pushes the ones below it up by one.
+- **Trash / Delete notice** removes that specific card; remaining cards renumber. Deleting the last remaining card returns the accordion to its empty state (no `Notice 1` card, only the `Add notice` button).
+- The two icons appear on every notice card regardless of accordion and regardless of whether the card is fully filled in or still empty — i.e. present on brand-new (unsaved) policies too, not only on existing/saved ones.
+- **View-only / no-edit capability:** whether these controls are hidden vs. merely disabled in read-only mode was NOT confirmed from the story — verify on execution.
+
+> **Known gap — policy-level toasts unverified.** This file confirms *template* toasts (`A patron notice with this name already exists`, `Cannot delete Patron notice template`), but the verbatim success toast for saving/creating/updating/deleting a notice **policy** is not captured here. Do not assert an exact policy-save toast string from memory; verify wording on execution (expected pattern, unconfirmed: `The patron notice policy <name> was successfully updated`).
 
 ---
 
@@ -130,3 +142,71 @@ Patron Notices: mixed **`Other` ~53% / `Func` ~40%**, median **~12 steps** (larg
 > N≥10 audit round (2026-07-22): 14 cases read (C396392, C414969, C784435, C784436, C784437, C784438, C729196, C397372, C397373, C397380, C357041, C385643, C449392, C400642). Resolved the file's main open Known Gap by pulling directly from TestRail section 328 and its subsections. Surfaced several previously undocumented rules: Patron Notice Template Duplication, Proxy/Sponsor notification routing (a single relationship-level switch governing all notice types), the exact scope-boundary of overdue-fine notice bundling (same-event-type only), the always-latest-comment behavior of `loan.additionalInfo`, the 2-decimal-place rule for fee tokens, and the "Lost item fee(s) charged" event's unique dual-radio Multiples UI. Added 6 new Key Business Rules (9-14).
 
 > Random spot-check (2026-07-23): picked one fresh uncited case at random from section 328 (C411862) — found the template Edit pane's `Record last updated`/`Record created` metadata dropdown (with per-field `Source`/timestamp) was entirely undocumented. Added a new subsection under "Patron notice templates".
+
+
+---
+
+## Changes since 2026-07-21 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-circulation (translations/ui-circulation/en.json, HEAD v12.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-07-21; TestRail suite 21 cases created since 2026-07-21.
+
+### What changed
+- Notice templates: **Notice format** dropdown (Email / Text message); text message limited to 160 characters; Subject enabled only for Email; Body enabled after a format is chosen (UICIRC-1353). String "Email or print" removed — do not assert it.
+- Notice policies: notices can be reordered by **drag & drop**; "Add notice above", "Delete notice" (UICIRC-1355/1372).
+- Bugs to regress: hold shelf expiration notice sent twice (CIRC-2664); notice after aged to lost (CIRC-2679); item/title missing for ECS and mediated requests (CIRC-2639).
+
+### UI strings changed since 2026-07-21 [source — en.json, 2026-11-07]
+
+> `en.json` is the source of truth; `en_US.json` is a Lokalise copy that can lag behind. `<b>`/`<strong>` render as bold; `{x}` are placeholders.
+
+**New strings**
+
+| Key | Text |
+|---|---|
+| `settings.patronNotices.patronNoticeContent` | Patron notice content |
+| `settings.patronNotices.textMessage` | Text message |
+| `settings.patronNotices.noticeFormat` | Notice format |
+| `settings.patronNotices.selectNoticeFormat` | Select notice format |
+| `settings.patronNotices.noticeFormat.infoPopover` | If text message is selected, it has a maximum limit of 160 characters, including spaces, numbers, and symbols. If more than 160 characters are used, multiple text messages will be sent. |
+| `settings.patronNotices.subject.infoPopover` | To enable the <strong>Subject</strong> field, select <strong>Email</strong> in the <strong>Notice format</strong> drop-down list. |
+| `settings.patronNotices.body.infoPopover` | To enable the <strong>Body</strong> field, select an option in the <strong>Notice format</strong> drop-down list. |
+| `settings.noticePolicy.addNoticeAbove` | Add notice above |
+| `settings.noticePolicy.deleteNotice` | Delete notice |
+| `settings.noticePolicy.dragAndDrop` | Drag & drop |
+| `settings.noticePolicy.notices.textMessage` | Text message |
+
+**Removed strings — do not assert**
+
+| Key | Text |
+|---|---|
+| `settings.patronNotices.emailOrPrint` | Email or print |
+
+### Jira — Done since build (circulation: check-in / check-out / circulation-settings / patron-notices / requests / mediated / circulation-log (CIRC, UICIRC, UICHKIN, UICHKOUT, UIREQ, UIREQMED, MODREQMED, UICIRCLOG, MODAUD) since 2026-07-21)
+
+- UICIRC-1351 / 1387 / 1390 Story — "Automatic renewals" section on Loan policy form and page (settings + validation)
+- UICIRC-1355 / 1372 Story — Reordering of patron notice policies (drag & drop)
+- UICIRC-1353 Story — Shortened tokens in patron notices for text messages
+- UICHKIN-515 / CIRC-2685 Story — [PoC] In-house use option in Check in (inHouseUse persisted on check-in-by-barcode)
+- UICHKIN-510 Story — Check in modals: default focus on the action button, not "X"
+- CIRC-2130 Story — Both Set cost and Actual cost fees/fines closed when item returned
+- CIRC-2705/2706/2707 Bug — America/Vancouver time zone: due date cut-off by patron expiration; releases for Sunflower/Trillium (see Vancouver incident)
+- CIRC-2664 Bug — Hold shelf expiration notice sent twice; CIRC-2679 notice not sent after aged to lost; CIRC-2639 item/title missing in email notices for ECS and mediated requests
+- CIRC-2697 Bug — [LoC] batch requests duplicated queue positions; CIRC-2538 ECS pick slips printed from wrong SP; CIRC-2629 extra "Aged to lost" action (ECS); CIRC-2673 declare lost 500
+- CIRC-2496 Bug — staff slip preview name always "Transit"
+- MODAUD-324 Bug — fee/fine actions missing from Circulation log; MODAUD-323 circ logs not appearing; MODAUD-326 preferred contact changes missing in user version history
+- (2026-06-16..07-21) UIREQ-1365 Bug — Requests app crashes opening a request with erased data; CIRC-2497 Bug — staff slip name missing in due date receipt; UICHKOUT-1012 Bug — all custom fields shown at Check out with default Other settings; UICIRC-1354 staff slips localisation; UICIRC-1316 Save button state for "Patron id(s) for checkout scanning"
+- (no other Done issues found for UIREQ / UIREQMED / MODREQMED / UICHKOUT / UICIRCLOG in this window)
+
+### TestRail — cases created since 2026-07-21: 24 (10 manual, 14 automated/Karate)
+
+- C1538651 Postman \| item.shortTitle with missing, blank, or absent token in template — refs MODTEMPENG-137
+- C1538650 Postman \| Render item.shortTitle alongside item.title in one template — refs MODTEMPENG-137
+- C1538649 Postman \| Render item.shortTitle token with titles of varying length — refs MODTEMPENG-137
+- C1504508 User without notice policy edit permission cannot modify the Formats settings pane — refs CIRC-2661,UICIRC-149,UXPROD-1532
+- C1504507 Formats enabled in the Formats settings pane control which options appear in the patron record "Preferred notification method" field — refs CIRC-2661,UICIRC-149,UXPROD-1532
+- C1504506 Formats enabled in the Formats settings pane are the only options available in the patron notice policy "Format" dropdown — refs CIRC-2661,UICIRC-149,UXPROD-1532
+- C1504505 "Formats" pane appears in Settings > Circulation > Patron notices and displays correct elements — refs CIRC-2661,UICIRC-149,UXPROD-1532
+- C1504504 Two notice rows with identical Template, Triggering event, Send, and Frequency but different Formats send in patron's preferred format; email is the fallback when no preference is set — refs CIRC-2661,UICIRC-149,UXPROD-1532
+- C1504503 Notice with Format set to "User preference" is delivered in the patron's preferred format; fallback to email applies when patron has no preferred format set — refs CIRC-2661,UICIRC-149,UXPROD-1532
+- C1504502 Notice with Format set to "Print" is delivered via print regardless of patron's preferred notification method — refs CIRC-2661,UICIRC-149,UXPROD-1532

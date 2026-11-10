@@ -1,6 +1,9 @@
 # FOLIO Invoices App - Business Logic Context
 
+> Built: 2026-06-18 (Cypress-fragment refresh 2026-08-06) · Delta-refreshed: 2026-11-07 · Release: not recorded · Builder: build-app-context/manual — header normalized 2026-11-07, see area-map.md → Freshness
+
 > Generated/refreshed by the build-app-context workflow on 2026-06-18.
+> **GitHub fragment refresh on 2026-08-06**: `stripes-testing/cypress/support/fragments/invoices/invoiceView.js` scanned. New item added: Invoice Lines table column headers including `Total (Exchanged)`. All other strings confirmed current.
 > Sources:
 > - TestRail section subtree under group_id=329 scoped to Invoices roots (sections: 329, 1289, 37957; 276 cases total).
 > - Focus releases requested: Umbrellaleaf, Trillium, Sunflower, Ramsons, 2023 Poppy (175 matching cases; no Umbrellaleaf-tagged cases found in this subtree).
@@ -108,6 +111,13 @@ Each invoice line represents one item being paid. Lines are linked to POLs.
 - **Adjustments** — line-level adjustments (tax, shipping, etc.)
 - **Accounting code** — from vendor record, required if Export to accounting is on
 - **Release encumbrance** — checkbox; when checked, the encumbrance on the linked POL is released when the invoice is approved (vs. when it's paid)
+
+### Invoice Lines table column headers (confirmed from `invoiceView.js` fragment, 2026-08-06)
+
+The invoice lines table inside the Invoice detail pane shows these columns:
+`POL number`, `Description`, `Fund code`, `Receipt status`, `Payment status`, `Quantity`, `Sub-total`, `Total`, `Total (Exchanged)`
+
+- `Total (Exchanged)` column appears when the invoice currency differs from the tenant base currency (multi-currency scenario). In same-currency scenarios this column is absent or blank. Use verbatim when asserting column presence in currency-mismatch tests.
 
 ### Linking an invoice line to a POL
 - User clicks "Add fund distribution from POL" or links via POL number
@@ -549,3 +559,25 @@ Invoices is strongly **`Functional` (~95%)**, median ~8 steps, `User Journey` ~1
 - [ ] Whether a duplicated invoice's fiscal year can ever resolve to something OTHER than "current FY or blank" (e.g. if invoice date itself is edited pre-save) was not tested in the sampled cases.
 
 > N≥10 audit round (2026-07-22): 14 cases read (C514954, C514958, C1332438, C613165, C663268, C422074, C471512, C610245, C396373, C700852, C1322894, C825250, C889747, C934328). Added entirely new sections: Duplicate Invoice (field carry-over/reset rules), Version History (Invoice/Invoice line), "Save & keep editing" button mechanic, Batch group credentials permission tiers, strict Pro-rate↔fund-distribution coupling for adjustments, JPY zero-decimal display vs API contract, and fiscal-year auto-resolution/no-revert-to-blank rules. Added 8 new Key Business Rules (17-24) and enriched the "Update order status" modal row with its exact radio-option list and the Central-only ECS Affiliation-dropdown scoping.
+
+
+---
+
+## Changes since 2026-06-18 (delta refresh 2026-11-07)
+
+> Delta, not a rebuild: sections above reflect the original build. Where this section contradicts them, **this section wins**.
+> Sources: GitHub folio-org/ui-invoice (translations/ui-invoice/en.json, HEAD v8.0.0); Jira folio-org.atlassian.net Done issues resolved since 2026-06-18; TestRail suite 21 cases created since 2026-06-18.
+
+### What changed
+- Version history no longer shows metadata.updatedDate for invoice and invoice line (UINV-639).
+- Connected Tasks/Jobs fourth pane in Invoice and Invoice line views (UINV-637).
+- Bug fixed: Calculated total amount (Exchanged) not converted for a user with only `UI-Invoice Invoice - view` (UINV-641) — a capability-boundary regression candidate.
+
+### Jira — Done since build (invoices (UINV, MODINVOICE) since 2026-06-18 (none Done between 06-18 and 08-06))
+
+- UINV-641 Bug — Calculated total amount (Exchanged) not converted for user with "UI-Invoice Invoice - view" only
+- UINV-639 Story — Do not show metadata.updatedDate in "Version history" for Invoice and Invoice line
+
+### TestRail — cases created since 2026-06-18: 0 (0 manual, 0 automated/Karate)
+
+- No new manual cases.
