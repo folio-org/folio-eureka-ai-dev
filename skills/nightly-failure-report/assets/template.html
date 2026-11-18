@@ -108,6 +108,9 @@ ol.prio p{color:var(--muted);max-width:72ch}
 .card .titleline{display:flex;gap:16px;align-items:flex-start}
 .card .count{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;min-width:44px;color:var(--cc)}
 .card .titleline > div{display:flex;flex-direction:column;gap:8px;min-width:0}
+.card .fid{font-family:var(--f-mono);font-size:13px;font-weight:700;color:var(--muted);background:var(--sunken);border-radius:6px;padding:2px 7px;margin-right:8px;vertical-align:2px}
+.tag.known{background:var(--accent-soft);color:var(--accent);font-family:var(--f-mono)}
+.tag.known.back{background:var(--s-env);color:var(--c-env)}
 .tags{display:flex;flex-wrap:wrap;gap:6px}
 .tag{font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--sunken);color:var(--muted);white-space:nowrap}
 .tag.rc{background:var(--cs);color:var(--cc)}
@@ -135,6 +138,13 @@ details.tl[open] > summary::before{transform:rotate(90deg)}
 .t .thist{text-align:right;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.35}
 .t .thist b{display:block;font-size:15px;color:var(--fg)}
 .t .thist b.zero{color:var(--c-env)}
+/* run history: one segment per run, newest on top; green passed, red failed/broken */
+/* the last 15 runs at most; every segment has the same size, so the column length shows how many runs there are */
+.hbar{display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:8px}
+.hbar a{display:block;width:28px;height:6px;border-radius:2px;background:var(--c-code)}
+.hbar a.f{background:var(--c-env)}
+.hbar a.cur{outline:2px solid var(--fg);outline-offset:1px}
+.hbar a:hover,.hbar a:focus-visible{opacity:.6}
 @media (max-width:640px){.t{grid-template-columns:minmax(0,1fr) auto}.t .tmain{grid-column:1/-1;grid-row:2}.t .tid{flex-direction:row;gap:10px;align-items:baseline}}
 .fixbox{margin:0 24px 20px;border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:16px 18px;display:flex;flex-direction:column;gap:14px}
 .fixbox > .lbl{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--fg);font-weight:700}
@@ -225,6 +235,10 @@ footer{color:var(--muted);font-size:13px;max-width:80ch}
       <div class="teams" id="readiness"></div>
     </div>
     <div class="fgroup">
+      <div class="eyebrow"><span>Known issues and existing bugs</span></div>
+      <div class="teams" id="knownf"></div>
+    </div>
+    <div class="fgroup">
       <div class="eyebrow"><span>Team (from the test tag)</span></div>
       <div class="teams" id="teams"></div>
     </div>
@@ -248,13 +262,16 @@ const TYPE = {
 };
 const esc=s=>String(s??"").replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
 const fixes=Object.fromEntries(DATA.fixes.map(f=>[f.id,f]));
-const state={team:"",type:"",q:"",ready:""};
+const state={team:"",type:"",q:"",ready:"",known:""};
+// known = a known issue from the registry (KI-NN) or an app bug already filed in Jira ("Existing: KEY ...")
+const isKnown=f=>(f.known||[]).length>0||/^Existing:/.test(f.jira||"");
 const qEl=document.getElementById("q");
 const teamCount={}; DATA.tests.forEach(t=>teamCount[t.team]=(teamCount[t.team]||0)+1);
 const TEAMS=Object.keys(teamCount).sort((a,b)=>(a==="untagged")-(b==="untagged")||teamCount[b]-teamCount[a]);
-const hay=t=>{const f=fixes[t.fix];return [t.id,t.name,t.err,t.spec,t.note,f.title,f.repo,f.owner,f.ticket,f.evidence,...(f.changes||[]).map(c=>c.path),...(t.linked||[]).map(l=>l.key)].join(" ").toLowerCase();};
+const hay=t=>{const f=fixes[t.fix];return [f.id,...(f.known||[]).map(k=>k.key),t.id,t.name,t.err,t.spec,t.note,f.title,f.repo,f.owner,f.ticket,f.evidence,...(f.changes||[]).map(c=>c.path),...(t.linked||[]).map(l=>l.key)].join(" ").toLowerCase();};
 const pass=(t,skip)=>(skip==="team"||!state.team||t.team===state.team)&&(skip==="type"||!state.type||fixes[t.fix].type===state.type)
-  &&(skip==="ready"||!state.ready||(state.ready==="yes")===fixes[t.fix].ready)&&(!state.q||hay(t).includes(state.q));
+  &&(skip==="ready"||!state.ready||(state.ready==="yes")===fixes[t.fix].ready)
+  &&(skip==="known"||!state.known||(state.known==="only")===isKnown(fixes[t.fix]))&&(!state.q||hay(t).includes(state.q));
 const ticketLink=k=>/^https?:/.test(k)?k:/^[A-Z][A-Z0-9]+-\d+$/.test(k)?`https://folio-org.atlassian.net/browse/${k}`:null;
 const ghLink=(repo,ref,p,l)=>`https://github.com/folio-org/${repo}/blob/${ref||"HEAD"}/${p}${l?`#L${l}`:""}`;
 const repoOf=f=>f.type==="test"||!f.repo?"stripes-testing":f.repo;
@@ -277,6 +294,11 @@ function renderReady(){
   document.getElementById("readiness").innerHTML=[["","All",c.yes+c.no],["yes","Ready to apply",c.yes],["no","Needs verification",c.no]]
     .map(([k,l,n])=>`<button type="button" class="tchip" data-ready="${k}" aria-pressed="${state.ready===k}">${l} <b>${n}</b></button>`).join("");
 }
+function renderKnown(){
+  const c={only:0,hide:0}; DATA.tests.filter(t=>pass(t,"known")).forEach(t=>c[isKnown(fixes[t.fix])?"only":"hide"]++);
+  document.getElementById("knownf").innerHTML=[["","All",c.only+c.hide],["hide","Hide known/existing",c.hide],["only","Only known/existing",c.only]]
+    .map(([k,l,n])=>`<button type="button" class="tchip" data-known="${k}" aria-pressed="${state.known===k}">${l} <b>${n}</b></button>`).join("");
+}
 function renderTeams(){
   const c={}; DATA.tests.filter(t=>pass(t,"team")).forEach(t=>c[t.team]=(c[t.team]||0)+1);
   const tot=Object.values(c).reduce((a,b)=>a+b,0);
@@ -298,7 +320,10 @@ function dataHtml(f){
     ${d.ui?`<ol class="ui">${d.ui.map(s=>`<li>${esc(s)}</li>`).join("")}</ol>`:""}</div>`).join("")}</div>`;
 }
 function testRow(t){
-  const h=t.ht?`<b class="${t.hp===0?"zero":""}">${t.hp}/${t.ht}</b>passed`:`<b>—</b>no history`;
+  const runs=(t.runs||[]).slice(0,15);
+  const bar=runs.length>1?`<div class="hbar" role="img" aria-label="Last ${runs.length} runs, newest first: ${runs.map(r=>r.s==="p"?"passed":"failed").join(", ")}">${runs.map((r,i)=>
+    `<a class="${r.s}${i===0?" cur":""}" href="${esc(r.u)}" target="_blank" rel="noopener" title="${r.b?"#"+esc(r.b):"run"} · ${r.s==="p"?"passed":"failed"}${i===0?" (this run)":""}"></a>`).join("")}</div>`:"";
+  const h=(t.ht?`<b class="${t.hp===0?"zero":""}">${t.hp}/${t.ht}</b>passed`:`<b>—</b>no history`)+bar;
   const ws=(t.where||[]).filter(w=>w.path&&w.line);
   return `<div class="t"><div class="tid">${t.id}<span class="st st-${t.status}">${t.status}</span></div>
   <div class="tmain"><div class="tname">${esc(t.name)}</div>
@@ -337,9 +362,9 @@ function renderCards(){
     const f=fixes[k], ts=by[k].sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
     const repo=repoOf(f);
     const canPrompt=(f.changes||[]).length>0;
-    return `<article class="card ty-${f.type}">
-      <div class="chead"><div class="titleline"><span class="count">${ts.length}</span><div><h3>${esc(f.title)}</h3>
-      <div class="tags"><span class="ready ${f.ready?"ok":"no"}">${f.ready?"Ready":"Needs verification"}</span><span class="fixtype">${TYPE[f.type].short}${f.type==="app"?`: ${esc(repo)}`:""}</span>${f.teams.map(x=>`<span class="tag">${esc(x)}</span>`).join("")}${f.owner?`<span class="tag">owner: ${esc(f.owner)}</span>`:""}<span class="tag ${f.confidence==="Confirmed"?"yes":"prob"}">${esc(f.confidence)}</span></div></div></div></div>
+    return `<article class="card ty-${f.type}" id="${esc(f.id)}">
+      <div class="chead"><div class="titleline"><span class="count">${ts.length}</span><div><h3><span class="fid">${esc(f.id)}</span>${esc(f.title)}</h3>
+      <div class="tags"><span class="ready ${f.ready?"ok":"no"}">${f.ready?"Ready":"Needs verification"}</span><span class="fixtype">${TYPE[f.type].short}${f.type==="app"?`: ${esc(repo)}`:""}</span>${f.teams.map(x=>`<span class="tag">${esc(x)}</span>`).join("")}${f.owner?`<span class="tag">owner: ${esc(f.owner)}</span>`:""}<span class="tag ${f.confidence==="Confirmed"?"yes":"prob"}">${esc(f.confidence)}</span>${(f.known||[]).map(k=>`<span class="tag known${k.status==="fixed"?" back":""}" title="${k.status==="fixed"?"Marked fixed - it is back. ":""}Seen before: ${esc(k.seen.join(", ")||"first time")}">${esc(k.key)}${k.ticket?` · ${esc(k.ticket)}`:""}${k.seen.length?` · seen ${esc(k.seen.join(", "))}`:" · new"}${k.status==="fixed"?" · was fixed":""}</span>`).join("")}</div></div></div></div>
       <p class="evidence"><b>Why:</b> ${esc(f.evidence)}${f.ticket?` <b>Ticket:</b> ${ticketLink(f.ticket)?`<a class="ticket" href="${ticketLink(f.ticket)}" target="_blank" rel="noopener">${esc(f.ticket)}</a>`:`<span class="ticket">${esc(f.ticket)}</span>`}`:""}</p>
       ${f.ready?"":`<div class="verify"><b>Verify before applying:</b><ul>${f.reasons.map(r=>`<li>${esc(r)}</li>`).join("")}</ul></div>`}
       ${f.jira?`<div class="block"><div class="jira"><span class="lbl" style="font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700">Jira</span><code>${esc(f.jira)}</code></div></div>`:""}
@@ -360,12 +385,13 @@ document.addEventListener("click",e=>{
   const f=fixes[b.dataset.fix], ts=DATA.tests.filter(t=>t.fix===f.id);
   copyText(b.dataset.copy==="curl"?f.data.filter(d=>d.request).map(d=>`# ${d.what||""}\n${curl(d.request)}`).join("\n\n"):promptFor(f,ts),b,f.id);
 });
-function renderAll(){renderTypes();renderReady();renderTeams();renderCards();}
+function renderAll(){renderTypes();renderReady();renderKnown();renderTeams();renderCards();}
+document.getElementById("knownf").addEventListener("click",e=>{const b=e.target.closest("button[data-known]");if(!b)return;state.known=b.dataset.known;renderAll();});
 document.getElementById("readiness").addEventListener("click",e=>{const b=e.target.closest("button[data-ready]");if(!b)return;state.ready=b.dataset.ready;renderAll();});
 document.getElementById("types").addEventListener("click",e=>{const b=e.target.closest("button[data-type]");if(!b)return;state.type=state.type===b.dataset.type?"":b.dataset.type;renderAll();});
 document.getElementById("teams").addEventListener("click",e=>{const b=e.target.closest("button[data-team]");if(!b)return;state.team=b.dataset.team;renderAll();});
 let tmr; qEl.addEventListener("input",()=>{clearTimeout(tmr);tmr=setTimeout(()=>{state.q=qEl.value.trim().toLowerCase();renderAll();},150);});
-document.getElementById("reset").addEventListener("click",()=>{state.team=state.type=state.q=state.ready="";qEl.value="";renderAll();});
+document.getElementById("reset").addEventListener("click",()=>{state.team=state.type=state.q=state.ready=state.known="";qEl.value="";renderAll();});
 document.getElementById("linkedmeta").textContent=DATA.linked?`Linked tickets: TestRail run ${DATA.linked.run_id} (${DATA.linked.run_name}), since ${DATA.linked.since}`:"Linked tickets: not checked";
 renderAll();
 </script>

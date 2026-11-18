@@ -185,6 +185,27 @@ def unreferenced_open_links(f, linked):
             + (' ...' if len(ts) > 8 else '') for k, ts in by_key.items()]
 
 
+def history_runs(work, t, allure_url):
+    """Per-run pass/fail of a test, newest first (as extract.py writes it to tests.json). For work folders
+    extracted before that field existed, read it from the downloaded Allure test case (allure/tc/<uid>.json)."""
+    if t.get('runs') is not None:
+        return t['runs']
+    path = os.path.join(work, 'allure', 'tc', f"{t['uid']}.json")
+    if not os.path.exists(path):
+        return []
+    tc = json.load(open(path, encoding='utf-8'))
+    build = re.search(r'/(\d+)/allure', allure_url)
+    runs = [dict(b=build.group(1) if build else '', s='p' if t['status'] == 'passed' else 'f',
+                 u=f"{allure_url}#testresult/{t['uid']}")]
+    for item in ((tc.get('extra') or {}).get('history') or {}).get('items') or []:
+        if item.get('status') not in ('passed', 'failed', 'broken'):
+            continue
+        b = re.search(r'/(\d+)/allure', item.get('reportUrl') or '')
+        runs.append(dict(b=b.group(1) if b else '', s='p' if item['status'] == 'passed' else 'f',
+                         u=item.get('reportUrl') or ''))
+    return runs
+
+
 def main():
     if len(sys.argv) != 2:
         sys.exit(__doc__)
@@ -199,6 +220,24 @@ def main():
     if errs:
         sys.exit(f'analysis.json is not ready ({len(errs)} problems):\n- ' + '\n- '.join(errs))
 
+    # known issues persist across runs (known_issues.py); the registry lives next to the work folders
+    registry_path = os.path.join(os.path.dirname(os.path.abspath(work)), 'known_issues.json')
+    registry = {i['key']: i for i in json.load(open(registry_path, encoding='utf-8'))['issues']} \
+        if os.path.exists(registry_path) else {}
+    folder = os.path.basename(os.path.abspath(work))
+
+    def known_of(f):
+        keys = f.get('known') or []
+        out = []
+        for key in [keys] if isinstance(keys, str) else keys:
+            if key not in registry:
+                sys.exit(f"{f['id']}: known issue {key} is not in {common.disp(registry_path)}"
+                         " - add it with known_issues.py add")
+            i = registry[key]
+            earlier = [s['run'] for s in i.get('seen', []) if s.get('folder') != folder]
+            out.append(dict(key=key, ticket=i.get('ticket'), status=i.get('status'), seen=list(dict.fromkeys(earlier))))
+        return out
+
     by_id = {t['id']: t for t in tests}
     fixes, out_tests = [], []
     for f in sorted(an['fixes'], key=lambda f: -len(f['tests'])):
@@ -206,6 +245,7 @@ def main():
         reasons = readiness(f)
         fixes.append({**{k: f.get(k) for k in ('id', 'type', 'cause', 'title', 'confidence', 'evidence', 'same_cause', 'repo',
                                                  'ref', 'ticket', 'owner', 'changes', 'data', 'jira')},
+                      'known': known_of(f),
                       'teams': [t for t, _ in teams.most_common()], 'ready': not reasons, 'reasons': reasons})
         for tid, note in f['tests'].items():
             t = by_id[tid]
@@ -213,7 +253,8 @@ def main():
                      for l in (linked['tests'].get(tid, []) if linked else [])]
             out_tests.append(dict(uid=t['uid'], id=tid, name=t['name'], team=t['team'], status=t['status'],
                                   stage=t['stage'], fix=f['id'], note=note, err=t['err'], spec=t['spec'],
-                                  hp=t['hp'], ht=t['ht'], where=t['where'], linked=links))
+                                  hp=t['hp'], ht=t['ht'], where=t['where'], linked=links,
+                                  runs=history_runs(work, t, meta['allure'])))
     data = dict(fixes=fixes, tests=out_tests, sha=meta['sha'], allure=meta['allure'], build=meta.get('build', ''),
                 linked=({k: linked[k] for k in ('run_id', 'run_name', 'since')} if linked else None))
 

@@ -49,6 +49,7 @@ Write `<WORK>/analysis.json` once, in English. `render.py` reads it together wit
 | `jira` | app | Jira summary for the module bug. When an existing ticket covers it (often one linked to the tests in TestRail or in the case's `refs`), write `Existing: <KEY> <summary>` and put the key in `ticket` too; such a fix needs no `changes`, `ref` or `repo`. |
 | `owner` | no | Team owning the module. Teams on the card come from the test tags automatically. |
 | `ticket` | no | Jira key (`UIEH-1553`) or commit/PR URL that shows why the behavior changed. Allowed on the fix or on a single change. |
+| `known` | no | Known-issue key from the registry (`"KI-07"`, or a list), when this fix is a problem that persists across runs. The card shows the key, ticket and earlier runs; `render.py` rejects keys not in the registry (add them with `known_issues.py add`). |
 | `same_cause` | no | One sentence proving why tests with different errors are fixed by the same change, e.g. "all 13 specs import calendar id a8531527 from calendar-e2e-test-values.js". Without it, a shared change may only cover tests that fail with the same error. |
 | `changes[]` | test, app | Code changes, see below. |
 | `data[]` | data | Environment changes, see below. |
