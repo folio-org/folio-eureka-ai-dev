@@ -8,7 +8,12 @@ HTML report (`report.html`) with one card per fix.
 It also uses what is already known about the failed tests:
 
 - **tickets linked in TestRail** - bugs people linked to the tests' results in the last days, with their current Jira status;
-- **earlier analyses** - what previous reports concluded about the same tests, so a fix that was applied but did not help is spotted.
+- **earlier analyses** - what previous reports concluded about the same tests, so a fix that was applied but did not help is spotted;
+- **known issues** - a registry of problems that keep coming back across runs, with stable keys (`KI-01`, ...), their Jira
+  ticket and the runs they were seen in; an issue marked fixed that shows up again is flagged.
+
+Each test in the report has a run-history bar (newest run on top, up to 15 runs, green passed / red failed) that links
+to each run's Allure result, so you see at a glance whether a test just broke or has been flaky for a while.
 
 Works with any agent that supports skills (Claude Code, Cursor, Codex, ...), on Windows, macOS and Linux.
 
@@ -134,12 +139,54 @@ Optional additions to the prompt:
 - a TestRail run to read linked tickets from (when every rerun gets a new run): "TestRail run 3695";
 - an environment to check things on: "use the ECS snapshot" or the details of another one.
 
+Follow-ups you can ask for after the report:
+
+- "post F03 and F07 results to TestRail" - one Failed result per test with the Jira key in Defects (`testrail_result.py`, previewed first);
+- "KI-05 is fixed" / "MODORDERS-1488 was closed" - updates the known-issue registry.
+
+## Sharing history with your team
+
+Your earlier analyses and the known-issue registry live only on your machine (`paths.work_dir`). To let someone else
+continue where you left off - e.g. triage your team's tests while you are on vacation - ask the agent to export them,
+or run:
+
+```bash
+python <skill>/scripts/history.py export ~/triage-history.zip --teams promin,eureka   # optional: --last 10
+```
+
+The zip holds `known_issues.json` and, per analyzed run, `analysis.json`, `meta.json`, `tests.json`, `report.html`,
+the linked-ticket/known-issue data and any `.md` notes in the run folder - not the downloaded Allure data, screenshots,
+scripts, logs, your config or credentials. Look through the `.md` notes before sending it. A few MB at most.
+
+The recipient needs this skill version (or newer) and imports the zip from wherever they saved it - e.g. their
+Downloads folder; there is no need to move it, and it should not be put into the skill folder (it could get committed).
+Nothing else to configure:
+
+```bash
+python <skill>/scripts/history.py import ~/Downloads/triage-history.zip
+```
+
+or they ask their agent: "import nightly triage history from ~/Downloads/triage-history.zip". The import copies
+everything into their work folder (`paths.work_dir`, `~/.folio-nightly-report/runs` by default); the zip can be
+deleted afterwards.
+
+Imported runs sit next to their own and are used by the next analysis like any other earlier run; their existing
+run folders are never overwritten (`--overwrite` to replace). The registry is copied if they have none, merged if
+the KI keys agree, and otherwise saved as `known_issues.imported.json` with the clashing keys listed.
+
+When you come back, they export theirs and you import it the same way.
+
+For a team that triages together all the time, an alternative is one shared folder (a synced drive) set as everyone's
+`paths.work_dir` - then everybody sees every run immediately. Avoid two people analyzing at the same moment: both
+write `known_issues.json`.
+
 ## Files on disk
 
 | location | what | safe to delete? |
 |---|---|---|
 | `~/.folio-nightly-report/config.json` | your settings and credentials | only if you want to start over |
-| `~/.folio-nightly-report/runs/<job>-<build>/` | one folder per analyzed run: downloaded Allure data, `analysis.json`, `report.html` | **no** - later analyses read earlier ones to see what was already tried; delete only very old runs |
+| `~/.folio-nightly-report/runs/<job>-<build>/` | one folder per analyzed run: downloaded Allure data, `analysis.json`, `report.html` | **no** - later analyses read earlier ones to see what was already tried; delete only very old runs (or just their `allure/` and `shots/` subfolders) |
+| `~/.folio-nightly-report/runs/known_issues.json` | the known-issue registry | **no** - it is how a problem keeps its KI key across runs |
 | `~/.cache/folio-repos/` | blobless clones of FOLIO modules, updated on use | yes - re-cloned when needed |
 
 ## Troubleshooting

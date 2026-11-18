@@ -125,6 +125,21 @@ def cluster_key(m):
     return 'UI ' + re.sub(r'"[^"]*"', '"X"', re.sub(r'\d+', 'N', first))[:120]
 
 
+def history_runs(t, allure_url):
+    """This run plus the Allure history, newest first: [{b: build, s: 'p'|'f', u: result link}].
+    Broken counts as failed; skipped/unknown runs are left out. Same logic in render.py (fallback)."""
+    build = re.search(r'/(\d+)/allure', allure_url)
+    runs = [dict(b=build.group(1) if build else '', s='p' if t.get('status') == 'passed' else 'f',
+                 u=f"{allure_url}#testresult/{t['uid']}")]
+    for item in ((t.get('extra') or {}).get('history') or {}).get('items') or []:
+        if item.get('status') not in ('passed', 'failed', 'broken'):
+            continue
+        b = re.search(r'/(\d+)/allure', item.get('reportUrl') or '')
+        runs.append(dict(b=b.group(1) if b else '', s='p' if item['status'] == 'passed' else 'f',
+                         u=item.get('reportUrl') or ''))
+    return runs
+
+
 def main():
     if len(sys.argv) != 3:
         sys.exit(__doc__)
@@ -182,6 +197,7 @@ def main():
             err=short_error(msg), msg=msg[:3000], step=(deepest_failed_step(stage) or [''])[-1],
             spec=spec.replace('cypress/e2e/', ''), suite=labels.get('suite'),
             hp=hist.get('passed'), ht=hist.get('total'), flaky=t.get('flaky'),
+            runs=history_runs(t, idx['allure']),
             start=datetime.datetime.fromtimestamp(t['time']['start'] / 1000, datetime.timezone.utc).strftime('%H:%M'),
             cluster=cluster_key(msg), where=where))
 
