@@ -156,7 +156,8 @@ python <skill>/scripts/history.py export ~/triage-history.zip --teams promin,eur
 
 The zip holds `known_issues.json` and, per analyzed run, `analysis.json`, `meta.json`, `tests.json`, `report.html`,
 the linked-ticket/known-issue data and any `.md` notes in the run folder - not the downloaded Allure data, screenshots,
-scripts, logs, your config or credentials. Look through the `.md` notes before sending it. A few MB at most.
+scripts, logs, your config or credentials. Access tokens, cookies and auth headers that failed `cy.request()` messages
+carry in the stored errors are replaced with `<redacted>`. Look through the `.md` notes before sending it. A few MB at most.
 
 The recipient needs this skill version (or newer) and imports the zip from wherever they saved it - e.g. their
 Downloads folder; there is no need to move it, and it should not be put into the skill folder (it could get committed).

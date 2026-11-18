@@ -20,6 +20,7 @@ The default work folder root is the config's paths.work_dir (or NIGHTLY_TRIAGE_D
 """
 import json
 import os
+import re
 import sys
 import zipfile
 
@@ -29,6 +30,20 @@ import common  # noqa: E402
 RUN_FILES = ('analysis.json', 'meta.json', 'tests.json', 'report.html', 'linked_defects.json',
              'previous_findings.json', 'known_matches.json')
 REGISTRY = 'known_issues.json'
+# failed cy.request() messages (kept in tests.json) include the request headers: cookies with access tokens
+REDACT = [
+    (re.compile(r'eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*'), '<redacted-token>'),
+    (re.compile(r'((?:folioAccessToken|folioRefreshToken)=)[^;\s"\\]+'), r'\1<redacted>'),
+    (re.compile(r'((?:x-okapi-token|[Aa]uthorization|[Cc]ookie)\\?"?\s*[:=]\s*\\?"?)(?:Basic |Bearer )?[^\s"\\,;]{8,}'),
+     r'\1<redacted>'),
+    (re.compile(r'(\\?"password\\?"\s*:\s*\\?")[^"\\]+'), r'\1<redacted>'),
+]
+
+
+def redact(text):
+    for pattern, repl in REDACT:
+        text = pattern.sub(repl, text)
+    return text
 
 
 def load(path):
@@ -100,7 +115,8 @@ def export(zip_path, opts):
     n_files = 0
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as z:
         if os.path.isfile(os.path.join(root, REGISTRY)):
-            z.write(os.path.join(root, REGISTRY), REGISTRY)
+            with open(os.path.join(root, REGISTRY), encoding='utf-8') as fh:
+                z.writestr(REGISTRY, redact(fh.read()))
             n_files += 1
         for name, d in runs:
             for f in sorted(os.listdir(d)):
@@ -108,9 +124,11 @@ def export(zip_path, opts):
                 if not os.path.isfile(p) or not (f in RUN_FILES or f.endswith('.md')):
                     continue
                 if f == 'tests.json':
-                    z.writestr(f'{name}/{f}', json.dumps(with_runs(d), indent=1, ensure_ascii=False))
+                    text = json.dumps(with_runs(d), indent=1, ensure_ascii=False)
                 else:
-                    z.write(p, f'{name}/{f}')
+                    with open(p, encoding='utf-8', errors='replace') as fh:
+                        text = fh.read()
+                z.writestr(f'{name}/{f}', redact(text))
                 n_files += 1
     size = os.path.getsize(zip_path) / 1e6
     print(f'exported {len(runs)} run(s), {n_files} files, {size:.1f} MB → {common.disp(zip_path)}')
