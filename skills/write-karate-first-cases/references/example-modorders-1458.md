@@ -2,7 +2,7 @@
 
 End-to-end run of this skill (November 2026). Result: TestRail C1621341, C1621342; PR folio-org/folio-integration-tests#2619.
 
-## Phase 1 — Analysis
+## Phases 1–2 — Context and analysis
 
 - Story MODORDERS-1458 "Do not overwrite approvalDate when opening an order" is test-only; the fix is MODORDERS-1456 (mod-orders PR #1332, commit `4f016d4`).
 - Fix diff: `OrderValidationService.checkOrderApprovalRequired` used to call `setApprovedById(currentUser)` and `setApprovalDate(new Date())` on **every** transition to Open. Now `PurchaseOrderHelper.setOrderApprovalDetails` sets each field **only when it is null**.
@@ -10,14 +10,17 @@ End-to-end run of this skill (November 2026). Result: TestRail C1621341, C162134
 - Existing coverage: no Karate feature asserts `approvalDate`; manual UI case C736774 was updated by the team for this story.
 - Shared state: `approvals.isApprovalRequired` is tenant-wide and mod-orders caches it for 60 s; toggling it would break parallel open-order features. Not needed — the changed code runs without it.
 
-| # | Scenario | Layer | Fails before fix because | Coverage | Target |
-|---|---|---|---|---|---|
-| 1 | Approval details from first opening survive unopen + open | Karate | second open overwrote both fields | none | new feature, Extended |
-| 2 | Approval date set while Pending survives opening; approvedById filled | Karate | open overwrote approvalDate | none | same feature |
+| ID | Requirement | Source | Ev. | Decision | Existing coverage | Pre-fix failure | Conf. |
+|---|---|---|---|---|---|---|---|
+| R1 | Approval details from the first opening survive unopen + open | AC1; fix diff | F | Karate (new feature, Extended) | none | by diff: the second open overwrote both fields | H |
+| R2 | Approval date set while Pending survives opening; approvedById filled | fix diff (per-field null check) | F | Karate (same feature) | none | by diff: open overwrote approvalDate | H |
+| R3 | Order details show the initial approval date after reopen | AC2 | F | Covered | C736774 (manual, updated by the team) | — | H |
+
+Pre-fix failure was not demonstrated (no environment with the pre-fix mod-orders build); the claim rests on the diff.
 
 Scenario 2 also proves the per-field "only when null" logic: `approvalDate` is kept, `approvedById` (empty) is filled.
 
-## Phase 2 — TestRail case (C1621342, as posted)
+## Phase 3 — TestRail case (C1621342, as posted)
 
 Plain business language: no endpoints, no status codes, no UI clicks. Capabilities are listed for people; the feature does not model them.
 
@@ -47,7 +50,7 @@ Preconditions (HTML):
 
 The feature turns these steps into requests (`PUT /orders/composite-orders/{id}` with `approved`, `approvalDate`; `openOrder`; `GET` with `match`), keeping the step numbers as `# 1.` to `# 4.` comments.
 
-## Phase 3 — Feature
+## Phase 4 — Feature
 
 `acquisitions/src/main/resources/thunderjet/mod-orders/features/open-order-approval-details-not-overwritten.feature`, registered at the end of `OrdersExtendedApiTest.FEATURES` and `mod-orders/orders.feature`.
 
@@ -189,7 +192,7 @@ Feature: Approval Details Are Not Overwritten When Opening An Order
     And match $.approvedById == '#uuid'
 ```
 
-## Phase 4 — PR notes that mattered
+## Phase 6 — PR notes that mattered
 
 - Why both scenarios fail on the pre-fix code (one line each).
 - Why the approval setting is not toggled (shared tenant, parallel runner, 60 s cache).

@@ -1,6 +1,6 @@
 # Karate feature conventions
 
-Apply these when the owning team has no rules file. When it has one (for example `acquisitions/ai/ACQ_ORDERS_SYSTEM_PROMPT.md`), the team file wins on every point it covers.
+Skeleton of a new feature and the mapping from a TestRail case to a scenario. When the owning team has rules files (`<project>/ai/`), they win on every point they cover.
 
 ## Skeleton
 
@@ -56,22 +56,7 @@ Feature: <Business Outcome In Title Case>
 
 ## Rules
 
-| Topic | Rule |
-|---|---|
-| Header | `# For <JIRA-KEY>, <TestRail case URL>[, <URL>]` — first line of the file |
-| Tags | `@C<id>` alone on the first tag line, then `@Positive` or `@Negative`. Exactly one `@C` per scenario. No `@T` tags |
-| Names | Feature, scenario names and comments in Title Case. Scenario name = TestRail case title |
-| Steps | `# N. …` comments, numbered to match TestRail steps; `# Prerequisites: …` for setup. No `* print` inside scenarios |
-| IDs | `call uuid` inside each scenario. Background-level IDs only for data that every scenario may share safely |
-| Parallelism | Scenarios must run in parallel. Never add `@parallel=false` to a new feature |
-| Reusables | Call by `karate-config.js` key (`call createOrder { … }`), parameters from the reusable's `# parameters:` header |
-| Waiting | `retry until <all conditions>` only after async triggers. Do not mix `retry until` and `match` in one request block — wait first, then GET again and `match` |
-| Assertions | `match $.field == value` right after the request. Presence markers: `'##null'` absent-or-null, `'#notnull'`, `'#uuid'`, `'#string'`, `'#[1]'` array of size 1 |
-| Captured values | `* def initialValue = response.field`, compare later with `match $.field == initialValue` |
-| Headers | `configure headers = headersAdmin` before admin-only calls, back to `headersUser` after; never as the last line of a scenario |
-| Body changes | GET → `* def body = response` → `* set body.field = …` / `* remove body.field` → PUT |
-| Amounts | TestRail amounts in brackets `($10.00)` are positive values in the API (`amount == 10.00`) |
-| File name | kebab-case, ≤ 80 characters including `.feature` |
+The rules, with their scope (all teams or one team), are in `karate-standards.md`. Copy login and headers from an exemplar feature of the target folder; the skeleton shows the acquisitions style.
 
 ## Mapping a TestRail Karate case to a scenario
 
@@ -80,7 +65,7 @@ Feature: <Business Outcome In Title Case>
 | Case title | `Scenario:` name (Title Case) |
 | Case ID | `@C<id>` tag + header URL |
 | Preconditions → records | `# Prerequisites:` block of reusable calls |
-| Preconditions → permissions | Already granted in the module's `init-*.feature`; if missing, add them there (and say so in the PR) |
+| Preconditions → capabilities | Not modelled: the project's test users have a fixed permission set (init feature). If the scenario fails for a missing permission, add it to the init feature and say so in the PR |
 | Step N action | `# N.` comment + request or reusable call |
 | Step N expected status | `Then status <code>` |
 | Step N expected fields | `And match` lines (or `retry until` + separate GET for async) |
