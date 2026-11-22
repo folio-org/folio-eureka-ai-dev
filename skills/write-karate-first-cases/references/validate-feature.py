@@ -75,7 +75,8 @@ def main():
     a = ap.parse_args()
 
     feature = a.feature
-    project = feature.split("/" + RES + "/")[0]
+    project = feature.split("/src/")[0]
+    RES = kc.res(project)
     name = os.path.basename(feature)[:-8]
     text = open(feature, encoding="utf-8").read()
     lines = text.splitlines()
@@ -137,12 +138,16 @@ def main():
     config = os.path.join(project, RES, "karate-config.js")
     config_text = open(config, encoding="utf-8").read() if os.path.exists(config) else ""
     repo_root = os.path.dirname(project) or "."
-    for key in sorted(set(re.findall(r"(?:^|[\s=])call(?:once)?\s+([A-Za-z_][A-Za-z0-9_]*)", "\n".join(l for l in lines if not l.strip().startswith("#"))))):
+    step_lines = [re.sub(r"'[^']*'|\"[^\"]*\"", "''", l) for l in lines if re.match(r"\s*(\*|Given|When|Then|And|But)\s", l)]
+    dyn_prefixes = set(re.findall(r"karate\.set\(\s*['\"]([A-Za-z_]+)['\"]\s*\+", config_text))
+    for key in sorted(set(re.findall(r"(?:^|[\s=])call(?:once)?\s+([A-Za-z_][A-Za-z0-9_]*)", "\n".join(step_lines)))):
         if key in ("read", "login") or re.match(r"uuid\d*$", key):
+            continue
+        if any(re.fullmatch(re.escape(p) + r"\d+", key) for p in dyn_prefixes):
             continue
         if re.search(rf"^\s*{key}\s*:", config_text, re.M) or re.search(rf"def\s+{key}\s*=", text):
             continue
-        found = subprocess.run(["grep", "-rlE", rf"def {key}\s*=", os.path.join(project, RES), os.path.join(repo_root, "common", RES)],
+        found = subprocess.run(["grep", "-rlE", rf"def {key}\s*=", os.path.join(project, RES), os.path.join(repo_root, "common", "src/main/resources")],
                                capture_output=True, text=True).stdout.strip()
         if not found:
             report("ERROR", f"'{key}' is called but not defined (karate-config.js, the feature, or a global/util feature)")
@@ -177,13 +182,27 @@ def main():
             report("WARN", f"{label}: Scenario Outline; prepare data with a Karate table and one reusable call")
         nums = [int(m.group(1)) for l in body for m in [re.match(r"\s*# (\d+)\. ", l)] if m]
         if nums and nums != list(range(1, len(nums) + 1)):
-            report("ERROR", f"{label}: step comments {nums} are not 1..N; they must map to TestRail steps")
+            # the 1..N rule exists for TestRail traceability; scenarios without a case keep their own numbering
+            report("ERROR" if ctags else "INFO", f"{label}: step comments {nums} are not 1..N" + ("; they must map to TestRail steps" if ctags else ""))
         if any(re.match(r"\*\s*print\s+['\"]", l) for l in code):
             team(r"NEVER add `\* print", f"{label}: '* print' step markers; use '# N.' comments")
         has_match = any(re.match(r"(And|Then|\*)\s+match\b", l) for l in code)
         has_retry = any("retry until" in l for l in code)
         has_status = any(re.match(r"(Then|And)\s+status\b", l) for l in code)
         calls_verify = any(re.search(r"call(?:once)?\s+(?:verify\w*|read\([^)]*(?:assert|verify|check|validate|expect)[^)]*\))", l, re.I) for l in code)
+        has_match = has_match or any(re.match(r"\*\s+assert\b", l) for l in code)
+        if not (has_match or calls_verify):
+            # a called helper scenario may assert: read(var + '@Tag') whose target scenario contains match/assert
+            defs = {**kc.project_defs(project), **kc.feature_defs(text)}
+            for l in code:
+                m = re.search(r"call(?:once)?\s+read\(([^)]*)\)", l)
+                ref = kc.resolve_read(m.group(1).strip(), defs) if m else None
+                target = kc.locate(project, ref) if ref else None
+                if target:
+                    tag = "@" + ref.split("@", 1)[1] if "@" in ref else None
+                    for tsc in kc.parse_feature(target):
+                        if (not tag or tag in tsc["tags"]) and any(re.match(r"\s*(\*|And|Then)\s+(match|assert)\b", b) for b in tsc["body"]):
+                            calls_verify = True
         if not (has_match or has_retry or calls_verify):
             report("ERROR" if not has_status else "WARN",
                    f"{label}: no business assertion (match / retry until / verify reusable)" + ("; only status codes are checked" if has_status else ""))
@@ -219,7 +238,15 @@ def main():
         if n != 1:
             report("ERROR", f"called {n} times from {os.path.basename(a.root)} (expected 1)")
     if not runner_list and not callers:
-        report("ERROR", "not registered: no runner and no root feature runs it")
+        # helpers are often reached dynamically (karate.call, a path built from a type name, another project's runner)
+        refs = subprocess.run(["grep", "-rl", "--include=*.java", "--include=*.feature", "--include=*.js", name, "."],
+                              capture_output=True, text=True).stdout.split()
+        refs = [r for r in refs if not r.endswith(f"/{name}.feature")]
+        if refs:
+            report("INFO", f"not registered directly; referenced from {os.path.relpath(refs[0])}" + (f" and {len(refs) - 1} more" if len(refs) > 1 else "")
+                   + " (helper or dynamic call): confirm it is executed")
+        else:
+            report("ERROR", "not registered: no runner, root feature or other file refers to it, so nothing runs it")
 
     for level in ("ERROR", "WARN", "INFO"):
         for msg in results[level]:

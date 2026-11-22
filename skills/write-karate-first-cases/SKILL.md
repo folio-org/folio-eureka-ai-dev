@@ -61,7 +61,7 @@ Collect before analysing. Record each source as used, unavailable or not applica
 | TestRail | Cases with the story/fix keys; manual cases of the area | Sibling skill, step 4b |
 | Lessons | Rules learned from reviews | `references/lessons.md` (entries of matching scope) |
 
-**Stale or missing application context** (no file, DRAFT, older than 90 days, built for an older release than the Fix Version): run the sibling's *Lightweight Context Enrichment* for this story; if it still lacks the touched rules, say so, lower confidence and suggest `build-app-context`. Never fill the gap from general knowledge.
+**Stale or missing application context** (no file, DRAFT, older than 90 days, built for an older release than the Fix Version; check with `python3 references/karate-context.py appctx <area>`): run the sibling's *Lightweight Context Enrichment* for this story; if it still lacks the touched rules, say so, lower confidence and suggest `build-app-context`. Never fill the gap from general knowledge.
 
 **Token economy.** Read the diff and the touched files, not whole repositories; use `karate-context.py` instead of reading features one by one (its index is cached per git HEAD); open only the scenarios that `coverage` ranks highest.
 
@@ -71,7 +71,7 @@ Build the coverage matrix described in `references/analysis.md` (columns, decisi
 
 1. **Requirements.** One row per AC, per before/after line of the fix, per touched Key Business Rule (changed → scenario, depended on → precondition, at risk → regression row). For each, consider positive, relevant negative and boundary cases, missing permission, invalid data, status transitions and effects in other modules — only where the code or requirement distinguishes them.
 2. **Contradictions and gaps.** Compare AC, comments, diff and unit tests. Every disagreement or unsourced value becomes an open question `Qn`; the row keeps evidence `A` until answered.
-3. **Existing coverage.** For every row: `karate-context.py coverage <projects> --endpoint "<METHOD> <path>" --field <f> --code <c> --reusable <key>` over all projects the story touches. Reusable calls are expanded, so differently named scenarios are found by what they do. Open each top hit and compare precondition, trigger and asserted outcome → `Covered` or `Extend`. Run the sibling's TestRail check for the same rows.
+3. **Existing coverage.** For every row: `karate-context.py coverage <projects> --endpoint "<METHOD> <path>" --field <f> --code <c> --reusable <key>` over all projects the story touches. Reusable calls are expanded, so differently named scenarios are found by what they do. Open each top hit and compare precondition, trigger and asserted outcome → `Covered` or `Extend`. A hit marked `NOT REGISTERED` does not run anywhere and is not coverage: treat the row as uncovered and mention the orphan feature in the run summary. Run the sibling's TestRail check for the same rows.
 4. **Shared state.** For every precondition ask whether it changes something tenant-wide (settings, rules, configuration, shared global records). Prefer a path to the changed code that does not need it; if impossible, say so and ask the team; never add `@parallel=false`.
 5. **Decision** per row (Karate / Manual / Split / Covered / Extend), pre-fix failure evidence, confidence, QA review flag.
 
@@ -115,7 +115,9 @@ Show the matrix and wait for confirmation unless the run is unattended (then sta
    8. Are the assertions on business outcomes, not only status codes?
    9. Would a maintainer understand it from the comments and names?
    10. Does it follow the target team's actual conventions (exemplar, rules files)?
-4. **Pre-fix demonstration** (optional, when an environment with the pre-fix module version is available): run the scenario there and record `demonstrated` in the matrix. Otherwise keep `by diff` or `unknown`. Do not run `mvn test` without an environment and the user's go-ahead.
+4. **Compile check** (when a Java runner was changed): `mvn -q -B -pl common,testrail-integration,<project> -am test-compile`. It needs no environment and changes nothing outside `target/`.
+5. **Execution** (optional): runners create and delete their own tenants through the platform admin client, so a run needs an environment, its admin client secret (`-DargLine="-Dkarate.env=<env> -DclientSecret=…"`) and the user's confirmation that the environment may be used for this. Run only the runner that contains the feature (`-Dtest=<Runner> -DfailIfNoTests=false`). Without all three, report "not executed" and why; never present an unexecuted feature as passing.
+6. **Pre-fix demonstration** (optional, when an environment with the pre-fix module version is available): run the scenario there and record `demonstrated` in the matrix. Otherwise keep `by diff` or `unknown`.
 
 ## Phase 6 — Delivery
 
