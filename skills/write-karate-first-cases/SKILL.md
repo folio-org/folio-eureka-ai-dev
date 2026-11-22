@@ -97,7 +97,7 @@ Show the matrix and wait for confirmation unless the run is unattended (then sta
    - One complete workflow per scenario; IDs from `call uuid` and unique codes from `call random_string` inside it; no shared mutable data.
    - Reusables before raw requests, with every documented parameter passed explicitly; missing parameter → add it to the reusable as optional and say so in the PR.
    - Tables instead of Scenario Outline; `retry until` on async state; assertions on business fields with exact or captured values; order-independent collection checks; negative cases assert status, error code and that nothing changed.
-3. **Register** the project's way (styles in `karate-standards.md`): append to the `FEATURES` array of the runner chosen by Test Group, or add a `@Test` method like its neighbours, or a call at the end of the root feature — or both array and root feature where the project uses both. A feature runs from exactly one place.
+3. **Register** the project's way (`profile` names the style; all styles are in `karate-standards.md`): append to the `FEATURES` array of the runner chosen by Test Group, or add a `@Test` method like its neighbours (`runFeatureTest(...)`, `feature("classpath:…").run()`, or enum entry + method in older runners), or a call at the end of the root feature — or both array and root feature where the project uses both. A feature runs from exactly one place.
 4. Never modify unrelated features, historical tests or production code to make validation pass.
 
 ## Phase 5 — Validation

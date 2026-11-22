@@ -22,7 +22,7 @@ Known differences between rank 1 and rank 2:
 |---|---|---|
 | Scenario design | One scenario = one complete workflow (prepare, trigger, verify). Never split dependent steps into separate scenarios; that pattern needs `@parallel=false` | U |
 | Scenario design | A scenario passes alone, in any order, and twice in a row on the same tenant | U |
-| Scenario design | Never add `@parallel=false` to a new feature (tolerated only in init features and old features) | U |
+| Scenario design | Do not add `@parallel=false` to a new feature (wiki: avoid; acquisitions rules forbid it). If a team serialises on purpose because of tenant-wide state, the PR says why | U (error only where team rules forbid it) |
 | Scenario design | Keep features focused; split by business rule instead of growing one file | U |
 | Test data | IDs with `call uuid` inside the scenario; no `callonce uuidN` or Background IDs for data scenarios change | U |
 | Test data | Codes and names that must be unique (fiscal year series, fund codes) built from `call random_string`, not literals (PR #2465) | U |
@@ -62,6 +62,8 @@ Known differences between rank 1 and rank 2:
 | `FEATURES` array (PR #2426) | acquisitions, data-import | Append the name to the array of one runner; no new `@Test` methods, enums or runner classes |
 | One `@Test` per feature | mod-calendar, mod-users | Add a `@Test` method calling `runFeatureTest("<name>")`, shaped like its neighbours |
 | Root feature | mod-circulation | Add `* call read('…/<name>.feature')` to the root feature (`root.feature`, `root-extended.feature`) the runner executes |
+| `@Test` per feature with `feature("classpath:…").run()` | data-import (`DataImportExtendedApiTest`, `DataImportCriticalPathApiTest`) | Add a `@Test` method running the feature by path, like its neighbours |
+| `enum Feature` + `@Test` per feature (before PR #2426) | older acquisitions runners | Add an enum entry and a `@Test` method; do not convert the class to the array style in a test PR |
 | Array + root feature | acquisitions | Both: array entry and a `Scenario` calling the feature at the end of the module root feature |
 
 Where the project has per-group runners (Critical Path, Extended), the TestRail Test Group decides the runner. Append only; never reorder.

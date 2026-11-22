@@ -111,7 +111,7 @@ def main():
     # ---- feature-level rules
     header = "\n".join(lines[: next((i for i, l in enumerate(lines) if l.startswith("Feature:")), 0)])
     if "@parallel=false" in text:
-        report("ERROR", "@parallel=false: scenarios must be able to run in parallel (Karate Coding Standards)")
+        team(r"parallel=false", "@parallel=false: the Karate Coding Standards ask for scenarios that run in parallel; if the team serialises on purpose, say why in the PR", "WARN")
     if re.search(r"callonce\s+uuid\d*", text):
         report("ERROR", "callonce uuid: IDs shared by all scenarios break parallel runs; use 'call uuid' inside each scenario")
     if re.search(r"^\s*\*\s*def\s+\w+\s*=\s*call\s+uuid", "\n".join(l for l in text.split("Scenario")[0].splitlines()), re.M):
@@ -170,7 +170,7 @@ def main():
                 report("ERROR", f"{label}: {t} also used by '{seen_c[t][:60]}'")
             seen_c[t] = s["name"]
             if f"cases/view/{t[2:]}" not in header:
-                report("ERROR", f"{label}: {t} missing from the header comments before Feature:")
+                report("WARN", f"{label}: {t} not linked in the header comments (skill convention for traceability)")
         if not any(t in s["tags"] for t in ("@Positive", "@Negative")):
             report("INFO", f"{label}: no @Positive / @Negative tag")
         if lines[s["line"] - 1].strip().startswith("Scenario Outline"):
@@ -183,7 +183,7 @@ def main():
         has_match = any(re.match(r"(And|Then|\*)\s+match\b", l) for l in code)
         has_retry = any("retry until" in l for l in code)
         has_status = any(re.match(r"(Then|And)\s+status\b", l) for l in code)
-        calls_verify = any(re.search(r"call\s+verify\w*", l) for l in code)
+        calls_verify = any(re.search(r"call(?:once)?\s+(?:verify\w*|read\([^)]*(?:assert|verify|check|validate|expect)[^)]*\))", l, re.I) for l in code)
         if not (has_match or has_retry or calls_verify):
             report("ERROR" if not has_status else "WARN",
                    f"{label}: no business assertion (match / retry until / verify reusable)" + ("; only status codes are checked" if has_status else ""))

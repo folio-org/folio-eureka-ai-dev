@@ -100,18 +100,21 @@ def analyse_body(lines):
         m = re.search(r"(?:^|[\s=])call(?:once)?\s+([A-Za-z_][A-Za-z0-9_]*)", l)
         if m and m.group(1) not in ("read", "uuid", "random_string") and not re.match(r"uuid\d+$", m.group(1)):
             calls.append(m.group(1))
-        m = re.search(r"call(?:once)?\s+read\(['\"](?:classpath:)?([^'\"@]+)", l)
+        m = re.search(r"call(?:once)?\s+read\(\s*(?:\w+\s*\+\s*)?['\"](?:classpath:)?([^'\"]+)['\"]", l)
         if m:
             calls.append("read:" + os.path.basename(m.group(1)))
         m = re.match(r"(?:Then|And|\*)\s+status\s+(\d+)", l)
         if m:
             statuses.add(m.group(1))
         if re.match(r"(?:Then|And|\*)\s+match\b", l) or "retry until" in l:
-            for f in re.findall(r"(?:\$|response)((?:\.[A-Za-z_][A-Za-z0-9_]*|\[[^\]]*\])+)", l):
-                fields.update(x for x in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", f))
+            # fields of the response or of any captured variable: $.a.b, response.a, invoice.poNumbers[0]
+            for f in re.findall(r"(?:\$|\b[A-Za-z_][A-Za-z0-9_]*)((?:\.[A-Za-z_][A-Za-z0-9_]*|\[[^\]]*\])+)", l.split("==")[0] if "==" in l else l):
+                fields.update(x for x in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", re.sub(r"\[[^\]]*\]", "", f)))
             if "errors" in l or "code" in l:
                 codes.update(re.findall(r"['\"]([a-z][A-Za-z0-9]+(?:[A-Z][A-Za-z0-9]*)+|[a-z0-9]+(?:[-_][a-z0-9]+)+)['\"]", l))
-    return {"requests": requests, "calls": calls, "fields": sorted(fields), "statuses": sorted(statuses), "codes": sorted(codes)}
+    verify_calls = [c for c in calls if re.search(r"assert|verify|check|validate|expect", c, re.I)]
+    return {"requests": requests, "calls": calls, "fields": sorted(fields), "statuses": sorted(statuses), "codes": sorted(codes),
+            "verify_calls": verify_calls}
 
 
 def reusable_map(project):
@@ -140,7 +143,8 @@ def git_head():
 def build_index(project):
     import json, hashlib
     cache_dir = os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "karate-context")
-    key = hashlib.sha1(f"{os.getcwd()}|{project}|{git_head()}".encode()).hexdigest()[:16]
+    version = hashlib.sha1(open(__file__, "rb").read()).hexdigest()[:8]  # a new helper version rebuilds the index
+    key = hashlib.sha1(f"{os.getcwd()}|{project}|{git_head()}|{version}".encode()).hexdigest()[:16]
     cache = os.path.join(cache_dir, key + ".json")
     dirty = subprocess.run(["git", "status", "--porcelain", "--", project], capture_output=True, text=True).stdout.strip()
     if os.path.exists(cache) and not dirty:
@@ -215,7 +219,9 @@ def cmd_coverage2(projects, args):
         print(f"  Scenario: {sc['name']}")
         print(f"  TestRail: {' '.join(sc['ctags']) or 'no @C tag'}   Runs from: {', '.join(sc['runner'] + sc['roots']) or 'NOT REGISTERED'}")
         print(f"  Evidence: {'; '.join(ev)}")
-        print(f"  Asserts:  {', '.join(sc['fields'][:12]) or 'no field assertions'}" + (f"  status {','.join(sc['statuses'])}" if sc['statuses'] else ""))
+        verify = sc.get("verify_calls") or []
+        print(f"  Asserts:  {', '.join(sc['fields'][:12]) or 'no field assertions'}" + (f"  status {','.join(sc['statuses'])}" if sc['statuses'] else "")
+              + (f"  via {', '.join(sorted(set(verify)))}" if verify else ""))
     print("\nText and structure matching is a filter, not a verdict: open each hit and compare precondition, trigger and asserted outcome.")
 
 
@@ -244,6 +250,10 @@ def feature_names_in_runner(text):
     if m:
         names += re.findall(r'"([^"]+)"', m.group(1))
     names += re.findall(r'runFeatureTest\(\s*"([^"]+)"', text)
+    # pre-PR #2426 style: enum Feature { FEATURE_1("name", true), ... } + runFeatureTest(Feature.FEATURE_1.getFileName())
+    names += re.findall(r'FEATURE_\d+\(\s*"([^"]+)"', text)
+    # one @Test per feature with the Karate runner API: feature("classpath:.../x.feature").run() or feature(PATH + "x.feature")
+    names += [os.path.basename(n) for n in re.findall(r'feature\(\s*(?:[A-Z_]+\s*\+\s*)?"(?:classpath:)?([^"]+?)\.feature"', text)]
     return [os.path.basename(n)[:-8] if n.endswith(".feature") else os.path.basename(n) for n in names]
 
 
@@ -267,6 +277,22 @@ def callers_index(project):
     return idx
 
 
+def parse_params_header(text):
+    """Text of a `# parameters:` header; continuation lines only while the previous line ends with a comma."""
+    lines = text.splitlines()
+    for i, l in enumerate(lines):
+        m = re.match(r"\s*#\s*parameters?:\s*(.*)", l, re.I)
+        if not m:
+            continue
+        out = [m.group(1).strip()]
+        j = i + 1
+        while out[-1].endswith(",") and j < len(lines) and re.match(r"\s*#", lines[j]):
+            out.append(re.sub(r"^\s*#\s*", "", lines[j]).strip())
+            j += 1
+        return " ".join(out)
+    return None
+
+
 def reusable_params(project):
     """key -> (required set, optional set) for reusables with a `# parameters:` header."""
     out = {}
@@ -277,10 +303,10 @@ def reusable_params(project):
         path = os.path.join(project, RES, ref.split("@")[0])
         if not os.path.exists(path):
             continue
-        header = re.findall(r"#\s*parameters?:\s*(.*(?:\n\s*#\s+(?!\d+\.)(?![A-Za-z_]+\s*:).*)*)", read(path), re.I)
+        header = parse_params_header(read(path))
         if not header:
             continue
-        names = re.findall(r"([A-Za-z_][A-Za-z0-9_]*)(\??)", re.sub(r"\s*\n\s*#\s*", " ", header[0]))
+        names = re.findall(r"([A-Za-z_][A-Za-z0-9_]*)(\??)", header)
         # optional = marked with ? in the header, or read with a default in the code (karate.get('x', default))
         defaulted = set(re.findall(r"karate\.get\(\s*['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]\s*,", read(path)))
         req = {n for n, q in names if not q and n not in defaulted}
@@ -351,9 +377,9 @@ def cmd_reusables(project):
         path = os.path.join(project, RES, file_part)
         params = ""
         if os.path.exists(path):
-            header = re.findall(r"#\s*parameters?:\s*(.*(?:\n\s*#\s+(?!\d+\.)(?![A-Za-z_]+\s*:).*)*)", read(path), re.I)
+            header = parse_params_header(read(path))
             if header:
-                params = re.sub(r"\s*\n\s*#\s*", " ", header[0]).strip()
+                params = header
             else:
                 body = read(path)
                 optional = sorted(set(re.findall(r"karate\.get\(\s*['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]", body)))
@@ -392,18 +418,14 @@ def cmd_coverage(project, terms):
 
 
 def cmd_endpoints(project, filt):
-    root = os.path.join(project, RES)
     idx = defaultdict(set)
-    for path in features(root):
-        if "/reusable/" in path:
-            continue
-        for p in re.findall(r"^\s*Given path\s+'([^']+)'", read(path), re.M):
-            if not filt or filt in p:
-                idx[p].add(os.path.basename(path)[:-8])
+    for sc in build_index(project):
+        for r in set(sc["requests"]) | set(sc["implied"]):
+            if not filt or filt in r:
+                idx[r].add(os.path.basename(sc["file"])[:-8])
     for p in sorted(idx, key=lambda k: -len(idx[k])):
         names = sorted(idx[p])
         print(f"{p}  ({len(names)} features)\n  " + ", ".join(names[:15]) + (" ..." if len(names) > 15 else ""))
-
 
 def compliance(path):
     text = read(path)
@@ -473,6 +495,10 @@ def cmd_profile(project):
         names = feature_names_in_runner(text)
         if "String[] FEATURES" in text:
             style = f"FEATURES array ({len(names)})"
+        elif re.search(r'feature\(\s*(?:[A-Z_]+\s*\+\s*)?"', text) and names:
+            style = f"one @Test per feature via feature(...).run() ({len(names)})"
+        elif re.search(r"enum Feature\b", text):
+            style = f"enum Feature + one @Test per feature ({len(names)}; pre-PR #2426 style)"
         elif re.search(r'runFeatureTest\(\s*"root', text):
             style = "root feature(s): " + ", ".join(n for n in names if n.startswith("root"))
         elif names:
