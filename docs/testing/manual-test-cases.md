@@ -1,269 +1,237 @@
-# AI Test Case Generation — MQA Team Guide
+# QA Onboarding: OpenCode + the `write-testrail-cases` Skill
 
-**TL;DR:** A Copilot agent now writes and posts manual test cases to TestRail from a Jira story in one command. This guide explains how to use it, what to feed it, and how to improve it.
+A practical guide for QA engineers to start using OpenCode (or Claude Code) to turn a Jira story into **TestRail test cases** with the team's `write-testrail-cases` skill — written in the FOLIO QA team's own style and posted straight into TestRail.
 
----
+## What you will learn
 
-## What Changed
-
-The `write-testrail-cases` skill is a Copilot agent that:
-
-1. Reads a Jira story (by ticket ID)
-2. Loads business-logic context for the relevant FOLIO app
-3. Enriches context automatically from Jira, GitHub, and TestRail if needed
-4. Proposes a set of test scenarios for your review
-5. Generates structured manual test cases after you confirm
-6. Posts them directly to TestRail via API — with all metadata filled in
-
-The agent understands FOLIO's domain: it knows which team owns which module, where the GitHub repos live, which TestRail sections map to which application area, and how capability sets work in Eureka. You don't need to spell that out.
+- What the `write-testrail-cases` skill does and why it exists.
+- What you need before your first run (agent, model, TestRail + Jira credentials).
+- How to install the FOLIO QA skills.
+- The end-to-end workflow: Jira key → confirmed scenarios → cases posted in TestRail.
+- The two confirmation gates that keep you in control.
 
 ---
 
-## Installation and Updates
+## 1. What the skill does
 
-Skills live in the shared repository [`folio-org/folio-eureka-ai-dev`](https://github.com/folio-org/folio-eureka-ai-dev). Copilot pulls them automatically when you open the workspace — but they don't update themselves.
+`write-testrail-cases` reads a Jira story (by key, or pasted) and generates **manual test cases for TestRail** (project 14 "FOLIO Bug Fest", suite 21) that match how the real FOLIO QA team writes:
 
-### First-time setup
+- **Detects the application area** (Orders, Inventory, Finance, Check-in, …) and loads a curated context file with that area's exact UI strings, business rules, and house style (Type, typical size, journey usage).
+- **Analyses the story into scenarios** — happy path, business-rule verification, capability boundaries, negative/edge cases, and inferred integration journeys (rollover, from-template, ECS) — and **shows you the list first**.
+- **Writes each case** with numbered preconditions, imperative steps, and terse observable expected results, using the correct metadata (Type, Priority, Test Group, Release, Dev Team, `refs`).
+- **Posts to TestRail via API** after you confirm a preview and give a Section (folder) ID — and returns the created `C…` case numbers.
 
-If you haven't installed the skills yet, run once in the repo root:
+It is agentic: it asks you clarifying questions, waits for your confirmation twice, and never posts anything until you say so.
 
-```bash
-npx skills update folio-org/folio-eureka-ai-dev
-```
-
-### Keeping skills up to date
-
-**Run this command before starting a new session** — especially after the team announces a skill update in the channel:
-
-```bash
-npx skills update folio-org/folio-eureka-ai-dev
-```
-
-That's it. The command pulls the latest `SKILL.md` files, context files, and examples from the repo. No restart needed — changes take effect in the next Copilot session you open.
-
-> **Why does this matter?** Bug fixes, new context files, and calibration improvements are pushed to the repo regularly. An outdated skill may generate cases with the wrong style, wrong capability set names, or miss newly added business rules. When in doubt — update.
+> Where it runs: this guide uses the **OpenCode Desktop App** (to match the team's other onboarding guides). The skill is agent-agnostic — it works identically in **Claude Code (the VS Code extension)**. If your team standardises on Claude Code, use "Reload Window / new chat" wherever this guide says "start a new chat", and skip the OpenCode-specific `/` commands.
 
 ---
 
-## Quick Start
+## 2. Install OpenCode
 
-The shortest prompt that works:
+The easiest way to start is the standalone **Desktop App**.
 
-```
-Use the write-testrail-cases skill to cover UIBULKED-123.
-```
+1. Go to <https://opencode.ai/download>.
+2. Download the installer for your OS (macOS, Windows, or Linux).
+3. Run the installer and open the OpenCode app.
 
-The agent will detect the area, load context, and present a Scenario Analysis for your approval before generating anything. **It will not post cases until you confirm.**
+*(Terminal/CLI and the Claude Code VS Code extension are both fine alternatives — the skill behaves the same.)*
 
 ---
 
-## Recommended Prompt (copy and adapt)
+## 3. Connect an LLM provider and pick a model
+
+The agent's "brain" comes from an LLM provider. Connect at least one your employer has approved.
+
+1. In the chat bar type `/connect`, choose your provider (Anthropic/Claude, OpenAI, OpenCode Zen, Copilot, …), and authenticate.
+2. Pick a model with `/models`. **Prefer a high-quality reasoning model** (Claude Sonnet/Opus, GPT-5, or your provider's flagship) — case-writing quality matters more than speed.
+3. Sanity check: type `Say hello and tell me which model you are.` — if you get a reply, you're ready.
+
+Credentials are stored locally (`~/.local/share/opencode/auth.json` on macOS/Linux; `%APPDATA%\opencode\auth.json` on Windows) and only ever sent to the provider you chose.
+
+---
+
+## 4. Install the FOLIO QA skills
+
+### 4.1 Check for Node.js
+
+`npx` (the skills installer) ships with Node.js.
+
+- **macOS:** ⌘ Space → `Terminal` → Enter.
+- **Windows:** Windows + R → `cmd` → Enter.
+
+Run `node --version`. If you see a version number (e.g. `v20.11.0`), continue. If not, install the **LTS** build from <https://nodejs.org> (accept the defaults), restart the terminal, and re-check.
+
+### 4.2 Create a working folder and install the skill
 
 ```
-Use the write-testrail-cases skill to cover UICHKIN-485.
-
-Fetch the story from Jira and proceed through the full Mandatory Workflow.
-Present the Scenario Analysis before generating any cases —
-I'll confirm or adjust coverage before you write.
-
-Additional context:
-- This is a Check In area story (team: Vega)
-- Focus on the happy path and the two negative scenarios from the
-  acceptance criteria — skip load/performance for now
-- TestRail section for posting: 17150
-
-Do not post until I explicitly confirm the preview.
+mkdir -p ~/folio-testrail-work
+cd ~/folio-testrail-work
+npx skills add folio-org/folio-eureka-ai-dev --skill write-testrail-cases
 ```
 
-**What each part does:**
+Verify:
 
-| Part | Why it helps |
+```
+npx skills list
+```
+
+You should see `write-testrail-cases`. To update later: `npx skills update folio-org/folio-eureka-ai-dev`.
+
+> Prefer to avoid the terminal? Paste this into a new OpenCode chat and follow along:
+>
+> ```
+> Help me set up OpenCode for FOLIO TestRail case drafting as a non-expert.
+> Goal: create a local folder for TestRail work and install the write-testrail-cases
+> skill from folio-org/folio-eureka-ai-dev.
+> Rules: explain each step in plain English; first check Node.js via `node --version`
+> and tell me how to open a terminal; if Node is missing, stop and point me to
+> https://nodejs.org (LTS) and wait; then guide me to create `folio-testrail-work` in my
+> home folder and run the npx install; then help me verify and open the folder in OpenCode.
+> ```
+
+### 4.3 Add your credentials (one-time, required for posting)
+
+The skill reads TestRail and Jira credentials from a `.env` file in your working folder. Create `~/folio-testrail-work/.env` with:
+
+```
+# TestRail
+TESTRAIL_URL=https://foliotest.testrail.io/
+TESTRAIL_EMAIL=you@epam.com
+TESTRAIL_API_KEY=<your TestRail API key>
+
+# Jira (so the skill can fetch a story by key)
+JIRA_BASE_URL=https://folio-org.atlassian.net
+JIRA_USER_EMAIL=you@epam.com
+JIRA_API_TOKEN=<your Jira API token>
+```
+
+- **TestRail API key:** TestRail → *My Settings* → *API Keys* → *Add Key*.
+- **Jira API token:** <https://id.atlassian.com/manage-profile/security/api-tokens> → *Create API token*.
+- **Keep `.env` private.** Never paste these keys into chat or commit them to git (add `.env` to `.gitignore`). Rotate a key immediately if it's ever exposed.
+
+### 4.4 Open the folder in OpenCode
+
+Open the Desktop App → **File > Open Folder…** → select `~/folio-testrail-work`. Run `/init` once so the agent understands the folder. After this, all normal work happens in the app.
+
+---
+
+## 5. Find your TestRail Section ID (where cases will be posted)
+
+The skill posts into a specific TestRail **section** (folder). Get its ID from the URL:
+
+1. Open TestRail → project 14, suite 21 → open the folder you want.
+2. Look at the URL: `…&group_id=114774` — the number after `group_id=` (or `section_id=`) is your **Section ID**.
+
+Have this ready before you post. If you don't provide one, the skill will ask.
+
+---
+
+## 6. The end-to-end workflow
+
+```
+┌──────────────┐   ┌───────────────┐   ┌────────────────┐   ┌────────────────┐   ┌───────────────┐
+│ 1. Open App  │ → │ 2. Invoke the │ → │ 3. Confirm the │ → │ 4. Confirm the │ → │ 5. Cases live │
+│  in the work │   │ skill on a    │   │ scenario list  │   │ posting preview│   │ in TestRail   │
+│  folder      │   │ Jira key      │   │ (gate #1)      │   │ + Section ID   │   │ (C… numbers)  │
+│              │   │               │   │                │   │ (gate #2)      │   │               │
+└──────────────┘   └───────────────┘   └────────────────┘   └────────────────┘   └───────────────┘
+```
+
+**Step 1 — Open OpenCode** in `~/folio-testrail-work`.
+
+**Step 2 — Invoke the skill.** Paste a prompt (see Section 7). The skill fetches the Jira story, detects the area, and reads the matching context file.
+
+**Step 3 — Confirmation gate #1: the scenario list.** The skill shows a **Scenario Analysis** (business rules touched + the scenarios it plans to cover, including inferred integration journeys) and **stops**. Add, remove, or reword scenarios, then confirm. Nothing is generated until you do.
+
+**Step 4 — Confirmation gate #2: the posting preview.** After generating and self-reviewing the cases, the skill shows a numbered preview (title / Type / Priority / Test Group) and asks for the **Section ID**. Review it, provide the ID, and confirm.
+
+**Step 5 — Cases are posted.** The skill posts each case via the TestRail API and returns the created `C…` numbers and links.
+
+---
+
+## 7. Example prompts
+
+You don't have to memorise the skill name — mention it and describe what you want.
+
+**Universal prompt** (swap `{JIRA-KEY}` and `{SECTION_ID}`):
+
+```
+Use the write-testrail-cases skill to create TestRail cases for Jira story {JIRA-KEY}.
+
+Follow the full skill workflow:
+1. Detect the area and read the matching context file. State which area/file you loaded.
+2. Fetch {JIRA-KEY} from Jira; extract summary, acceptance criteria, Dev Team, and the
+   ticket(s) the cases should reference.
+3. FIRST show me the full Scenario Analysis (including an "Inferred integration journeys"
+   block) and WAIT for my confirmation. Do not generate or post anything before I confirm.
+4. Match the target area's house style (Type, size, journey usage from the context file).
+5. Use exact UI strings / validation messages from the story and context file; keep expected
+   results terse and observable.
+6. After I confirm the scenarios, generate the cases, then show the posting preview and post
+   to TestRail section ID {SECTION_ID} — only after I confirm the preview.
+```
+
+**Story pasted directly** (no Jira access needed for the read):
+
+```
+Use the write-testrail-cases skill for the story below. Show me the scenario list first,
+then after I confirm, post to TestRail section {SECTION_ID}.
+
+[paste the story text — summary, description, acceptance criteria]
+```
+
+**Dry run only** (see the cases in chat, don't post):
+
+```
+Use the write-testrail-cases skill for {JIRA-KEY}. Show me the scenarios, then generate the
+cases in the chat only — do NOT post to TestRail. I'll review first.
+```
+
+> If you stay quiet, the skill asks for what it needs (area if ambiguous, Section ID, ECS vs non-ECS). Answer in plain English — the agent handles the TestRail formatting and metadata IDs.
+
+---
+
+## 8. Daily-use cheat sheet
+
+| You want to… | Do this |
 |---|---|
-| Jira ticket ID | Agent pulls summary, AC, dev team, fix version automatically |
-| "Present Scenario Analysis" | You review coverage before any cases are written — easy to add/remove scenarios |
-| Additional context | Optional — helps when area auto-detection might be ambiguous or you want to constrain scope |
-| Section ID | Saves a back-and-forth at the end |
-| "Do not post until I confirm" | Safety net — agent waits for your explicit "yes" before writing to TestRail |
+| Start work | Open the Desktop App in `~/folio-testrail-work` |
+| Draft cases for a story | `Use the write-testrail-cases skill for {JIRA-KEY}…` |
+| See cases without posting | Add "generate in chat only — do NOT post to TestRail" |
+| Post to a folder | Give the **Section ID** when the preview asks |
+| Connect / change model | `/connect` · `/models` |
+| Undo the last agent turn | `/undo` |
+| Share the conversation | `/share` |
+| Update the skill | Terminal in the work folder → `npx skills update folio-org/folio-eureka-ai-dev` |
 
 ---
 
-## What the Agent Uses to Generate Cases
+## 9. Good habits and pitfalls
 
-The agent pulls context from three layers, in order:
+**Do**
 
-### 1. The Jira Story
-Acceptance criteria, description, dev team, fix version. The story is always the primary source — if anything conflicts with other sources, the story wins.
+- Invoke the skill by name ("Use the write-testrail-cases skill…") so it loads the area context and house style.
+- Let it show you the **scenario list first** and edit it there — cheaper than fixing 12 posted cases.
+- Give the correct **Section ID**; double-check it's the right folder in project 14 / suite 21.
+- Trust the area's **house style**: some areas are short atomic cases (Fees&Fines ~2 steps), others are large workflows (Bulk Edit ~14) — the skill matches the local norm.
+- Keep expected results **terse and observable** — if a result reads like an explanation, ask the agent to cut it.
 
-### 2. Context Files (`references/context/`)
-Each FOLIO application area has a dedicated context file that describes:
-- Domain model and record hierarchy
-- Lifecycle statuses and transitions
-- Key business rules (each rule = a potential test scenario)
-- Exact UI texts: toast messages, modal titles, confirmed capability set names
+**Don't**
 
-Currently available: **Agreements, Bulk Edit, Check In, Check Out, Consortium Manager, Data Export, Data Import, eHoldings, Finance, Inventory, Invoices, Licenses, Lists, MARC Authority, Mediated Requests, OAI-PMH, Orders, Receiving, Requests, Users.**
-
-### 3. Live Enrichment (automatic fallback)
-If the context file is missing, out of date, or has too few business rules, the agent automatically fetches:
-- GitHub: `en_US.json` (exact UI strings), `package.json` (capability sets), Cypress fragments (UI labels)
-- Jira: acceptance criteria from subtasks and linked bugs
-- It knows where to look based on the module/team — you don't need to provide URLs
+- Don't build cases around **unshipped behavior** or hedge with "IF present / IF not" — cover what's actually testable now.
+- Don't let expected results become a **wall of text**: a list of `field = value` checks should be bullets, not a semicolon run-on. If you see one, say "bullet the field list in step N".
+- Don't invent concrete values where the team uses **symbolic placeholders** (`S`, `<barcode>`) — that's the circulation convention.
+- Don't paste API keys, secrets, or real patron data into prompts. Keep them in `.env`.
 
 ---
 
-## The Scenario Analysis Step
+## 10. Where to get help
 
-Before writing any cases, the agent presents a plan like this:
+- OpenCode docs: <https://opencode.ai/docs> · providers: <https://opencode.ai/docs/providers> · Discord: <https://opencode.ai/discord>
+- FOLIO skills repo & issues: <https://github.com/folio-org/folio-eureka-ai-dev>
+- TestRail API reference: <https://support.testrail.com/hc/en-us/articles/7077196481428-Introduction-to-the-TestRail-API>
+- Skill internals (for the curious): `write-testrail-cases/SKILL.md` (workflow, metadata IDs, House Style table) and `references/examples.md` (golden cases + anti-patterns).
+- Feedback on the skill: open an issue in the repo above, or note what the skill got wrong so the context files / SKILL can be tuned.
 
-```
-I've read UIBULKED-123 and the Bulk Edit context.
-Business rules touched: #3 (identifier gating), #7 (preview before commit), #12 (errors accordion).
-
-Happy path:
-1. User can upload a valid CSV and reach the preview screen → Critical Path
-
-Business-rule verification:
-2. Error accordion is displayed and expanded by default after processing with invalid identifiers → Critical Path
-
-Capability boundaries:
-3. User without Bulk Edit Edit capability set cannot access the commit button → Critical Path
-
-Negative / edge cases:
-4. Upload fails gracefully when CSV contains only invalid identifiers → Extended
-
-Does this coverage look complete? Any scenarios to add or remove?
-```
-
-**This is your most important interaction point.** Reply with adjustments before saying "go ahead":
-- "Add a scenario for the download errors CSV button"
-- "Skip scenario 4, we have that covered elsewhere"
-- "Split scenario 2 into separate cases for Users and Items"
-
----
-
-## What Good Generated Cases Look Like
-
-The agent is calibrated on 195 real team cases (Trillium/Umbrellaleaf/Sunflower releases, sections 98/105/329/454/96/17140/17995/23689). Expected output characteristics:
-
-- **Imperative steps**: "Click Actions menu", "Navigate to Finance app > Fund A > Transactions" — not "User B clicks"
-- **Absolute values in expected results**: `Encumbered = 0.00`, `Available = 200.00` — never "increased by 50"
-- **Exact toast text**: `"The Purchase order - <PO number> has been successfully opened"` — never "success toast displayed"
-- **Business-critical table rows verified column by column**: Type, Source, Amount, Status — not "transaction is displayed"
-- **Numbered preconditions** referenced in steps as "Preconditions #3"
-- **5–10 steps** per case (team median is 9)
-- **Labels: AI** added to every generated case automatically
-
----
-
-## How to Give Feedback
-
-The skill is in alpha — your feedback directly improves it. Three channels:
-
-### 1. Fix a context file yourself
-Context files live in `write-testrail-cases/references/context/<area>.md`. You know these apps better than any automated extraction process. Open the file, fix what's wrong, add what's missing. The most valuable additions:
-- Missing business rules (add to the "Key Business Rules" section)
-- Exact toast texts the agent gets wrong (add to "Exact UI Texts")
-- Correct capability set names (the agent sometimes uses legacy permission names)
-- ECS-specific behaviour if the file doesn't cover it
-
-**No special process needed — just edit the file and commit.**
-
-### 2. Talk to the build-app-context agent
-`build-app-context` is a companion agent that regenerates context files from live data. If a file is stale or missing:
-
-```
-Use the build-app-context skill to build context for the Requests app.
-TestRail section ID: 96
-```
-
-The agent will pull 100–300 cases from TestRail, read GitHub translation files and permission sets, query Jira closed stories and bugs, and produce an enriched context file. You can give it extra guidance:
-
-```
-Use the build-app-context skill to build context for the Agreements app.
-TestRail section ID: 130
-Jira component: Agreements
-GitHub repos: folio-org/ui-agreements, folio-org/mod-agreements, folio-org/stripes-erm-components
-Releases to focus on: Umbrellaleaf, Trillium, Sunflower
-
-Additional notes:
-- Agreements is part of the ERM suite alongside Licenses and eHoldings
-- Key integration points: Licenses app, eHoldings, Orders, Organizations
-- K-Int team owns this module
-```
-
-### 3. Report what's wrong with a specific case
-If the agent generates a bad case, the most useful feedback includes:
-- What was wrong (wrong business rule? invented UI label? missing scenario? too few steps?)
-- The Jira ticket it was generated from
-- What the correct case should look like (a real case from TestRail is ideal)
-
-Post in the team channel or open a comment in the PR that modifies the context file.
-
----
-
-## Known Limitations (Alpha)
-
-| Issue | Status |
-|---|---|
-| ECS Enabled sometimes set to No for ECS stories | Fixed in latest SKILL.md — requires new agent session |
-| `refs` field picks up linked bugs/spikes in addition to the story key | Fixed in latest SKILL.md — the agent should set only the original story key |
-| Context files for some areas are thin (docs-only, no live TestRail data yet) | Help wanted — edit the file or run build-app-context for your area |
-| Jira access is restricted for some projects (ERM, MARC Authority, OAI-PMH) | Known — those context files rely on TestRail + GitHub only |
-| Agent may use legacy permission names if context file has them | Fix: update "Capability Sets" section in the relevant context file |
-
----
-
-## Files Reference
-
-```
-.agents/skills/
-├── write-testrail-cases/
-│   ├── SKILL.md                    ← agent instructions (v1.5.0, calibrated)
-│   └── references/
-│       ├── examples.md             ← golden cases the agent learns style from
-│       └── context/
-│           ├── bulk-edit.md        ← 730 cases, Trillium-heavy
-│           ├── check-in.md
-│           ├── check-out.md
-│           ├── consortium-manager.md ← 380 cases
-│           ├── data-export.md
-│           ├── data-import.md
-│           ├── finance.md          ← 249 cases
-│           ├── inventory.md        ← 775 cases + Jira + GitHub
-│           ├── invoices.md         ← 276 cases
-│           ├── licenses.md
-│           ├── marc-authority.md
-│           ├── oai-pmh.md
-│           ├── orders.md
-│           ├── receiving.md
-│           ├── requests.md
-│           ├── users.md
-│           └── ...
-└── build-app-context/
-    └── SKILL.md                    ← context file generation agent
-```
-
----
-
-## FAQ
-
-**Q: Do I need to provide the TestRail section ID?**
-You can give it upfront in the prompt (recommended) or the agent will ask after you confirm the cases.
-
-**Q: Can I generate cases for a story that spans two apps?**
-Yes — the agent reads both context files automatically. Just mention both in the prompt if you want to be explicit: "This story touches Orders and Finance."
-
-**Q: What if the context file for my area doesn't exist?**
-The agent warns you and generates from the story alone. Results will be less accurate for domain-specific preconditions. Use `build-app-context` to create the file.
-
-**Q: Can I adjust a generated case before it's posted?**
-Yes — after the agent shows the posting preview, reply "edit case 3: change the priority to Medium and add a step verifying the toast message" before confirming.
-
-**Q: The agent posted cases with wrong metadata. How do I fix them?**
-```
-Update TestRail case C[ID]: set ECS Enabled to true, 
-set refs to UIBULKED-123 only.
-```
-
-**Q: Can I run this for multiple stories at once?**
-Run one story per session. The agent's context window is better focused on one story at a time — mixing stories risks scenarios bleeding across cases.
+Welcome aboard.
