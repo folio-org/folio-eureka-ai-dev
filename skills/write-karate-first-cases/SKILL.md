@@ -32,7 +32,22 @@ The user can stop after any phase ("cases only", "feature only, no PR"). If the 
    - All teams: the FOLIJET wiki page *Karate Coding Standards & Best Practices* (https://folio-org.atlassian.net/wiki/spaces/FOLIJET/pages/114098928). It is from 2024; where it differs from a team rules file, the team file wins (see the known differences in `references/karate-standards.md`).
    - `references/karate-standards.md` — digest of the sources above and of what the team learned while rewriting old tests (FAT-13426, FAT-20199) and restructuring the runners (PR #2426). Read it once per run; open the original PRs when a rule needs an example.
    - Other teams without an `ai/` folder: derive conventions from the 3 most recently changed features in the same folder (`git log -3 --name-only -- <folder>`) and record what you derived in the run summary.
-5. **TestRail and Jira access.** Use the TestRail / Jira MCP tools when present; otherwise the credentials chain in `../write-testrail-cases/SKILL.md` ("TestRail API Integration → Credentials").
+5. **Context map.** Collect these before Phase 1; each one answers a question the skill otherwise guesses. Record in the run summary which were unavailable.
+
+   | Source | What it answers | How |
+   |---|---|---|
+   | Jira story: description, AC, comments, linked issues, epic siblings | The rule, agreed edge cases, decisions made in comments | Jira MCP; read all comments, not only the description |
+   | Fix PR in the module repo: diff **and its unit tests** | Changed code paths; the test names and inputs show the cases the developer had in mind | `git log --grep=<FIX-KEY>` / Jira Development panel |
+   | `ErrorCodes.java` (or equivalent) | Exact `code` and message for negative scenarios | module repo |
+   | `ModuleDescriptor-template.json`, schemas and examples (`acq-models` for acquisitions) | Endpoints, permissions, field names, enums, valid request bodies | module repo, `folio-org/acq-models` |
+   | `samples/` JSON in folio-integration-tests | Request bodies the team already uses | `<project>/src/main/resources/samples/` |
+   | Reusable catalog | Which call already does a step, and its parameters | `references/karate-context.py reusables <project>` |
+   | Coverage search | Existing scenarios for the same behaviour | `references/karate-context.py coverage <project> <terms>` and `endpoints` |
+   | Exemplar features | The current team style to imitate (Background, headers, comments) | `references/karate-context.py exemplars <features folder>`; read the top 2 in full |
+   | TestRail: cases with the story/fix key, manual cases in the same section | What QA already checks manually; titles and capability-set wording | TestRail MCP |
+   | Team lessons | Review feedback from earlier runs | `references/lessons.md` |
+
+6. **TestRail and Jira access.** Use the TestRail / Jira MCP tools when present; otherwise the credentials chain in `../write-testrail-cases/SKILL.md` ("TestRail API Integration → Credentials").
 
 ---
 
@@ -54,7 +69,7 @@ From the module repo:
 
 ### 1.3 Existing coverage (no duplicates)
 A new case or scenario that repeats an existing Karate test adds runtime and maintenance and nothing else. Old tests were merged and renamed during the FAT-13426 / FAT-20199 refactoring, so search by behaviour, not by file name (`references/karate-standards.md`, section 8):
-- Karate: `grep -rln` the endpoint, the changed field, the error code and the state transition across the team folder **and** `cross-modules/`. Open every hit and read the scenario: what it sets up, what triggers, what it asserts.
+- Karate: `python3 references/karate-context.py coverage <project> <term> [<term> ...]` with the endpoint, the changed field, the error code and the state transition (it searches the whole project, `cross-modules/` included, and prints scenario, `@C` tag and runner). Run several term combinations. Open every hit and read the scenario: what it sets up, what triggers, what it asserts.
 - Reusable features: every key in `<project>/src/main/resources/karate-config.js` and the `reusable/` folders; read the `# parameters:` header of each one you plan to call.
 - TestRail: cases whose `refs` contain the story / fix key, and cases found by a semantic search on the rule. An existing **Karate** case whose `@C` tag is in a feature means the rule is covered.
 
@@ -135,6 +150,8 @@ Assertion rules (apply to the case and, more concretely, to the feature):
 - Name: kebab-case, describes the scenario, **≤ 80 characters** including `.feature` (long names break Karate reports and Windows checkouts). Drop filler words ("correctly", "when", "should").
 
 ### 3.2 Writing the feature
+Start from the closest exemplar found in Phase 0 (same folder, same kind of workflow): copy its header layout, `Background`, login and headers, then write the scenarios. Pick every call from the reusable catalog. Apply `references/lessons.md`.
+
 Follow the team rules file first; `references/karate-feature-conventions.md` holds the skeleton and the rules that apply when the team has no rules file. The essentials, which must hold in every team:
 
 - Header: `# For <JIRA-KEY>, https://foliotest.testrail.io/index.php?/cases/view/<id>[, …]`, then `Feature:` in Title Case.
@@ -161,7 +178,7 @@ Run and fix until clean (`references/validate-feature.sh` does all of it):
 2. Every reusable key used in the feature exists in `karate-config.js`.
 3. File name length ≤ 80; no `* print` in scenarios; no `@parallel=false`; no `Scenario Outline`; no `callonce uuid` or unquoted `#(...)` in call arguments; no `read()` of a reusable already in `karate-config.js`; every scenario has exactly one `@C<id>` that matches a posted case.
 4. The feature name appears once in the runner's `FEATURES`, in no other runner of the project, and once in the root feature.
-5. Step comments 1..N match the TestRail steps of that case.
+5. Step comments 1..N without gaps and matching the TestRail steps of that case; no `retry until` and `match` in the same request block; no scenario ends with `configure headers`.
 
 Do not run `mvn test` unless the user asks and an environment is available (it needs a FOLIO Eureka environment and takes long). Say in the PR that the test was not executed.
 
@@ -178,6 +195,7 @@ Do not run `mvn test` unless the user asks and an environment is available (it n
    - **TestRail** — case links.
 4. Do not request reviewers on the user's behalf; tell the user who usually reviews the folder (recent committers: `git log -5 --format='%an' -- <folder>`).
 5. If the user wants it, add the PR link as a comment on the Jira story.
+6. **Learn from the review.** When reviewers comment on the PR, apply the fixes and add each comment that is a general rule (not specific to this story) to `references/lessons.md`: the rule, the PR and the reviewer's wording in short. Suggest the same rule to the team for their rules file when it is acquisitions-wide.
 
 ---
 
@@ -213,6 +231,8 @@ Rules source:     ACQ_ORDERS_SYSTEM_PROMPT.md, ACQ_CROSS_MODULES_SYSTEM_PROMPT.m
 
 ## References
 - `references/karate-standards.md` — digest of the Karate Coding Standards wiki page, the FAT-13426 / FAT-20199 refactoring and the PR #2426 runner structure; precedence and known differences.
+- `references/karate-context.py` — read-only helper: reusable catalog, coverage search, endpoint index, exemplar features, registration check.
+- `references/lessons.md` — rules learned from PR reviews; apply on every run.
 - `references/karate-feature-conventions.md` — feature skeleton and conventions for teams without a rules file.
 - `references/team-thunderjet.md` — Thunderjet folders, runners, root features, reusables, pitfalls.
 - `references/example-modorders-1458.md` — worked example: analysis, TestRail case, feature, PR.

@@ -46,7 +46,7 @@ SCEN=$(grep -cE "^[[:space:]]*Scenario( Outline)?:" "$FEATURE")
 CTAGS=$(grep -cE "^[[:space:]]*@C[0-9]+[[:space:]]*$" "$FEATURE")
 [ "$SCEN" -eq "$CTAGS" ] && ok "$CTAGS @C tags for $SCEN scenarios" || fail "$CTAGS @C tags for $SCEN scenarios"
 for id in $(grep -oE "^[[:space:]]*@C[0-9]+" "$FEATURE" | tr -d ' @C'); do
-  head -1 "$FEATURE" | grep -q "cases/view/$id" && ok "C$id linked in header" || fail "C$id missing from header URL list"
+  sed '/^Feature:/q' "$FEATURE" | grep -q "cases/view/$id" && ok "C$id linked in header" || fail "C$id missing from the header comments before Feature:"
 done
 grep -qE "^[[:space:]]*Scenario Outline:" "$FEATURE" && fail "Scenario Outline used (use a Karate table + one reusable call)" || ok "no Scenario Outline"
 # Reusables already loaded in karate-config.js must not be read() again in the feature
@@ -57,6 +57,44 @@ done
 grep -nE "call [A-Za-z_]+ \{[^}]*:[[:space:]]*#\(" "$FEATURE" | sed 's/^/      /' | grep -q . && fail "unquoted #(...) in call arguments; use '#(...)'" || ok "embedded expressions quoted"
 # Shared IDs: callonce uuid in Background breaks parallel scenarios
 grep -qE "callonce uuid[0-9]*" "$FEATURE" && fail "callonce uuid used; generate IDs with 'call uuid' inside each scenario" || ok "no callonce uuid"
+
+# Team rules that need scenario context: step numbering, retry/match mixing, headers at the end
+python3 -I - "$FEATURE" <<'EOF' || FAIL=1
+import re, sys
+lines = open(sys.argv[1], encoding="utf-8").read().splitlines()
+bad = 0
+scen, nums, body = None, [], []
+def close():
+    global bad
+    if scen is None:
+        return
+    if nums and nums != list(range(1, len(nums) + 1)):
+        print(f"FAIL: '{scen}': step comments {nums} are not 1..N without gaps"); bad = 1
+    code = [l.strip() for l in body if l.strip() and not l.strip().startswith("#")]
+    if code and code[-1].startswith("* configure headers"):
+        print(f"FAIL: '{scen}': ends with 'configure headers'"); bad = 1
+    block = []
+    for l in body + ["Given"]:
+        s = l.strip()
+        if s.startswith("Given ") or s == "Given":
+            if any(b.startswith("And retry until") for b in block) and any(b.startswith("And match") or b.startswith("Then match") for b in block):
+                print(f"FAIL: '{scen}': 'retry until' and 'match' in the same request block"); bad = 1
+            block = []
+        block.append(s)
+for l in lines:
+    m = re.match(r"\s*Scenario(?: Outline)?:\s*(.*)", l)
+    if m:
+        close(); scen, nums, body = m.group(1), [], []
+        continue
+    if scen is not None:
+        body.append(l)
+        n = re.match(r"\s*# (\d+)\. ", l)
+        if n:
+            nums.append(int(n.group(1)))
+close()
+print("ok:   step numbering, retry/match blocks, headers" if not bad else "", end="\n" if not bad else "")
+sys.exit(bad)
+EOF
 
 # 4. Registration
 [ "$(grep -c "\"$NAME\"" "$RUNNER")" -eq 1 ] && ok "registered once in $(basename "$RUNNER")" || fail "not registered exactly once in $(basename "$RUNNER")"
