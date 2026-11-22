@@ -27,12 +27,17 @@ The user can stop after any phase ("cases only", "feature only, no PR"). If the 
 3. **Repositories (local clones, read with shell tools).**
    - `folio-org/folio-integration-tests` — the test repo. Work in the user's fork (`<user>/folio-integration-tests`); if it does not exist, create it (`gh repo fork folio-org/folio-integration-tests --clone=false`, or ask the user to click *Fork* on GitHub). Branch from the latest upstream `master`.
    - The backend module repo (`folio-org/<module>`) and `folio-org/acq-models` (acquisitions schemas) or the module's `ramls/` / OpenAPI files.
-4. **Coding rules (read in full before Phase 3, from the latest upstream `master`).** Precedence: team rules files → Karate Coding Standards wiki page → `references/karate-standards.md` → this skill.
+4. **Application context from `write-testrail-cases`** (the sibling skill holds the team's knowledge of each FOLIO app; this skill reuses it instead of rediscovering it):
+   - Detect the area with `../write-testrail-cases/references/area-map.md` and read `../write-testrail-cases/references/context/<area>.md`, starting with its `## Changes since …` section. Read every area the story crosses (an orders story that encumbers money also loads `finance.md`; one that pays also loads `invoices.md`).
+   - Use from the context file: **Key Business Rules** (scenario candidates and regression risks, Phase 1.5), **Required Capability Sets** (exact names for preconditions, Phase 2.2), the record hierarchy and settings (preconditions and shared-state check), the area's feature sections (for example *Multi-Year Prepayment*), **Known Gaps** (open questions), and the `Sources:` line (the area's TestRail section subtree, Phase 2.3).
+   - Freshness: if the file is missing, marked DRAFT, older than 90 days or built for an older release than the story's Fix Version, run the sibling skill's *Lightweight Context Enrichment* for this story and suggest `build-app-context` in the run summary.
+   - Also read `../write-testrail-cases/references/house-style.md` (Type, Priority, title conventions per area), `references/writing-rules.md` (preconditions and steps) and `references/examples/<area>.md` when it exists (the verification depth to match).
+5. **Coding rules (read in full before Phase 3, from the latest upstream `master`).** Precedence: team rules files → Karate Coding Standards wiki page → `references/karate-standards.md` → this skill.
    - Thunderjet (acquisitions): **both** `acquisitions/ai/ACQ_ORDERS_SYSTEM_PROMPT.md` and `acquisitions/ai/ACQ_CROSS_MODULES_SYSTEM_PROMPT.md`, whatever the module (an orders story often touches finance or invoices), plus `acquisitions/ai/prompt/PROMPT_TEMPLATES.md`. Team map: `references/team-thunderjet.md`.
    - All teams: the FOLIJET wiki page *Karate Coding Standards & Best Practices* (https://folio-org.atlassian.net/wiki/spaces/FOLIJET/pages/114098928). It is from 2024; where it differs from a team rules file, the team file wins (see the known differences in `references/karate-standards.md`).
    - `references/karate-standards.md` — digest of the sources above and of what the team learned while rewriting old tests (FAT-13426, FAT-20199) and restructuring the runners (PR #2426). Read it once per run; open the original PRs when a rule needs an example.
    - Other teams without an `ai/` folder: derive conventions from the 3 most recently changed features in the same folder (`git log -3 --name-only -- <folder>`) and record what you derived in the run summary.
-5. **Context map.** Collect these before Phase 1; each one answers a question the skill otherwise guesses. Record in the run summary which were unavailable.
+6. **Context map.** Collect these before Phase 1; each one answers a question the skill otherwise guesses. Record in the run summary which were unavailable.
 
    | Source | What it answers | How |
    |---|---|---|
@@ -45,9 +50,10 @@ The user can stop after any phase ("cases only", "feature only, no PR"). If the 
    | Coverage search | Existing scenarios for the same behaviour | `references/karate-context.py coverage <project> <terms>` and `endpoints` |
    | Exemplar features | The current team style to imitate (Background, headers, comments) | `references/karate-context.py exemplars <features folder>`; read the top 2 in full |
    | TestRail: cases with the story/fix key, manual cases in the same section | What QA already checks manually; titles and capability-set wording | TestRail MCP |
+   | App context (`write-testrail-cases`) | Business rules, capability sets, settings, known gaps, TestRail sections of the area | `../write-testrail-cases/references/context/<area>.md` (step 4) |
    | Team lessons | Review feedback from earlier runs | `references/lessons.md` |
 
-6. **TestRail and Jira access.** Use the TestRail / Jira MCP tools when present; otherwise the credentials chain in `../write-testrail-cases/SKILL.md` ("TestRail API Integration → Credentials").
+7. **TestRail and Jira access.** Use the TestRail / Jira MCP tools when present; otherwise the credentials chain in `../write-testrail-cases/SKILL.md` ("TestRail API Integration → Credentials").
 
 ---
 
@@ -71,7 +77,7 @@ From the module repo:
 A new case or scenario that repeats an existing Karate test adds runtime and maintenance and nothing else. Old tests were merged and renamed during the FAT-13426 / FAT-20199 refactoring, so search by behaviour, not by file name (`references/karate-standards.md`, section 8):
 - Karate: `python3 references/karate-context.py coverage <project> <term> [<term> ...]` with the endpoint, the changed field, the error code and the state transition (it searches the whole project, `cross-modules/` included, and prints scenario, `@C` tag and runner). Run several term combinations. Open every hit and read the scenario: what it sets up, what triggers, what it asserts.
 - Reusable features: every key in `<project>/src/main/resources/karate-config.js` and the `reusable/` folders; read the `# parameters:` header of each one you plan to call.
-- TestRail: cases whose `refs` contain the story / fix key, and cases found by a semantic search on the rule. An existing **Karate** case whose `@C` tag is in a feature means the rule is covered.
+- TestRail: run the sibling skill's existing-coverage check (`../write-testrail-cases/SKILL.md`, step 4b): `refs` filter for every key, title search in the area's sections. Mark each match **duplicate** / **update** (expected results outdated by the story — propose the change for the `test-case-updater` skill) / **unrelated**. An existing **Karate** case whose `@C` tag is in a feature means the rule is covered.
 
 Decide per rule and show it in the Coverage column of 1.5:
 - **covered** — same precondition, same trigger, same asserted outcome: cite feature + scenario + C-id; no new case, no new scenario.
@@ -86,6 +92,8 @@ Features run in parallel in a shared tenant. For each precondition ask: *does it
 2. If impossible, the scenario must live in a feature or runner that is not run in parallel with features depending on that setting — say so in the PR and ask the team; never add `@parallel=false` to a new feature.
 
 ### 1.5 Scenario analysis (show, then wait for confirmation)
+
+Scenario sources, in this order: the acceptance criteria; the before/after lines of the fix; the **Key Business Rules** of the area context file that the change touches. For each touched rule decide whether the story changes it (new scenario), depends on it (precondition) or risks breaking it (regression scenario, usually Extended). Regression scenarios on existing behaviour are part of the analysis, not an extra.
 
 ```
 Story: MODORDERS-1458 — fix in MODORDERS-1456 (mod-orders PR #1332)
@@ -108,7 +116,9 @@ Columns are mandatory. A Karate row with an empty "Fails before fix because" is 
 ## Phase 2 — TestRail cases
 
 ### 2.1 Layer decision
-Karate by default: the outcome is decidable from HTTP requests/responses (including follow-up GETs, job polling, other modules' APIs). UI case only for UI wiring with no API equivalent (rendering, client-side validation, navigation, UI-only capability hiding) — written per `../write-testrail-cases/SKILL.md`, thin, and never re-asserting what a Karate case asserts.
+Karate by default: the outcome is decidable from HTTP requests/responses (including follow-up GETs, job polling, other modules' APIs). Manual UI case only for UI wiring with no API equivalent (rendering, client-side validation, navigation, UI-only capability hiding, exact UI texts).
+
+Manual UI cases are written by the `write-testrail-cases` workflow (its steps 2, 4, 6–8), reusing the context, story analysis and coverage check already done here — do not repeat them. Its rules apply in full: exact UI texts from the context file, section style, house style, self-review gate. Two additions: a UI case never re-asserts what a Karate case of the same story asserts (it may reference it: "business rule covered by C<id>"), and both kinds go to the same section. These are the cases the developer executes by hand before Done and that a UI developer later automates in Cypress.
 
 ### 2.2 Karate case content
 TestRail cases are read and reviewed by people (QA, PO, developers), so they are written in **plain business language**. Endpoints, payloads, field paths and error codes live only in the Karate feature; translating the case into requests is the job of Phase 3. Step N in TestRail still equals the `# N.` comment in the feature, so the PR covers exactly what the case says.
@@ -116,7 +126,7 @@ TestRail cases are read and reviewed by people (QA, PO, developers), so they are
 - **Title:** the business outcome, sentence case, no "API:" prefix.
 - **Preconditions** (`<ol>`):
   1. Tenant settings the rule depends on, in UI terms (Settings > Orders > Approvals...), with values, and an explicit note when a setting is intentionally left at default.
-  2. **Capabilities the user needs, as Eureka capability sets** in the team's usual wording (`data - UI-Orders Orders - create`, `procedural - UI-Orders Order Unopen - execute`). Take the names from existing cases of the same area. They document the access a real user needs; the Karate implementation does **not** model them (the test users of the project have a fixed permission set), so do not create per-case users or permission setup in the feature.
+  2. **Capabilities the user needs, as Eureka capability sets** in the team's usual wording (`data - UI-Orders Orders - create`, `procedural - UI-Orders Order Unopen - execute`). Take the names from the context file's *Required Capability Sets* section, then from existing cases of the same section. They document the access a real user needs; the Karate implementation does **not** model them (the test users of the project have a fixed permission set), so do not create per-case users or permission setup in the feature.
   3. Records the case needs, with meaningful values and symbolic names (Fund A with $10,000 budget, Order O in Pending). No reusable names, no UUIDs.
 - **Steps:** one business action per step, in the domain's words ("Open Order O", "Unopen Order O, deleting holdings", "Add a PO line with multi-year payment on, prepayment term 2 years, 1 fiscal year distribution"). No URLs, no HTTP methods, no UI clicks.
 - **Expected:** the business outcome with exact values ("Order O is rejected with the message that the number of fiscal year distributions must match the prepayment term", "Approval date is the same as after the first opening"). Status codes and error codes are not written in the case; the feature asserts them. Values captured during the run are named (remember as D1) and compared later.
@@ -136,9 +146,9 @@ Assertion rules (apply to the case and, more concretely, to the feature):
   - Automation Scope = Karate Approved (`custom_automation_scope` 6)
   - Automated For = current release (`custom_case_automated_in`), only after the PR is opened
   - Test Group = Critical Path for core rules and permissions, Extended for regressions of bug fixes and edge cases — **this also selects the runner class** (Phase 3.3)
-  - Dev Team = owning team; Type and Priority per the sibling skill
+  - Dev Team = owning team; Type and Priority per `../write-testrail-cases/references/house-style.md` for the area, overridden by the section sample
   - `refs` = story key + fix key
-- Section: the team's section for the area (for acquisitions: the section where the related manual cases live, e.g. Orders section 105). Ask only if it cannot be determined.
+- Section, chosen by the skill: take the area's section subtree from the context file's `Sources:` line (Orders: 105 and its children), list the subsections with `get_sections`, and pick the one whose name matches the feature; if related cases were found in Phase 1.3, prefer their section. Then sample its 10 most recent cases (sibling skill, step 4) and follow their preconditions format, capability block and title style. Ask only when two subsections fit equally.
 - Post after confirmation; collect the C-ids — Phase 3 needs them.
 
 ---
@@ -208,6 +218,7 @@ Do not run `mvn test` unless the user asks and an environment is available (it n
 - [ ] Child entities verified through their own endpoint; cross-module effects verified in the other module.
 - [ ] All reusable keys exist; parameters match their headers.
 - [ ] No case or scenario repeats an existing Karate test (Coverage column filled with feature + scenario for every "covered" or "extend" row).
+- [ ] The area context file(s) were read; every touched Key Business Rule is a scenario, a precondition or explicitly out of scope; capability set names come from the context file.
 - [ ] Both Thunderjet rules files and the Karate Coding Standards page were read; every scenario is a complete workflow with its own IDs and unique codes.
 - [ ] TestRail fields are HTML and carry the "AI" label; Execution Type = Karate, Automation Scope = Karate Approved.
 - [ ] TestRail cases contain no endpoints, HTTP methods, status codes or UI clicks; capabilities are listed as Eureka capability sets; the feature does not model them.
@@ -226,6 +237,8 @@ Registered in:    OrdersExtendedApiTest, orders.feature
 PR:               folio-org/folio-integration-tests#2619 (ready for review, not executed; nightly run covers it)
 Shared state:     approvals.isApprovalRequired left at default
 Open questions:   Q1 — mod-orders keeps client-supplied approvalDate on PUT (scenario 2)
+App context:      write-testrail-cases context/orders.md (built 2026-11-07), finance.md
+Section:          Orders > <subsection> (chosen from context Sources + section sample)
 Rules source:     ACQ_ORDERS_SYSTEM_PROMPT.md, ACQ_CROSS_MODULES_SYSTEM_PROMPT.md, Karate Coding Standards wiki
 ```
 
@@ -237,4 +250,5 @@ Rules source:     ACQ_ORDERS_SYSTEM_PROMPT.md, ACQ_CROSS_MODULES_SYSTEM_PROMPT.m
 - `references/team-thunderjet.md` — Thunderjet folders, runners, root features, reusables, pitfalls.
 - `references/example-modorders-1458.md` — worked example: analysis, TestRail case, feature, PR.
 - `references/validate-feature.sh` — static validation script.
-- `../write-testrail-cases/SKILL.md` — UI case rules, HTML formatting, metadata, posting, clarifying questions.
+- `../write-testrail-cases/SKILL.md` — Manual UI case workflow, existing-coverage check, HTML formatting, metadata, posting, clarifying questions.
+- `../write-testrail-cases/references/` — `area-map.md`, `context/<area>.md`, `house-style.md`, `writing-rules.md`, `examples/<area>.md`: application knowledge shared by both skills.
