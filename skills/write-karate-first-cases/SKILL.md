@@ -27,9 +27,11 @@ The user can stop after any phase ("cases only", "feature only, no PR"). If the 
 3. **Repositories (local clones, read with shell tools).**
    - `folio-org/folio-integration-tests` — the test repo. Work in the user's fork (`<user>/folio-integration-tests`); if it does not exist, create it (`gh repo fork folio-org/folio-integration-tests --clone=false`, or ask the user to click *Fork* on GitHub). Branch from the latest upstream `master`.
    - The backend module repo (`folio-org/<module>`) and `folio-org/acq-models` (acquisitions schemas) or the module's `ramls/` / OpenAPI files.
-4. **Team rules file.** Load the team's own AI/coding rules — they are authoritative and override anything in this skill when they disagree:
-   - Thunderjet (acquisitions): `acquisitions/ai/ACQ_ORDERS_SYSTEM_PROMPT.md` (mod-orders, consortia, edge-orders) or `acquisitions/ai/ACQ_CROSS_MODULES_SYSTEM_PROMPT.md` (cross-modules, finance, invoices), plus `acquisitions/ai/prompt/PROMPT_TEMPLATES.md`. Team map: `references/team-thunderjet.md`.
-   - Other teams: if the project has an `ai/` folder, use it; otherwise derive conventions from the 3 most recently changed features in the same folder (`git log -3 --name-only -- <folder>`) and record what you derived in the run summary.
+4. **Coding rules (read in full before Phase 3, from the latest upstream `master`).** Precedence: team rules files → Karate Coding Standards wiki page → `references/karate-standards.md` → this skill.
+   - Thunderjet (acquisitions): **both** `acquisitions/ai/ACQ_ORDERS_SYSTEM_PROMPT.md` and `acquisitions/ai/ACQ_CROSS_MODULES_SYSTEM_PROMPT.md`, whatever the module (an orders story often touches finance or invoices), plus `acquisitions/ai/prompt/PROMPT_TEMPLATES.md`. Team map: `references/team-thunderjet.md`.
+   - All teams: the FOLIJET wiki page *Karate Coding Standards & Best Practices* (https://folio-org.atlassian.net/wiki/spaces/FOLIJET/pages/114098928). It is from 2024; where it differs from a team rules file, the team file wins (see the known differences in `references/karate-standards.md`).
+   - `references/karate-standards.md` — digest of the sources above and of what the team learned while rewriting old tests (FAT-13426, FAT-20199) and restructuring the runners (PR #2426). Read it once per run; open the original PRs when a rule needs an example.
+   - Other teams without an `ai/` folder: derive conventions from the 3 most recently changed features in the same folder (`git log -3 --name-only -- <folder>`) and record what you derived in the run summary.
 5. **TestRail and Jira access.** Use the TestRail / Jira MCP tools when present; otherwise the credentials chain in `../write-testrail-cases/SKILL.md` ("TestRail API Integration → Credentials").
 
 ---
@@ -50,13 +52,18 @@ From the module repo:
 - Schemas → exact field names, enums, `readOnly`, formats.
 - Settings the rule depends on and **where they live** (e.g. `/orders-storage/settings` key `approvals`), and whether the module caches them (cache TTL, bypass header such as `x-okapi-bypass-cache`).
 
-### 1.3 Existing coverage
-Search before writing anything new:
-- Karate: `grep -rn "<endpoint path>\|<field name>" <team folder>` — list features that already exercise the endpoint or field.
+### 1.3 Existing coverage (no duplicates)
+A new case or scenario that repeats an existing Karate test adds runtime and maintenance and nothing else. Old tests were merged and renamed during the FAT-13426 / FAT-20199 refactoring, so search by behaviour, not by file name (`references/karate-standards.md`, section 8):
+- Karate: `grep -rln` the endpoint, the changed field, the error code and the state transition across the team folder **and** `cross-modules/`. Open every hit and read the scenario: what it sets up, what triggers, what it asserts.
 - Reusable features: every key in `<project>/src/main/resources/karate-config.js` and the `reusable/` folders; read the `# parameters:` header of each one you plan to call.
-- TestRail: cases whose `refs` contain the story / fix key, and cases found by a semantic search on the rule. Note their Execution Type: an existing **Karate** case already linked by `@C` means the rule is covered.
+- TestRail: cases whose `refs` contain the story / fix key, and cases found by a semantic search on the rule. An existing **Karate** case whose `@C` tag is in a feature means the rule is covered.
 
-Decide per rule: **already covered** (cite feature + scenario) / **extend an existing feature** (team rule: prefer adding a scenario to a related feature over a new file) / **new feature**.
+Decide per rule and show it in the Coverage column of 1.5:
+- **covered** — same precondition, same trigger, same asserted outcome: cite feature + scenario + C-id; no new case, no new scenario.
+- **extend** — same workflow, missing assertion or variant: add the assertion or a scenario to that feature (team rule: prefer this over a new file); a missing assertion goes into the existing TestRail case as a new expected result, not into a new case.
+- **new** — no scenario reaches the changed code path.
+
+The runner must not duplicate either: a feature name is registered in exactly one runner class of the project (PR #2426 structure, Phase 3.3).
 
 ### 1.4 Shared-state check (parallel safety)
 Features run in parallel in a shared tenant. For each precondition ask: *does it change something tenant-wide?* (order/finance settings, approval requirement, circulation rules, configuration entries, acquisition units used by others). If yes:
@@ -135,13 +142,16 @@ Follow the team rules file first; `references/karate-feature-conventions.md` hol
 - Every scenario: `@C<id>` on its own line **first**, then `@Positive` / `@Negative`; Title Case scenario name equal to the TestRail title.
 - IDs from `call uuid` inside the scenario — never shared between scenarios.
 - Step comments `# N. <Title Case Text>` matching TestRail step N; unnumbered `# Prerequisites: …` for precondition setup. No `* print` in scenarios.
-- Reusable features only by their `karate-config.js` key, with parameters from their `# parameters:` header. Do not write raw requests for something a reusable already does.
+- One scenario = one complete workflow (setup, trigger, check); never split dependent steps into separate scenarios. Codes and names that must be unique (fiscal year series, fund codes) come from `call random_string`, not literals.
+- Reusable features only by their `karate-config.js` key (`* def v = call createOrder { id: '#(orderId)' }`), with parameters from their `# parameters:` header; never re-`read()` a reusable the config already loads. Do not write raw requests for something a reusable already does; if it lacks one parameter, add it as optional to the reusable and say so in the PR.
+- Several similar records: a Karate `table` passed to one reusable call, not `Scenario Outline`.
+- Order-independent assertions on collections (`[*]` with `contains`); `contains` on objects that may gain fields.
 - `retry until` only to wait for async state; keep all conditions of a wait inside the `retry until` expression, then assert with `match` in a **separate** GET block.
 - `match` with `$` right after the request; Karate markers for presence: `'##null'` (absent or null), `'#uuid'`, `'#string'`, `'#notnull'`.
 - Admin headers only for modules the user lacks permissions for (team rule); switch with `configure headers`, never at the very end of a scenario.
 
 ### 3.3 Registration
-- Runner class by Test Group: Critical Path → `*CriticalPathApiTest`, Extended → `*ExtendedApiTest`, otherwise `*ApiTest` (the class whose `TEST_BASE_PATH` points at the module's `features/`). Add the file name (without `.feature`) **at the end** of the `FEATURES` array.
+- Runner class by Test Group: Critical Path → `*CriticalPathApiTest`, Extended → `*ExtendedApiTest`, otherwise `*ApiTest` (the class whose `TEST_BASE_PATH` points at the module's `features/`). Add the file name (without `.feature`) **at the end** of the `FEATURES` array. Since PR #2426 that array is the only registration in Java: no new `@Test` methods, enums or runner classes, and the name must not appear in any other runner.
 - Root feature (`<module>/<module-root>.feature`, e.g. `mod-orders/orders.feature`): append `Scenario: <Feature title>` + `* call read('features/<name>.feature')` at the end.
 - Append-only: never insert in the middle, never reorder.
 
@@ -149,8 +159,8 @@ Follow the team rules file first; `references/karate-feature-conventions.md` hol
 Run and fix until clean (`references/validate-feature.sh` does all of it):
 1. Gherkin parses (`pip install gherkin-official`, parse the file).
 2. Every reusable key used in the feature exists in `karate-config.js`.
-3. File name length ≤ 80; no `* print` in scenarios; no `@parallel=false`; every scenario has exactly one `@C<id>` that matches a posted case.
-4. The feature name appears once in the runner's `FEATURES` and once in the root feature.
+3. File name length ≤ 80; no `* print` in scenarios; no `@parallel=false`; no `Scenario Outline`; no `callonce uuid` or unquoted `#(...)` in call arguments; no `read()` of a reusable already in `karate-config.js`; every scenario has exactly one `@C<id>` that matches a posted case.
+4. The feature name appears once in the runner's `FEATURES`, in no other runner of the project, and once in the root feature.
 5. Step comments 1..N match the TestRail steps of that case.
 
 Do not run `mvn test` unless the user asks and an environment is available (it needs a FOLIO Eureka environment and takes long). Say in the PR that the test was not executed.
@@ -179,6 +189,8 @@ Do not run `mvn test` unless the user asks and an environment is available (it n
 - [ ] Every assertion is on a business field with an exact or captured value; no step is status-only except triggers.
 - [ ] Child entities verified through their own endpoint; cross-module effects verified in the other module.
 - [ ] All reusable keys exist; parameters match their headers.
+- [ ] No case or scenario repeats an existing Karate test (Coverage column filled with feature + scenario for every "covered" or "extend" row).
+- [ ] Both Thunderjet rules files and the Karate Coding Standards page were read; every scenario is a complete workflow with its own IDs and unique codes.
 - [ ] TestRail fields are HTML and carry the "AI" label; Execution Type = Karate, Automation Scope = Karate Approved.
 - [ ] TestRail cases contain no endpoints, HTTP methods, status codes or UI clicks; capabilities are listed as Eureka capability sets; the feature does not model them.
 - [ ] Static validation passed; registration is append-only.
@@ -196,10 +208,11 @@ Registered in:    OrdersExtendedApiTest, orders.feature
 PR:               folio-org/folio-integration-tests#2619 (ready for review, not executed; nightly run covers it)
 Shared state:     approvals.isApprovalRequired left at default
 Open questions:   Q1 — mod-orders keeps client-supplied approvalDate on PUT (scenario 2)
-Rules source:     acquisitions/ai/ACQ_ORDERS_SYSTEM_PROMPT.md
+Rules source:     ACQ_ORDERS_SYSTEM_PROMPT.md, ACQ_CROSS_MODULES_SYSTEM_PROMPT.md, Karate Coding Standards wiki
 ```
 
 ## References
+- `references/karate-standards.md` — digest of the Karate Coding Standards wiki page, the FAT-13426 / FAT-20199 refactoring and the PR #2426 runner structure; precedence and known differences.
 - `references/karate-feature-conventions.md` — feature skeleton and conventions for teams without a rules file.
 - `references/team-thunderjet.md` — Thunderjet folders, runners, root features, reusables, pitfalls.
 - `references/example-modorders-1458.md` — worked example: analysis, TestRail case, feature, PR.

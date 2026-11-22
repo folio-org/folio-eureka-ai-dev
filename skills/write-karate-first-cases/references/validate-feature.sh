@@ -48,9 +48,20 @@ CTAGS=$(grep -cE "^[[:space:]]*@C[0-9]+[[:space:]]*$" "$FEATURE")
 for id in $(grep -oE "^[[:space:]]*@C[0-9]+" "$FEATURE" | tr -d ' @C'); do
   head -1 "$FEATURE" | grep -q "cases/view/$id" && ok "C$id linked in header" || fail "C$id missing from header URL list"
 done
+grep -qE "^[[:space:]]*Scenario Outline:" "$FEATURE" && fail "Scenario Outline used (use a Karate table + one reusable call)" || ok "no Scenario Outline"
+# Reusables already loaded in karate-config.js must not be read() again in the feature
+for path in $(grep -oE "read\('classpath:[^']+/reusable/[^']+\.feature'\)" "$FEATURE" | sed -E "s/read\('classpath:([^']+)'\)/\1/" | sort -u); do
+  grep -q "$path" "$CONFIG" && fail "reusable $path is already loaded in karate-config.js; call it by its key" || ok "reusable read $path (not in config)"
+done
+# Unquoted embedded expressions in call arguments: { id: #(x) } instead of { id: '#(x)' }
+grep -nE "call [A-Za-z_]+ \{[^}]*:[[:space:]]*#\(" "$FEATURE" | sed 's/^/      /' | grep -q . && fail "unquoted #(...) in call arguments; use '#(...)'" || ok "embedded expressions quoted"
+# Shared IDs: callonce uuid in Background breaks parallel scenarios
+grep -qE "callonce uuid[0-9]*" "$FEATURE" && fail "callonce uuid used; generate IDs with 'call uuid' inside each scenario" || ok "no callonce uuid"
 
 # 4. Registration
 [ "$(grep -c "\"$NAME\"" "$RUNNER")" -eq 1 ] && ok "registered once in $(basename "$RUNNER")" || fail "not registered exactly once in $(basename "$RUNNER")"
+OTHERS=$(grep -rlE "\"$NAME\"" "$PROJECT_DIR/src/test/java" | grep -v "$(basename "$RUNNER")")
+[ -z "$OTHERS" ] && ok "not registered in any other runner" || fail "also registered in: $(echo $OTHERS | xargs -n1 basename | tr '\n' ' ')"
 [ "$(grep -c "features/$NAME.feature" "$ROOT")" -eq 1 ] && ok "registered once in $(basename "$ROOT")" || fail "not registered exactly once in $(basename "$ROOT")"
 
 exit $FAIL

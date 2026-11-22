@@ -4,11 +4,16 @@ Snapshot of `folio-org/folio-integration-tests` master, November 2026. Re-check 
 
 ## Rules files (authoritative)
 
-| File | Use for |
+Read both system prompts in full on every run, whatever the module: their rules overlap and an orders story often reaches finance or invoices.
+
+| File | Main focus |
 |---|---|
 | `acquisitions/ai/ACQ_ORDERS_SYSTEM_PROMPT.md` | mod-orders, consortia, edge-orders |
 | `acquisitions/ai/ACQ_CROSS_MODULES_SYSTEM_PROMPT.md` | cross-modules (orders ↔ finance ↔ invoices) |
 | `acquisitions/ai/prompt/PROMPT_TEMPLATES.md` | The team's own "mirror TestRail case C…" prompt |
+| [Karate Coding Standards & Best Practices](https://folio-org.atlassian.net/wiki/spaces/FOLIJET/pages/114098928) | Baseline style guide (2024); the files above win where they differ |
+
+Reference refactorings of the team's tests (read for before/after examples): FAT-13426 (PRs #1359, #1482) and FAT-20199 (PRs #2259, #2465); runner structure: PR #2426. Digest: `karate-standards.md`.
 
 ## Folders, runners, root features
 
