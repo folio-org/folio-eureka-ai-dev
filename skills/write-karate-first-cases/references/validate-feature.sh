@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
-# Static validation of a Karate feature in folio-integration-tests.
-# Usage: validate-feature.sh <path/to/feature.feature> <runner Java file> <root feature file>
-# Example:
+# Static validation of a Karate feature in folio-integration-tests (any team).
+# Usage: validate-feature.sh <path/to/feature.feature> [<runner Java file> | -] [<root feature file> | -]
+#   Pass the runner and/or root feature the project uses to register features (see `karate-context.py profile <project>`);
+#   use - for a registration step the project does not have.
+# Example (acquisitions: FEATURES array + root feature):
 #   validate-feature.sh \
 #     acquisitions/src/main/resources/thunderjet/mod-orders/features/my-test.feature \
 #     acquisitions/src/test/java/org/folio/OrdersExtendedApiTest.java \
 #     acquisitions/src/main/resources/thunderjet/mod-orders/orders.feature
+# Example (mod-circulation: root feature only):
+#   validate-feature.sh mod-circulation/src/main/resources/vega/mod-circulation/features/my-test.feature - \
+#     mod-circulation/src/main/resources/vega/mod-circulation/features/root.feature
 # Requires: python3, pip package gherkin-official (pip install gherkin-official).
 set -u
-FEATURE="$1"; RUNNER="$2"; ROOT="$3"
+FEATURE="$1"; RUNNER="${2:--}"; ROOT="${3:--}"
 PROJECT_DIR="${FEATURE%%/src/main/resources/*}"
 CONFIG="$PROJECT_DIR/src/main/resources/karate-config.js"
 NAME="$(basename "$FEATURE" .feature)"
@@ -28,12 +33,15 @@ then ok "Gherkin parses"; else fail "Gherkin does not parse"; fi
 
 # 2. Reusable keys exist in karate-config.js
 REPO_ROOT="$(dirname "$PROJECT_DIR")"
-for key in $(grep -oE "call(once)? [A-Za-z_][A-Za-z0-9_]*" "$FEATURE" | awk '{print $2}' | sort -u); do
+for key in $(grep -vE "^[[:space:]]*#" "$FEATURE" | grep -oE "(^|[[:space:]=])call(once)? [A-Za-z_][A-Za-z0-9_]*" | awk '{print $NF}' | sort -u); do
   case "$key" in read|login) continue ;; esac
+  # defined in the feature itself (def key = read(...) / function)
+  if grep -qE "def $key[[:space:]]*=" "$FEATURE"; then ok "reusable $key (defined in the feature)"; continue; fi
   # uuid1..uuid100 are generated in a loop in karate-config.js (karate.set("uuid"+i, ...))
   if [[ "$key" =~ ^uuid[0-9]+$ ]] && grep -q 'karate.set("uuid"+i' "$CONFIG"; then ok "helper $key (generated in karate-config.js)"; continue; fi
   if grep -qE "^[[:space:]]*$key[[:space:]]*:" "$CONFIG"; then ok "reusable $key"
   elif grep -rqsE "def $key = function" "$REPO_ROOT/common/src/main/resources/common/util/"; then ok "helper $key (common/util)"
+  elif grep -rqsE "def $key[[:space:]]*=" "$PROJECT_DIR/src/main/resources" --include="*.feature" -l | grep -qiE "/(global|util|reusable|common)[^/]*/|variables|init"; then ok "reusable $key (global/util feature of the project)"
   else fail "reusable $key not in karate-config.js or common/util"; fi
 done
 
@@ -59,10 +67,19 @@ grep -nE "call [A-Za-z_]+ \{[^}]*:[[:space:]]*#\(" "$FEATURE" | sed 's/^/      /
 grep -qE "callonce uuid[0-9]*" "$FEATURE" && fail "callonce uuid used; generate IDs with 'call uuid' inside each scenario" || ok "no callonce uuid"
 
 # Team rules that need scenario context: step numbering, retry/match mixing, headers at the end
-python3 -I - "$FEATURE" <<'EOF' || FAIL=1
+STRICT=0; [ -d "$PROJECT_DIR/ai" ] && STRICT=1   # team rules file present: its rules are mandatory
+python3 -I - "$FEATURE" "$STRICT" <<'EOF' || FAIL=1
 import re, sys
 lines = open(sys.argv[1], encoding="utf-8").read().splitlines()
+strict = sys.argv[2] == "1"
 bad = 0
+def team_rule(msg):
+    # retry/match and headers rules come from the acquisitions rules files; elsewhere they are recommendations
+    global bad
+    if strict:
+        print("FAIL: " + msg); bad = 1
+    else:
+        print("WARN: " + msg + " (team rule in acquisitions; recommended here)")
 scen, nums, body = None, [], []
 def close():
     global bad
@@ -72,13 +89,13 @@ def close():
         print(f"FAIL: '{scen}': step comments {nums} are not 1..N without gaps"); bad = 1
     code = [l.strip() for l in body if l.strip() and not l.strip().startswith("#")]
     if code and code[-1].startswith("* configure headers"):
-        print(f"FAIL: '{scen}': ends with 'configure headers'"); bad = 1
+        team_rule(f"'{scen}': ends with 'configure headers'")
     block = []
     for l in body + ["Given"]:
         s = l.strip()
         if s.startswith("Given ") or s == "Given":
             if any(b.startswith("And retry until") for b in block) and any(b.startswith("And match") or b.startswith("Then match") for b in block):
-                print(f"FAIL: '{scen}': 'retry until' and 'match' in the same request block"); bad = 1
+                team_rule(f"'{scen}': 'retry until' and 'match' in the same request block")
             block = []
         block.append(s)
 for l in lines:
@@ -96,10 +113,16 @@ print("ok:   step numbering, retry/match blocks, headers" if not bad else "", en
 sys.exit(bad)
 EOF
 
-# 4. Registration
-[ "$(grep -c "\"$NAME\"" "$RUNNER")" -eq 1 ] && ok "registered once in $(basename "$RUNNER")" || fail "not registered exactly once in $(basename "$RUNNER")"
-OTHERS=$(grep -rlE "\"$NAME\"" "$PROJECT_DIR/src/test/java" | grep -v "$(basename "$RUNNER")")
-[ -z "$OTHERS" ] && ok "not registered in any other runner" || fail "also registered in: $(echo $OTHERS | xargs -n1 basename | tr '\n' ' ')"
-[ "$(grep -c "features/$NAME.feature" "$ROOT")" -eq 1 ] && ok "registered once in $(basename "$ROOT")" || fail "not registered exactly once in $(basename "$ROOT")"
+# 4. Registration: in at most one runner, called by the given root feature once, and run by something
+RUNNERS=$(grep -rlE "\"$NAME\"|runFeatureTest\(\s*\"[^\"]*$NAME(\.feature)?\"" "$PROJECT_DIR/src/test/java" 2>/dev/null)
+NR=$(echo "$RUNNERS" | grep -c . )
+[ "$NR" -le 1 ] && ok "registered in $NR runner(s)" || fail "registered in $NR runners: $(echo $RUNNERS | xargs -n1 basename | tr '\n' ' ')"
+if [ "$RUNNER" != "-" ]; then
+  echo "$RUNNERS" | grep -q "$(basename "$RUNNER")" && ok "registered in $(basename "$RUNNER")" || fail "not registered in $(basename "$RUNNER")"
+fi
+if [ "$ROOT" != "-" ]; then
+  [ "$(grep -cE "read\('[^']*/?$NAME\.feature" "$ROOT")" -eq 1 ] && ok "called once from $(basename "$ROOT")" || fail "not called exactly once from $(basename "$ROOT")"
+fi
+[ "$NR" -ge 1 ] || [ "$ROOT" != "-" ] || fail "not registered anywhere: add it to a runner or a root feature"
 
 exit $FAIL

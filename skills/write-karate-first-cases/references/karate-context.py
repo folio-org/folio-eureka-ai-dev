@@ -8,6 +8,7 @@ Run from the root of a local clone. Read-only: it never changes files.
   karate-context.py endpoints  <project> [<filter>]           endpoint -> features index
   karate-context.py exemplars  <folder> [-n N]                most recent features that follow the current standards
   karate-context.py registered <project> <feature-name>       runners and root features that register a feature
+  karate-context.py profile    <project>                     team profile: teams, runners, registration style, root features, rules files
 
 <project> is the Maven module folder, for example `acquisitions`.
 <folder> is a features folder, for example `acquisitions/src/main/resources/thunderjet/mod-orders/features`.
@@ -55,19 +56,41 @@ def parse_feature(path):
     return scenarios
 
 
-def runner_index(project):
-    """feature name -> [runner class] from FEATURES arrays in src/test/java."""
-    idx = defaultdict(list)
+def runners(project):
+    """Yield (class name, text) for JUnit runner classes of a project."""
     for d, _, files in os.walk(os.path.join(project, "src/test/java")):
         for f in files:
-            if not f.endswith(".java"):
-                continue
-            text = read(os.path.join(d, f))
-            m = re.search(r"String\[\]\s+FEATURES\s*=\s*\{(.*?)\};", text, re.S)
-            if not m:
-                continue
-            for name in re.findall(r'"([^"]+)"', m.group(1)):
-                idx[name].append(f[:-5])
+            if f.endswith(".java"):
+                yield f[:-5], read(os.path.join(d, f))
+
+
+def feature_names_in_runner(text):
+    """Names a runner registers: FEATURES array entries and runFeatureTest(...) arguments."""
+    names = []
+    m = re.search(r"String\[\]\s+FEATURES\s*=\s*\{(.*?)\};", text, re.S)
+    if m:
+        names += re.findall(r'"([^"]+)"', m.group(1))
+    names += re.findall(r'runFeatureTest\(\s*"([^"]+)"', text)
+    return [os.path.basename(n)[:-8] if n.endswith(".feature") else os.path.basename(n) for n in names]
+
+
+def runner_index(project):
+    """feature name -> [runner class]."""
+    idx = defaultdict(list)
+    for cls, text in runners(project):
+        for name in feature_names_in_runner(text):
+            idx[name].append(cls)
+    return idx
+
+
+def callers_index(project):
+    """feature name -> [features that call it with read('...name.feature')] (root features)."""
+    idx = defaultdict(list)
+    for path in features(os.path.join(project, RES)):
+        for ref in re.findall(r"read\('(?:classpath:)?([^'@]+\.feature)", read(path)):
+            name = os.path.basename(ref)[:-8]
+            if not path.endswith(f"/{name}.feature"):
+                idx[name].append(os.path.relpath(path))
     return idx
 
 
@@ -166,15 +189,51 @@ def cmd_exemplars(folder, n):
 
 
 def cmd_registered(project, name):
-    runners = runner_index(project).get(name, [])
-    roots = []
-    for path in features(os.path.join(project, RES)):
-        if re.search(rf"features/{re.escape(name)}\.feature", read(path)) and not path.endswith(f"/{name}.feature"):
-            roots.append(os.path.relpath(path))
-    print(f"runners:       {', '.join(runners) or 'none'}")
-    print(f"root features: {', '.join(roots) or 'none'}")
-    if len(runners) > 1:
+    runner_list = runner_index(project).get(name, [])
+    roots = callers_index(project).get(name, [])
+    print(f"runners:          {', '.join(runner_list) or 'none'}")
+    print(f"called by (roots): {', '.join(roots) or 'none'}")
+    if len(runner_list) > 1:
         print("WARNING: registered in more than one runner; the feature runs twice")
+    if not runner_list and not roots:
+        print("WARNING: not registered; nothing runs this feature")
+
+
+def cmd_profile(project):
+    print(f"Project: {project}")
+    rules = []
+    for d in (os.path.join(project, "ai"), os.path.join(project, "docs")):
+        for root, _, files in os.walk(d):
+            rules += [os.path.join(root, f) for f in files if f.endswith(".md")]
+    print("Rules files:      " + (", ".join(rules) or f"none (no {project}/ai/): derive conventions from exemplars"))
+    config = os.path.join(project, RES, "karate-config.js")
+    if os.path.exists(config):
+        keys = re.findall(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(?:karate\.)?read\(", read(config), re.M)
+        print(f"karate-config.js: {config} ({len(keys)} reusable keys)")
+    else:
+        print("karate-config.js: none in project; check common/ and the runner's TestModuleConfiguration")
+    reus = sorted({os.path.relpath(d) for d, _, fs in os.walk(os.path.join(project, RES)) if d.endswith("reusable") or d.endswith("global")})
+    print("Reusable folders: " + (", ".join(reus) or "none"))
+    inits = sorted(os.path.relpath(p) for p in features(os.path.join(project, RES)) if re.search(r"/(init|root)[^/]*\.feature$", p))
+    print("Init/root features: " + (", ".join(inits) or "none"))
+    print("\nRunners:")
+    for cls, text in sorted(runners(project)):
+        team = re.search(r'@FolioTest\(team\s*=\s*"([^"]+)",\s*module\s*=\s*"([^"]+)"', text)
+        if not team:
+            continue
+        base = re.search(r'TEST_BASE_PATH\s*=\s*"?([^";]+)', text)
+        names = feature_names_in_runner(text)
+        if "String[] FEATURES" in text:
+            style = f"FEATURES array ({len(names)})"
+        elif re.search(r'runFeatureTest\(\s*"root', text):
+            style = "root feature(s): " + ", ".join(n for n in names if n.startswith("root"))
+        elif names:
+            style = f"one @Test per feature ({len(names)})"
+        else:
+            style = "custom (read the class)"
+        shared = re.search(r"(Shared\w+Tenant)", text)
+        print(f"  {cls}: team={team.group(1) if team else '?'} module={team.group(2) if team else '?'}")
+        print(f"    base={base.group(1).strip() if base else '?'}  registration={style}" + (f"  tenant={shared.group(1)}" if shared else ""))
 
 
 def main(argv):
@@ -193,6 +252,8 @@ def main(argv):
         cmd_exemplars(argv[2], n)
     elif cmd == "registered" and len(argv) >= 4:
         cmd_registered(argv[2], argv[3])
+    elif cmd == "profile":
+        cmd_profile(argv[2])
     else:
         print(__doc__)
         return 2
